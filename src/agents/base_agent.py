@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatDeepInfra
 from langchain.schema import (
     SystemMessage,
     HumanMessage,
@@ -9,6 +9,7 @@ from langchain.schema import (
 )
 from langchain.prompts import ChatPromptTemplate
 from src.utils.logger import Logger
+from src.llm.deepseek import DeepSeekLLM
 
 class BaseAgent(ABC):
     def __init__(self, 
@@ -28,11 +29,13 @@ class BaseAgent(ABC):
         self.config = config
         self.name = config.get("name", "Assistant")
         
-        # 初始化 LLM
-        self.llm = llm or ChatOpenAI(
-            model_name=config.get("model_name", "gpt-3.5-turbo"),
+        # 使用自定义的 DeepSeek LLM
+        self.llm = llm or DeepSeekLLM(
+            model_name=config.get("model_name", "deepseek-chat"),
             temperature=config.get("temperature", 0.7),
-            streaming=True
+            top_p=config.get("top_p", 0.9),
+            max_tokens=config.get("max_tokens", 4096),
+            tensor_parallel_size=config.get("tensor_parallel_size", 1)
         )
         
         # 初始化组件
@@ -101,14 +104,18 @@ class BaseAgent(ABC):
                 "context": context
             })
             
-            # 更新历史
-            ai_message = AIMessage(content=response.content)
-            await self.update_history(ai_message)
-            
-            return response.content
+            # 直接返回生成的文本
+            if isinstance(response, str):
+                return response
+            elif hasattr(response, "generations"):
+                # 处理 LLMResult
+                return response.generations[0][0].text
+            else:
+                # 其他情况，尝试获取内容
+                return str(response)
             
         except Exception as e:
-            # self._logger.error(f"Error generating response: {str(e)}")
+            # self.logger.error(f"Error generating response: {str(e)}")
             raise
             
     @abstractmethod

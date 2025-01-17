@@ -5,11 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat:基础框架">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/dev.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/dev.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/agents/base_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/base_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/api/routes/chat.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/routes/chat.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/chat_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/chat_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/agents/zero_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/zero_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/agent_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/agent_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_api.http" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_api.http" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -105,8 +107,8 @@
     <recent_temporary>
       <list>
         <item itemvalue="HTTP 请求.test_api | 和 Zero酱对话" />
-        <item itemvalue="HTTP 请求.test_api | 列出所有 Agents" />
         <item itemvalue="HTTP 请求.test_api | 健康检查" />
+        <item itemvalue="HTTP 请求.test_api | 列出所有 Agents" />
       </list>
     </recent_temporary>
   </component>
@@ -129,7 +131,11 @@
       <workItem from="1736923283651" duration="162000" />
       <workItem from="1736923472853" duration="6249000" />
       <workItem from="1736930352908" duration="269000" />
-      <workItem from="1736930635369" duration="559000" />
+      <workItem from="1736930635369" duration="2030000" />
+      <workItem from="1736932717014" duration="3284000" />
+      <workItem from="1736947219392" duration="358000" />
+      <workItem from="1736950884199" duration="83000" />
+      <workItem from="1737018622395" duration="12007000" />
     </task>
     <task id="LOCAL-00001" summary="feat:基础框架">
       <option name="closed" value="true" />
@@ -139,7 +145,15 @@
       <option name="project" value="LOCAL" />
       <updated>1736924176112</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="feat:基础框架">
+      <option name="closed" value="true" />
+      <created>1736931312188</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1736931312188</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

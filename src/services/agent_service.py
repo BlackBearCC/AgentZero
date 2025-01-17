@@ -1,12 +1,14 @@
 from typing import Dict, Optional
 from fastapi import Depends
 
+
 from src.agents.base_agent import BaseAgent
 from src.agents.zero_agent import ZeroAgent
 from src.agents.role_config import RoleConfig
 from src.agents.templates.agent_templates import AgentTemplates
 from src.utils.logger import Logger
-from langchain.chat_models import ChatOpenAI
+from src.llm.deepseek import DeepSeekLLM
+from src.llm.doubao import DoubaoChatModel
 import os
 from dotenv import load_dotenv
 
@@ -33,18 +35,26 @@ class AgentService:
     def _create_default_agents(self):
         """初始化默认角色"""
         try:
-            # 创建 LLM 实例
-            llm = ChatOpenAI(
-                temperature=0.7,
-                model_name="gpt-3.5-turbo",
-                # 如果环境变量中没有，可以直接设置
-                # openai_api_key="你的API_KEY",
-                # openai_api_base="你的代理地址"  # 可选
-            )
+            # # 从环境变量获取 API key
+            # deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+            # if not deepseek_api_key:
+            #     raise ValueError("DEEPSEEK_API_KEY not found in environment variables")
             
+            # 使用自定义的 DeepSeekLLM
+            # llm = DeepSeekLLM(
+            #     model_name="deepseek-chat",
+            #     temperature=0.7,
+            #     api_key=deepseek_api_key
+            # )
+            llm = DoubaoChatModel(
+                temperature=0.7,
+                max_tokens=4096
+            )
             # 创建 Zero酱
             zero_config = AgentTemplates.get_zero_agent()
-            self.logger.info(f"Creating default agent with config: {zero_config}")
+            # 添加 DeepSeek 配置
+            # zero_config.model_name = "deepseek-chat"
+            # zero_config.deepseek_api_key = deepseek_api_key
             
             agent = ZeroAgent(
                 config=zero_config.dict(),
@@ -53,10 +63,10 @@ class AgentService:
                 tools=None
             )
             self.agents[zero_config.role_id] = agent
-            self.logger.logger.info(f"Default agent {zero_config.name} initialized. Current agents: {list(self.agents.keys())}")
+            self.logger.info(f"Default agent {zero_config.name} initialized")
         except Exception as e:
             self.logger.error(f"Failed to initialize default agents: {str(e)}")
-            raise  # 让错误显示在日志中
+            raise
 
     async def create_agent(self, config: RoleConfig) -> str:
         """创建新的 Agent 实例"""

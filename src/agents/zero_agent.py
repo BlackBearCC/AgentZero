@@ -21,10 +21,6 @@ class ZeroAgent(BaseAgent):
                               context: Optional[Dict] = None) -> str:
         """生成回复"""
         try:
-            # 添加调试日志
-            print("Logger instance:", self.logger)  # 临时添加，用于调试
-            print("Logger methods:", dir(self.logger))  # 临时添加，用于调试
-            
             # 构建完整的提示词
             system_prompt = await self.load_prompt()
             messages = [

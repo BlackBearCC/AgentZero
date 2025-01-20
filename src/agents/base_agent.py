@@ -74,8 +74,7 @@ class BaseAgent(ABC):
             self.messages = system_messages + other_messages[-max_history:]
             
     async def generate_response(self, 
-                              input_text: str,
-                              context: Optional[Dict] = None) -> str:
+                              input_text: str) -> str:
         """生成回复"""
         try:
             # 构建提示模板
@@ -120,8 +119,7 @@ class BaseAgent(ABC):
             raise
             
     async def astream_response(self, 
-                           input_text: str,
-                           context: Optional[Dict] = None) -> AsyncIterator[str]:
+                           input_text: str) -> AsyncIterator[str]:
         """流式生成回复"""
         try:
             # 构建消息列表

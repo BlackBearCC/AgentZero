@@ -35,7 +35,6 @@ async def stream_chat(
         chat_service.stream_message(
             agent_id=agent_id,
             message=request.message,
-            context=request.context
         ),
         media_type="text/event-stream"
     )

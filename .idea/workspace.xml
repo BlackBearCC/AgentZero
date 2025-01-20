@@ -4,18 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="fix:修复豆包，deepseek无法流式输出bug">
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="fix:完善流式返回服务">
       <change beforePath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/agents/base_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/base_agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/agents/zero_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/zero_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/llm/doubao.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/llm/doubao.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/agent_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/agent_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/schemas/chat.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/schemas/chat.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/services/chat_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/chat_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/logger.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/logger.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_api.http" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_api.http" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -168,7 +162,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737359536722</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="fix:完善流式返回服务">
+      <option name="closed" value="true" />
+      <created>1737361280624</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1737361280624</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -200,6 +202,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="feat:基础框架" />
     <MESSAGE value="fix:修复豆包，deepseek无法流式输出bug" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix:修复豆包，deepseek无法流式输出bug" />
+    <MESSAGE value="fix:完善流式返回服务" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix:完善流式返回服务" />
   </component>
 </project>

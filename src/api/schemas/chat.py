@@ -3,7 +3,6 @@ from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     message: str
-    context: Optional[Dict[str, Any]] = None
 
 class ChatResponse(BaseModel):
     response: str

@@ -40,8 +40,7 @@ POST http://localhost:8000/api/v1/chat/zero_001/stream
 Content-Type: application/json
 
 {
-  "message": "你好，请做个自我介绍",
-  "context": {}
+  "message": "你好，请做个自我介绍"
 }
 
 ### 和 Zero酱聊天

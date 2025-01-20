@@ -18,8 +18,7 @@ class ZeroAgent(BaseAgent):
         return []  # Zero酱暂时不使用工具
 
     async def generate_response(self, 
-                              input_text: str,
-                              context: Optional[Dict] = None) -> str:
+                              input_text: str) -> str:
         """生成回复"""
         try:
             # 构建完整的提示词
@@ -30,15 +29,14 @@ class ZeroAgent(BaseAgent):
             ]
             
             # 使用父类的 generate_response 方法
-            return await super().generate_response(input_text, context)
+            return await super().generate_response(input_text)
             
         except Exception as e:
             # self.logger.error(f"Error generating response: {str(e)}") 
             raise
 
     async def astream_response(self, 
-                           input_text: str,
-                           context: Optional[Dict] = None) -> AsyncIterator[str]:
+                           input_text: str) -> AsyncIterator[str]:
         """流式生成回复"""
         try:
             # 构建完整的提示词

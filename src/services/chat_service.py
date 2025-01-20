@@ -34,7 +34,6 @@ class ChatService:
         self,
         agent_id: str,
         message: str,
-        context: Optional[Dict[str, Any]] = None
     ) -> AsyncIterator[str]:
         """流式处理聊天消息"""
         try:
@@ -46,7 +45,7 @@ class ChatService:
             print(f"\nStarting stream for agent {agent_id}", flush=True)
             response_text = ""
             # 生成流式回复
-            async for chunk in agent.astream_response(message, context):
+            async for chunk in agent.astream_response(message):
                 response_text += chunk
                 yield  chunk  # SSE 格式
 

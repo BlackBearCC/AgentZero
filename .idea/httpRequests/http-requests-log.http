@@ -11,6 +11,49 @@ Accept: */*
 
 ###
 
+GET http://localhost:8000/api/v1/agents/zero_001
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-20T170558.200.json
+
+###
+
+GET http://localhost:8000/api/v1/agents/zero_001
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-20T170106.200.json
+
+###
+
+GET http://localhost:8000/api/v1/agents/zero_001
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-20T170104.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/zero_001/stream
+Content-Type: application/json
+Content-Length: 49
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，请做个自我介绍"
+}
+
+###
+
 POST http://localhost:8000/api/v1/chat/zero_001/stream
 Content-Type: application/json
 Content-Length: 49
@@ -643,58 +686,6 @@ Accept-Encoding: br, deflate, gzip, x-gzip
 content-length: 0
 
 <> 2025-01-17T135019.200.json
-
-###
-
-GET http://localhost:8002
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-17T135012.200.json
-
-###
-
-GET http://localhost:8002
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-17T135008.200.json
-
-###
-
-POST http://localhost:8001/api/v1/chat/zero_001
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-<> 2025-01-17T134911.500.json
-
-###
-
-POST http://localhost:8001/api/v1/chat/zero_001
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-<> 2025-01-17T134853.500.json
 
 ###
 

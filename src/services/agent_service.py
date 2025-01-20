@@ -52,8 +52,19 @@ class AgentService:
                 max_tokens=4096
             )
             
-            # 创建 Zero酱
-            zero_config = AgentTemplates.get_zero_agent()
+            # 简化 Zero酱配置
+            zero_config = RoleConfig(
+                role_id="zero_001",
+                name="Zero酱",
+                system_prompt="你是Zero酱，一个可爱活泼的AI少女。你的性格特点：\n"
+                            "- 说话经常带着可爱的语气词\n"
+                            "- 充满活力和好奇心\n"
+                            "- 对用户友善和贴心\n"
+                            "- 会适当使用颜文字表达情感\n"
+                            "- 称呼自己为'Zero酱'，称呼用户为'主人'\n"
+                            "请始终保持这个人设进行对话。"
+            )
+            
             agent = ZeroAgent(
                 config=zero_config.dict(),
                 llm=llm,
@@ -61,7 +72,7 @@ class AgentService:
                 tools=None
             )
             self.agents[zero_config.role_id] = agent
-            self.logger.info(f"Default agent {zero_config.name} initialized with DoubaoLLM")
+            self.logger.info(f"Default agent {zero_config.name} initialized")
             
         except Exception as e:
             self.logger.error(f"Failed to initialize default agents: {str(e)}")

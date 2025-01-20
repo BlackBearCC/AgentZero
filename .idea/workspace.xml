@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="fix:移除对话请求的context参数" />
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="fix:移除对话请求的context参数">
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T134911.500.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -34,6 +38,9 @@
     &quot;accountId&quot;: &quot;2d15821e-03ec-48c2-936d-2e908b1c13af&quot;
   }
 }</component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$USER_HOME$/miniconda3/envs/AgentZero/Lib/site-packages/pydantic/main.py" root0="SKIP_INSPECTION" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5
 }</component>
@@ -76,6 +83,9 @@
     <configuration name="test_api | 和 Zero酱对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="4" requestIdentifier="和 Zero酱对话" runType="运行单个请求">
       <method v="2" />
     </configuration>
+    <configuration name="test_api | 获取 Zero酱信息" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="4" requestIdentifier="获取 Zero酱信息" runType="运行单个请求">
+      <method v="2" />
+    </configuration>
     <configuration name="test_api | 获取 Zero酱信息" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="3" requestIdentifier="获取 Zero酱信息" runType="运行单个请求">
       <method v="2" />
     </configuration>
@@ -103,6 +113,7 @@
     <recent_temporary>
       <list>
         <item itemvalue="HTTP 请求.test_api | 和 Zero酱对话" />
+        <item itemvalue="HTTP 请求.test_api | 获取 Zero酱信息" />
         <item itemvalue="HTTP 请求.test_api | 列出所有 Agents" />
         <item itemvalue="HTTP 请求.test_api | 健康检查" />
       </list>
@@ -173,7 +184,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737361554415</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="fix:移除对话请求的context参数">
+      <option name="closed" value="true" />
+      <created>1737362010122</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1737362010122</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

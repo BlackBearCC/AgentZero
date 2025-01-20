@@ -2,14 +2,9 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel
 
 class RoleConfig(BaseModel):
-    role_id: str
-    name: str
-    description: str
-    personality: str
-    system_prompt: str
-    constraints: List[str]
-    tools: List[str]
-    memory_config: Dict[str, any]
+    role_id: str  # 角色唯一标识
+    name: str     # 角色名称
+    system_prompt: str  # 系统提示词
     
     class Config:
         arbitrary_types_allowed = True 

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, AsyncIterator
 from langchain_community.chat_models import ChatDeepInfra
 from langchain.schema import (
     SystemMessage,
@@ -117,6 +117,47 @@ class BaseAgent(ABC):
         except Exception as e:
             # self.logger.error(f"Error generating response: {str(e)}")
             raise
+            
+    async def astream_response(self, 
+                           input_text: str,
+                           context: Optional[Dict] = None) -> AsyncIterator[str]:
+        """流式生成回复"""
+        try:
+            # 构建提示模板
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", self.config.get("system_prompt", "")),
+                ("human", "{input}")
+            ])
+            
+            # 添加用户消息
+            await self.update_history(HumanMessage(content=input_text))
+            
+            # 检查工具调用
+            if self.tools:
+                tool_calls = await self.think({"input": input_text, "context": context})
+                if tool_calls:
+                    tool_results = []
+                    for tool_call in tool_calls:
+                        result = await self.tools.execute(tool_call)
+                        tool_results.append(result)
+                    context = context or {}
+                    context["tool_results"] = tool_results
+            
+            # 生成流式回复
+            chain = prompt | self.llm
+            async for chunk in chain.astream({
+                "input": input_text,
+                "context": context
+            }):
+                if isinstance(chunk, str):
+                    yield chunk
+                elif hasattr(chunk, "content"):
+                    yield chunk.content
+                else:
+                    yield str(chunk)
+                    
+        except Exception as e:
+            raise Exception(f"Error streaming response: {str(e)}")
             
     @abstractmethod
     async def load_prompt(self):

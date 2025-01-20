@@ -1,9 +1,9 @@
 ### 健康检查
-GET http://localhost:8001/
+GET http://localhost:8000/
 Accept: application/json
 
 ### 创建 Zero酱
-POST http://localhost:8002/api/v1/agents/create
+POST http://localhost:8000/api/v1/agents/create
 Content-Type: application/json
 
 {
@@ -27,16 +27,16 @@ Content-Type: application/json
   }
 }
 ### 列出所有 Agents
-GET http://localhost:8002/api/v1/agents
+GET http://localhost:8000/api/v1/agents
 Accept: application/json
 
 
 ### 获取 Zero酱信息
-GET http://localhost:8002/api/v1/agents/zero_001
+GET http://localhost:8000/api/v1/agents/zero_001
 Accept: application/json
 
 ### 和 Zero酱对话
-POST http://localhost:8001/api/v1/chat/zero_001
+POST http://localhost:8000/api/v1/chat/zero_001
 Content-Type: application/json
 
 {
@@ -45,7 +45,7 @@ Content-Type: application/json
 }
 
 ### 和 Zero酱聊天
-POST http://localhost:8002/api/v1/chat/zero_001
+POST http://localhost:8000/api/v1/chat/zero_001
 Content-Type: application/json
 
 {
@@ -54,7 +54,7 @@ Content-Type: application/json
 }
 
 ### 请 Zero酱帮忙
-POST http://localhost:8002/api/v1/chat/zero_001
+POST http://localhost:8000/api/v1/chat/zero_001
 Content-Type: application/json
 
 {

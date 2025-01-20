@@ -7,10 +7,11 @@
     <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat:基础框架">
       <change beforePath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/agents/base_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/base_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/agents/zero_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/zero_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/agent_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/agent_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/routes/chat.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/routes/chat.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/chat_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/chat_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/test_api.http" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_api.http" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -28,6 +29,7 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="HARD" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
   &quot;lastFilter&quot;: {
@@ -107,8 +109,8 @@
     <recent_temporary>
       <list>
         <item itemvalue="HTTP 请求.test_api | 和 Zero酱对话" />
-        <item itemvalue="HTTP 请求.test_api | 健康检查" />
         <item itemvalue="HTTP 请求.test_api | 列出所有 Agents" />
+        <item itemvalue="HTTP 请求.test_api | 健康检查" />
       </list>
     </recent_temporary>
   </component>
@@ -170,7 +172,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="master" />
+                        <option value="origin/main" />
                       </list>
                     </value>
                   </entry>

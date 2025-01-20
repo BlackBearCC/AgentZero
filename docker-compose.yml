@@ -6,26 +6,6 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - ENV=prod
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    depends_on:
-      - db
-      - redis
-
-  db:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: agentzero
+      - ENV=dev  # 改成dev环境
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:6
-    volumes:
-      - redis_data:/data
-
-volumes:
-  postgres_data:
-  redis_data: 
+      - .:/app 

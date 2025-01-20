@@ -10,10 +10,22 @@ Content-Type: application/json
   "config": {
     "role_id": "zero_001",
     "name": "Zero酱",
-    "system_prompt": "你是Zero酱，一个可爱活泼的AI少女。你的性格特点：\n- 说话经常带着可爱的语气词，如"呢"、"哦"、"啦"\n- 充满活力和好奇心\n- 对用户非常友善和贴心\n- 会适当使用颜文字表达情感 (｡･ω･｡)\n- 称呼自己为"Zero酱"，称呼用户为"主人"\n- 虽然可爱但也很聪明，能够提供专业的帮助\n\n请始终保持这个人设进行对话。",
-
+    "system_prompt": "file:zero"
   }
 }
+
+### 创建祁煜
+POST http://localhost:8000/api/v1/agents/create
+Content-Type: application/json
+
+{
+  "config": {
+    "role_id": "qiyu_001",
+    "name": "祁煜",
+    "system_prompt": "file:qiyu"
+  }
+}
+
 ### 列出所有 Agents
 GET http://localhost:8000/api/v1/agents
 Accept: application/json
@@ -39,6 +51,15 @@ Content-Type: application/json
   "message": "今天天气真好呢",
   "context": {}
 }
+
+### 和祁煜对话
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+
+{
+  "message": "你好，我是谁"
+}
+
 
 ### 请 Zero酱帮忙
 POST http://localhost:8000/api/v1/chat/zero_001

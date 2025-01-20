@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, AsyncIterator
-from langchain_community.chat_models import ChatDeepInfra
 from langchain.schema import (
     SystemMessage,
     HumanMessage,
@@ -9,34 +8,34 @@ from langchain.schema import (
 )
 from langchain.prompts import ChatPromptTemplate
 from src.utils.logger import Logger
-from src.llm.deepseek import DeepSeekLLM
+from src.llm.doubao import DoubaoLLM
 import asyncio
+import json
 
-class BaseAgent(ABC):
+class BaseAgent:
     def __init__(self, 
                  config: Dict[str, Any],
                  llm=None,
                  memory=None,
                  tools=None):
         """
-        基础Agent类
+        统一的Agent类，通过配置来区分不同角色
         
         Args:
             config: 角色配置
-            llm: LangChain 聊天模型实例
+            llm: LLM 实例
             memory: 记忆系统实例
             tools: 工具管理器实例
         """
         self.config = config
         self.name = config.get("name", "Assistant")
+        self.role_id = config.get("role_id")
         
-        # 使用自定义的 DeepSeek LLM
-        self.llm = llm or DeepSeekLLM(
-            model_name=config.get("model_name", "deepseek-chat"),
-            temperature=config.get("temperature", 0.7),
-            top_p=config.get("top_p", 0.9),
-            max_tokens=config.get("max_tokens", 4096),
-            tensor_parallel_size=config.get("tensor_parallel_size", 1)
+        # 使用默认的 DoubaoLLM
+        self.llm = llm or DoubaoLLM(
+            model_name="ep-20241113173739-b6v4g",
+            temperature=0.7,
+            max_tokens=4096
         )
         
         # 初始化组件
@@ -61,7 +60,7 @@ class BaseAgent(ABC):
         # 同步到记忆系统
         if self.memory:
             await self.memory.add(
-                f"{self.config['role_id']}:history",
+                f"{self.role_id}:history",
                 new_message.dict()
             )
             
@@ -73,92 +72,73 @@ class BaseAgent(ABC):
             other_messages = [m for m in self.messages if not isinstance(m, SystemMessage)]
             self.messages = system_messages + other_messages[-max_history:]
             
-    async def generate_response(self, 
-                              input_text: str) -> str:
+    async def generate_response(self, input_text: str) -> str:
         """生成回复"""
         try:
-            # 构建提示模板
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", self.config.get("system_prompt", "")),
-                ("human", "{input}")
-            ])
-            
             # 添加用户消息
             await self.update_history(HumanMessage(content=input_text))
             
-            # 检查工具调用
-            if self.tools:
-                tool_calls = await self.think({"input": input_text, "context": context})
-                if tool_calls:
-                    tool_results = []
-                    for tool_call in tool_calls:
-                        result = await self.tools.execute(tool_call)
-                        tool_results.append(result)
-                    context = context or {}
-                    context["tool_results"] = tool_results
-            
-            # 生成回复
-            chain = prompt | self.llm
-            response = await chain.ainvoke({
-                "input": input_text,
-                "context": context
-            })
-            
-            # 直接返回生成的文本
-            if isinstance(response, str):
-                return response
-            elif hasattr(response, "generations"):
-                # 处理 LLMResult
-                return response.generations[0][0].text
-            else:
-                # 其他情况，尝试获取内容
-                return str(response)
-            
-        except Exception as e:
-            # self.logger.error(f"Error generating response: {str(e)}")
-            raise
-            
-    async def astream_response(self, 
-                           input_text: str) -> AsyncIterator[str]:
-        """流式生成回复"""
-        try:
             # 构建消息列表
-            system_prompt = await self.load_prompt()
             messages = [
                 {
                     "role": "system",
-                    "content": system_prompt  # 直接使用字符串
+                    "content": self.config["system_prompt"]
                 },
                 {
-                    "role": "user",
-                    "content": input_text  # 直接使用字符串
+                    "role": "user", 
+                    "content": input_text
                 }
             ]
             
+            # 生成回复
+            response = await self.llm.agenerate(messages)
+            
+            # 处理结构化输出
+            try:
+                # 尝试解析 JSON 格式
+                response_json = json.loads(response)
+                # 如果是祁煜的格式
+                if "content" in response_json:
+                    content = response_json["content"]
+                    # 保存状态和任务信息到上下文
+                    self.config["last_state"] = response_json.get("state")
+                    self.config["last_task"] = response_json.get("task")
+                    return content
+            except json.JSONDecodeError:
+                # 如果不是 JSON 格式，直接返回原文
+                pass
+                
+            return response
+            
+        except Exception as e:
+            self._logger.error(f"Error generating response: {str(e)}")
+            raise
+            
+    async def astream_response(self, input_text: str) -> AsyncIterator[str]:
+        """流式生成回复"""
+        try:
             # 添加用户消息到历史
             await self.update_history(HumanMessage(content=input_text))
             
-            # 检查工具调用
-            if self.tools:
-                tool_calls = await self.think({"input": input_text, "context": context})
-                if tool_calls:
-                    tool_results = []
-                    for tool_call in tool_calls:
-                        result = await self.tools.execute(tool_call)
-                        tool_results.append(result)
-                    context = context or {}
-                    context["tool_results"] = tool_results
-            
-            self._logger.logger.debug(f"Starting stream with messages: {messages}")
+            # 构建消息列表
+            messages = [
+                {
+                    "role": "system",
+                    "content": self.config["system_prompt"]
+                },
+                {
+                    "role": "user",
+                    "content": input_text
+                }
+            ]
             
             # 直接使用 LLM 的流式接口
             async for chunk in self.llm.astream(messages):
-                self._logger.logger.debug(f"Received chunk: {chunk}")
                 yield chunk
-                await asyncio.sleep(0)  # 确保立即输出
+                await asyncio.sleep(0)
                 
         except Exception as e:
-            self._logger.logger.error(f"Stream error: {str(e)}")
+            self._logger.error(f"Stream error: {str(e)}")
             raise
             
     @abstractmethod

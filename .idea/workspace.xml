@@ -4,10 +4,24 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="fix:移除对话请求的context参数">
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T134911.500.json" beforeDir="false" />
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat:简化roleconfig参数">
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T135019.200.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T135026.500.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T135319.500.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T135357.500.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T135801.500.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T144942.500.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T145400.500.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T145434.500.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T145520.500.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T150020.500.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/app.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/agents/base_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/base_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/agent_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/agent_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_api.http" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_api.http" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,6 +75,7 @@
     "HTTP 请求.test_api | 发送聊天消息.executor": "Run",
     "HTTP 请求.test_api | 和 Zero酱对话.executor": "Run",
     "HTTP 请求.test_api | 和 Zero酱聊天.executor": "Run",
+    "HTTP 请求.test_api | 和祁煜对话.executor": "Run",
     "HTTP 请求.test_api | 获取 Agent 信息.executor": "Run",
     "HTTP 请求.test_api | 获取 Zero酱信息.executor": "Run",
     "HTTP 请求.test_main | #1.executor": "Run",
@@ -92,6 +107,9 @@
     <configuration name="test_api | 创建 Zero酱" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="2" requestIdentifier="创建 Zero酱" runType="运行单个请求">
       <method v="2" />
     </configuration>
+    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
+      <method v="2" />
+    </configuration>
     <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
       <method v="2" />
     </configuration>
@@ -112,10 +130,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="HTTP 请求.test_api | 和祁煜对话" />
         <item itemvalue="HTTP 请求.test_api | 和 Zero酱对话" />
-        <item itemvalue="HTTP 请求.test_api | 获取 Zero酱信息" />
         <item itemvalue="HTTP 请求.test_api | 列出所有 Agents" />
         <item itemvalue="HTTP 请求.test_api | 健康检查" />
+        <item itemvalue="HTTP 请求.test_api | 获取 Zero酱信息" />
       </list>
     </recent_temporary>
   </component>
@@ -192,7 +211,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737362010122</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="feat:简化roleconfig参数">
+      <option name="closed" value="true" />
+      <created>1737364001707</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1737364001707</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -226,6 +253,7 @@
     <MESSAGE value="fix:修复豆包，deepseek无法流式输出bug" />
     <MESSAGE value="fix:完善流式返回服务" />
     <MESSAGE value="fix:移除对话请求的context参数" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix:移除对话请求的context参数" />
+    <MESSAGE value="feat:简化roleconfig参数" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat:简化roleconfig参数" />
   </component>
 </project>

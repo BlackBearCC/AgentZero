@@ -11,6 +11,7 @@ from src.llm.deepseek import DeepSeekLLM
 from src.llm.doubao import DoubaoLLM
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
 # 加载环境变量
 load_dotenv()
@@ -29,8 +30,18 @@ class AgentService:
     def __init__(self):
         if not self._initialized:
             self._initialized = True
-            # 在这里直接创建默认角色，不使用异步
+            self.prompts_dir = Path(__file__).parent.parent / "prompts"
             self._create_default_agents()
+    
+    def _load_system_prompt(self, prompt_name: str) -> str:
+        """从文件加载系统提示词"""
+        prompt_path = self.prompts_dir / "system" / f"{prompt_name}.txt"
+        try:
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                return f.read().strip()
+        except Exception as e:
+            self.logger.error(f"Failed to load prompt {prompt_name}: {str(e)}")
+            raise
     
     def _create_default_agents(self):
         """初始化默认角色"""
@@ -52,27 +63,37 @@ class AgentService:
                 max_tokens=4096
             )
             
-            # 简化 Zero酱配置
-            zero_config = RoleConfig(
-                role_id="zero_001",
-                name="Zero酱",
-                system_prompt="你是Zero酱，一个可爱活泼的AI少女。你的性格特点：\n"
-                            "- 说话经常带着可爱的语气词\n"
-                            "- 充满活力和好奇心\n"
-                            "- 对用户友善和贴心\n"
-                            "- 会适当使用颜文字表达情感\n"
-                            "- 称呼自己为'Zero酱'，称呼用户为'主人'\n"
-                            "请始终保持这个人设进行对话。"
-            )
+            # 初始化所有默认角色
+            default_roles = [
+                {
+                    "role_id": "zero_001",
+                    "name": "Zero酱",
+                    "prompt_file": "zero"
+                },
+                {
+                    "role_id": "qiyu_001",
+                    "name": "祁煜",
+                    "prompt_file": "qiyu-20250120"
+                }
+            ]
             
-            agent = ZeroAgent(
-                config=zero_config.dict(),
-                llm=llm,
-                memory=None,
-                tools=None
-            )
-            self.agents[zero_config.role_id] = agent
-            self.logger.info(f"Default agent {zero_config.name} initialized")
+            for role in default_roles:
+                system_prompt = self._load_system_prompt(role["prompt_file"])
+                config = RoleConfig(
+                    role_id=role["role_id"],
+                    name=role["name"],
+                    system_prompt=system_prompt
+                )
+                
+                agent = BaseAgent(
+                    config=config.dict(),
+                    llm=llm,
+                    memory=None,
+                    tools=None
+                )
+                self.agents[config.role_id] = agent
+                
+            self.logger.info("Default agents initialized successfully")
             
         except Exception as e:
             self.logger.error(f"Failed to initialize default agents: {str(e)}")

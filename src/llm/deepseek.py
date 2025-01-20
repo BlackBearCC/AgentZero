@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Dict
+from typing import Any, List, Optional, Dict, AsyncIterator
 from langchain_core.callbacks.manager import (
     CallbackManagerForLLMRun,
     AsyncCallbackManagerForLLMRun
@@ -7,6 +7,7 @@ from langchain_core.language_models.llms import LLM
 from langchain_core.outputs import Generation, LLMResult
 import aiohttp
 import requests
+import json
 import os
 from dotenv import load_dotenv
 
@@ -136,4 +137,65 @@ class DeepSeekLLM(LLM):
         for prompt in prompts:
             text = await self._acall(prompt, stop=stop, run_manager=run_manager, **kwargs)
             generations.append([Generation(text=text)])
-        return LLMResult(generations=generations) 
+        return LLMResult(generations=generations)
+
+    async def _astream(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """异步流式调用 DeepSeek API"""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "model": self.model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "stream": True  # 启用流式输出
+        }
+        
+        if stop:
+            data["stop"] = stop
+            
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.api_base}/chat/completions",
+                headers=headers,
+                json=data
+            ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise Exception(f"API call failed: {error_text}")
+                
+                # 处理流式响应
+                async for line in response.content:
+                    if line:
+                        # 移除 "data: " 前缀并解析 JSON
+                        line = line.decode('utf-8').strip()
+                        if line.startswith("data: "):
+                            line = line[6:]
+                        if line:
+                            try:
+                                chunk = json.loads(line)
+                                if chunk and chunk["choices"] and chunk["choices"][0]["delta"].get("content"):
+                                    content = chunk["choices"][0]["delta"]["content"]
+                                    yield content
+                            except json.JSONDecodeError:
+                                continue
+
+    async def astream(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """公开的流式接口"""
+        async for chunk in self._astream(prompt, stop, run_manager, **kwargs):
+            yield chunk 

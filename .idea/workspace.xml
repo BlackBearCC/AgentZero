@@ -133,8 +133,8 @@
         <item itemvalue="HTTP 请求.test_api | 和祁煜对话" />
         <item itemvalue="HTTP 请求.test_api | 和 Zero酱对话" />
         <item itemvalue="HTTP 请求.test_api | 列出所有 Agents" />
-        <item itemvalue="HTTP 请求.test_api | 健康检查" />
         <item itemvalue="HTTP 请求.test_api | 获取 Zero酱信息" />
+        <item itemvalue="HTTP 请求.test_api | 健康检查" />
       </list>
     </recent_temporary>
   </component>

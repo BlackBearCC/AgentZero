@@ -5,7 +5,6 @@ from fastapi import Depends
 from src.agents.base_agent import BaseAgent
 from src.agents.zero_agent import ZeroAgent
 from src.agents.role_config import RoleConfig
-from src.agents.templates.agent_templates import AgentTemplates
 from src.utils.logger import Logger
 from src.llm.deepseek import DeepSeekLLM
 from src.llm.doubao import DoubaoLLM

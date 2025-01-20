@@ -1,3 +1,0 @@
-{
-  "detail": "Error calling Doubao API: Error code: 403 - {'error': {'code': 'AccessDenied', 'message': 'The request failed because you do not have access to the requested resource. Request id: 021737097658210bc7b28f7f38e6790df714291470d9c4ab090d2', 'param': '', 'type': 'Forbidden'}}"
-}

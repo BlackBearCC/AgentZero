@@ -1,4 +1,5 @@
 from typing import Any, List, Optional, Dict, AsyncIterator
+from fastapi import requests
 from langchain_core.callbacks.manager import (
     CallbackManagerForLLMRun,
     AsyncCallbackManagerForLLMRun

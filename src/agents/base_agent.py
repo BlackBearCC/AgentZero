@@ -10,6 +10,7 @@ from langchain.schema import (
 from langchain.prompts import ChatPromptTemplate
 from src.utils.logger import Logger
 from src.llm.deepseek import DeepSeekLLM
+import asyncio
 
 class BaseAgent(ABC):
     def __init__(self, 
@@ -123,13 +124,20 @@ class BaseAgent(ABC):
                            context: Optional[Dict] = None) -> AsyncIterator[str]:
         """流式生成回复"""
         try:
-            # 构建提示模板
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", self.config.get("system_prompt", "")),
-                ("human", "{input}")
-            ])
+            # 构建消息列表
+            system_prompt = await self.load_prompt()
+            messages = [
+                {
+                    "role": "system",
+                    "content": system_prompt  # 直接使用字符串
+                },
+                {
+                    "role": "user",
+                    "content": input_text  # 直接使用字符串
+                }
+            ]
             
-            # 添加用户消息
+            # 添加用户消息到历史
             await self.update_history(HumanMessage(content=input_text))
             
             # 检查工具调用
@@ -143,21 +151,17 @@ class BaseAgent(ABC):
                     context = context or {}
                     context["tool_results"] = tool_results
             
-            # 生成流式回复
-            chain = prompt | self.llm
-            async for chunk in chain.astream({
-                "input": input_text,
-                "context": context
-            }):
-                if isinstance(chunk, str):
-                    yield chunk
-                elif hasattr(chunk, "content"):
-                    yield chunk.content
-                else:
-                    yield str(chunk)
-                    
+            self._logger.logger.debug(f"Starting stream with messages: {messages}")
+            
+            # 直接使用 LLM 的流式接口
+            async for chunk in self.llm.astream(messages):
+                self._logger.logger.debug(f"Received chunk: {chunk}")
+                yield chunk
+                await asyncio.sleep(0)  # 确保立即输出
+                
         except Exception as e:
-            raise Exception(f"Error streaming response: {str(e)}")
+            self._logger.logger.error(f"Stream error: {str(e)}")
+            raise
             
     @abstractmethod
     async def load_prompt(self):

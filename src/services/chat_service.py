@@ -2,6 +2,7 @@ from typing import Optional, Dict, Any, AsyncIterator
 from fastapi import Depends
 from src.services.agent_service import AgentService, get_agent_service
 from src.utils.logger import Logger
+import asyncio
 
 class ChatService:
     def __init__(self, agent_service: AgentService):
@@ -26,7 +27,7 @@ class ChatService:
             return response
 
         except Exception as e:
-            self.logger.logger.error(f"Error processing message: {str(e)}")
+            self.logger.error(f"Error processing message: {str(e)}")
             raise
 
     async def stream_message(
@@ -42,12 +43,18 @@ class ChatService:
             if not agent:
                 raise ValueError(f"Agent {agent_id} not found")
 
+            print(f"\nStarting stream for agent {agent_id}", flush=True)
+            response_text = ""
             # 生成流式回复
             async for chunk in agent.astream_response(message, context):
-                yield chunk
+                response_text += chunk
+                yield  chunk  # SSE 格式
+
+            print(f'\n{response_text}', flush=True)
+            print("\nStream completed", flush=True)
 
         except Exception as e:
-            self.logger.logger.error(f"Error streaming message: {str(e)}")
+            self.logger.error(f"Error streaming message: {str(e)}")
             raise
 
 # 依赖注入函数

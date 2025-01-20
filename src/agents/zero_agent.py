@@ -1,5 +1,6 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, AsyncIterator
 from src.agents.base_agent import BaseAgent
+import asyncio
 
 class ZeroAgent(BaseAgent):
     async def load_prompt(self) -> str:
@@ -33,4 +34,34 @@ class ZeroAgent(BaseAgent):
             
         except Exception as e:
             # self.logger.error(f"Error generating response: {str(e)}") 
+            raise
+
+    async def astream_response(self, 
+                           input_text: str,
+                           context: Optional[Dict] = None) -> AsyncIterator[str]:
+        """流式生成回复"""
+        try:
+            # 构建完整的提示词
+            system_prompt = await self.load_prompt()
+            messages = [
+                {
+                    "role": "system",
+                    "content": system_prompt  # 直接使用字符串
+                },
+                {
+                    "role": "user",
+                    "content": input_text  # 直接使用字符串
+                }
+            ]
+            
+            # self._logger.logger.debug(f"ZeroAgent streaming with messages: {messages}")
+            
+            # 直接使用 LLM 的流式接口
+            async for chunk in self.llm.astream(messages):
+                # self._logger.logger.debug(f"ZeroAgent chunk: {chunk}")
+                yield chunk
+
+                
+        except Exception as e:
+            self._logger.logger.error(f"ZeroAgent stream error: {str(e)}")
             raise

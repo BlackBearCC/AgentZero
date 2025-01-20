@@ -8,7 +8,7 @@ from src.agents.role_config import RoleConfig
 from src.agents.templates.agent_templates import AgentTemplates
 from src.utils.logger import Logger
 from src.llm.deepseek import DeepSeekLLM
-from src.llm.doubao import DoubaoChatModel
+from src.llm.doubao import DoubaoLLM
 import os
 from dotenv import load_dotenv
 
@@ -46,16 +46,14 @@ class AgentService:
             #     temperature=0.7,
             #     api_key=deepseek_api_key
             # )
-            llm = DoubaoChatModel(
+            llm = DoubaoLLM(
+                model_name="ep-20241113173739-b6v4g",
                 temperature=0.7,
                 max_tokens=4096
             )
+            
             # 创建 Zero酱
             zero_config = AgentTemplates.get_zero_agent()
-            # 添加 DeepSeek 配置
-            # zero_config.model_name = "deepseek-chat"
-            # zero_config.deepseek_api_key = deepseek_api_key
-            
             agent = ZeroAgent(
                 config=zero_config.dict(),
                 llm=llm,
@@ -63,7 +61,8 @@ class AgentService:
                 tools=None
             )
             self.agents[zero_config.role_id] = agent
-            self.logger.info(f"Default agent {zero_config.name} initialized")
+            self.logger.info(f"Default agent {zero_config.name} initialized with DoubaoLLM")
+            
         except Exception as e:
             self.logger.error(f"Failed to initialize default agents: {str(e)}")
             raise

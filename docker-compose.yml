@@ -6,6 +6,17 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - ENV=dev  # 改成dev环境
+      - ENV=dev
+      - LOG_LEVEL=DEBUG
+      - PYTHONUNBUFFERED=1  # 确保 Python 输出不被缓存
+      - PYTHONIOENCODING=UTF-8  # 确保正确处理中文
+      - FORCE_COLOR=1  # 启用终端颜色
+    tty: true  # 分配伪终端
+    stdin_open: true  # 保持标准输入开启
     volumes:
-      - .:/app 
+      - .:/app
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3" 

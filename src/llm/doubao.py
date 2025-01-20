@@ -123,12 +123,27 @@ class DoubaoLLM(LLM):
             "Content-Type": "application/json"
         }
         
+        # 如果输入是消息列表，直接使用；否则构造消息
+        if isinstance(prompt, list):
+            messages = [
+                {
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")  # 直接使用字符串
+                }
+                for msg in prompt
+            ]
+        else:
+            messages = [{
+                "role": "user",
+                "content": prompt  # 直接使用字符串
+            }]
+        
         data = {
             "model": self.model_name,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
-            "stream": True  # 启用流式输出
+            "stream": True
         }
         
         if stop:
@@ -147,7 +162,6 @@ class DoubaoLLM(LLM):
                 # 处理流式响应
                 async for line in response.content:
                     if line:
-                        # 移除 "data: " 前缀并解析 JSON
                         line = line.decode('utf-8').strip()
                         if line.startswith("data: "):
                             line = line[6:]

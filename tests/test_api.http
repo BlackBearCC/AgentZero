@@ -36,7 +36,7 @@ GET http://localhost:8000/api/v1/agents/zero_001
 Accept: application/json
 
 ### 和 Zero酱对话
-POST http://localhost:8000/api/v1/chat/zero_001
+POST http://localhost:8000/api/v1/chat/zero_001/stream
 Content-Type: application/json
 
 {

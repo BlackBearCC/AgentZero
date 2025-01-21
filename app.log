@@ -438,3 +438,22 @@
 2025-01-20 09:35:19,281 - ai-chat - INFO - Default agents initialized successfully
 2025-01-20 09:35:43,815 - ai-chat - ERROR - Stream error: API call failed: {"error":{"code":"ModelAccountTpmRateLimitExceeded","message":"TPM (Tokens Per Minute) limit of the model is exceeded Request id: 021737365744924945ada8e478a29a2419a74b62ea111103458de","param":"","type":"TooManyRequests"}}
 2025-01-20 09:35:43,816 - ai-chat - ERROR - Error streaming message: API call failed: {"error":{"code":"ModelAccountTpmRateLimitExceeded","message":"TPM (Tokens Per Minute) limit of the model is exceeded Request id: 021737365744924945ada8e478a29a2419a74b62ea111103458de","param":"","type":"TooManyRequests"}}
+2025-01-20 09:40:49,865 - ai-chat - INFO - Default agents initialized successfully
+2025-01-20 09:46:53,172 - ai-chat - INFO - Default agents initialized successfully
+2025-01-20 09:47:30,778 - ai-chat - INFO - Default agents initialized successfully
+2025-01-20 09:50:22,381 - ai-chat - INFO - Default agents initialized successfully
+2025-01-20 09:51:39,543 - ai-chat - INFO - Default agents initialized successfully
+2025-01-20 09:54:02,705 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 05:50:40,310 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 06:00:37,021 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 06:01:11,645 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 06:04:46,867 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 06:10:14,055 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 06:10:14,100 - ai-chat - ERROR - ZeroAgent stream error: object async_generator can't be used in 'await' expression
+2025-01-21 06:10:14,101 - ai-chat - ERROR - Error streaming message: object async_generator can't be used in 'await' expression
+2025-01-21 06:10:16,622 - ai-chat - ERROR - ZeroAgent stream error: object async_generator can't be used in 'await' expression
+2025-01-21 06:10:16,622 - ai-chat - ERROR - Error streaming message: object async_generator can't be used in 'await' expression
+2025-01-21 06:12:37,212 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 06:15:11,895 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 06:29:08,841 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 06:31:57,905 - ai-chat - INFO - Default agents initialized successfully

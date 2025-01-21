@@ -1,5 +1,368 @@
 POST http://localhost:8000/api/v1/chat/qiyu_001/stream
 Content-Type: application/json
+Content-Length: 47
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+GET http://localhost:8000/api/v1/agents/zero_001
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-21T141239-2.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/zero_001/stream
+Content-Type: application/json
+Content-Length: 49
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，请做个自我介绍"
+}
+
+###
+
+GET http://localhost:8000/api/v1/agents
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-21T141239-1.200.json
+
+###
+
+GET http://localhost:8000
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-21T141239.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+GET http://localhost:8000/api/v1/agents/zero_001
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-21T140453-2.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/zero_001/stream
+Content-Type: application/json
+Content-Length: 49
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，请做个自我介绍"
+}
+
+###
+
+GET http://localhost:8000/api/v1/agents
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-21T140453-1.200.json
+
+###
+
+GET http://localhost:8000
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-21T140453.200.json
+
+###
+
+GET http://localhost:8000/api/v1/agents/zero_001
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-21T140114.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/zero_001/stream
+Content-Type: application/json
+Content-Length: 49
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，请做个自我介绍"
+}
+
+###
+
+GET http://localhost:8000/api/v1/agents
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-21T140113-1.200.json
+
+###
+
+GET http://localhost:8000
+Accept: application/json
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+content-length: 0
+
+<> 2025-01-21T140113.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 46
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，你怎么称呼我"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
+Content-Length: 37
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "你好，我是谁"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+Content-Type: application/json
 Content-Length: 37
 User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
@@ -225,410 +588,6 @@ Accept-Encoding: br, deflate, gzip, x-gzip
 content-length: 0
 
 <> 2025-01-20T170106.200.json
-
-###
-
-GET http://localhost:8000/api/v1/agents/zero_001
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-20T170104.200.json
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 49
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 49
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍"
-}
-
-<> 2025-01-20T162434.500.txt
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-<> 2025-01-20T155735.200.json
-
-###
-
-GET http://localhost:8000/api/v1/agents/zero_001
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-20T155721.200.json
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-<> 2025-01-20T102620.200.json
-
-###
-
-GET http://localhost:8000/api/v1/agents/zero_001
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-20T102605.200.json
-
-###
-
-GET http://localhost:8000/api/v1/agents/zero_001
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-17T175308.200.json
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001
-Content-Type: application/json
-Content-Length: 66
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍",
-  "context": {}
-}
-
-###
-
-GET http://localhost:8000/api/v1/agents
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-17T175300-1.200.json
 
 ###
 

@@ -1,7 +1,5 @@
 from typing import Dict, Optional
 from fastapi import Depends
-
-
 from src.agents.base_agent import BaseAgent
 from src.agents.zero_agent import ZeroAgent
 from src.agents.role_config import RoleConfig
@@ -72,25 +70,33 @@ class AgentService:
                 {
                     "role_id": "qiyu_001",
                     "name": "祁煜",
-                    "prompt_file": "qiyu-20250120"
+                    "prompt_file": "qiyu-20250120",
+                    "variables": {
+                        "user": "爸爸",
+                        "scene": "在画廊里",
+                        "examples": "示例对话1\n示例对话2"
+                    }
                 }
             ]
             
             for role in default_roles:
                 system_prompt = self._load_system_prompt(role["prompt_file"])
-                config = RoleConfig(
-                    role_id=role["role_id"],
-                    name=role["name"],
-                    system_prompt=system_prompt
-                )
                 
-                agent = BaseAgent(
-                    config=config.dict(),
+                # 创建配置对象
+                config = {
+                    "role_id": role["role_id"],
+                    "name": role["name"],
+                    "system_prompt": system_prompt,
+                    "variables": role.get("variables", {})  # 确保变量被正确传递
+                }
+                
+                agent = ZeroAgent(
+                    config=config,  # 直接传递字典，而不是 RoleConfig.dict()
                     llm=llm,
                     memory=None,
                     tools=None
                 )
-                self.agents[config.role_id] = agent
+                self.agents[role["role_id"]] = agent
                 
             self.logger.info("Default agents initialized successfully")
             
@@ -101,7 +107,7 @@ class AgentService:
     async def create_agent(self, config: RoleConfig) -> str:
         """创建新的 Agent 实例"""
         try:
-            agent = BaseAgent(
+            agent = ZeroAgent(
                 config=config.dict(),
                 llm=None,
                 memory=None,

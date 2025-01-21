@@ -20,7 +20,15 @@ class BaseAgent(ABC):
                  llm=None,
                  memory=None,
                  tools=None):
-        """初始化基础组件"""
+        """
+        初始化基础组件
+
+        参数:
+        - config: 一个字典，包含配置信息，如名称、角色ID和变量等
+        - llm: 语言模型实例，默认为None
+        - memory: 存储记忆的实例，默认为None
+        - tools: 一个工具列表，默认为空列表
+        """
         self.config = config
         self.name = config.get("name", "Assistant")
         self.role_id = config.get("role_id")

@@ -9,6 +9,15 @@ from langchain.schema import (
 
 class ZeroAgent(BaseAgent):
     def __init__(self, config: Dict[str, Any], llm=None, memory=None, tools=None):
+        """
+        初始化函数，用于设置配置和系统提示词。
+        
+        参数:
+        - config: 包含系统配置的字典。
+        - llm: 语言模型实例，默认为None。
+        - memory: 存储记忆的实例，默认为None。
+        - tools: 可用工具的列表，默认为None。
+        """
         super().__init__(config, llm, memory, tools)
         # 初始化系统提示词
         if config.get("system_prompt"):

@@ -72,7 +72,7 @@ class AgentService:
                     "name": "祁煜",
                     "prompt_file": "qiyu-20250120",
                     "variables": {
-                        "user": "爸爸",
+                        "user": "琦琦",
                         "scene": "在画廊里",
                         "examples": "示例对话1\n示例对话2"
                     }

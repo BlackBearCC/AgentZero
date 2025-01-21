@@ -58,26 +58,37 @@ class ZeroAgent(BaseAgent):
     async def generate_response(self, input_text: str) -> str:
         """生成回复"""
         try:
-            # 先更新提示词
-            await self.update_prompt()
-            
-            # 添加用户消息
-            self.messages.append(HumanMessage(content=input_text))
+            # 获取最近的对话历史
+            recent_messages = await self.memory.get_recent_messages()
             
             # 构建消息列表
             messages = [
                 {
                     "role": "system",
                     "content": self.config["system_prompt"]
-                },
-                {
-                    "role": "user", 
-                    "content": input_text
                 }
             ]
             
+            # 添加对话历史
+            for msg in recent_messages:
+                messages.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+            
+            # 添加当前用户输入
+            messages.append({
+                "role": "user",
+                "content": input_text
+            })
+            
             # 生成回复
             response = await self.llm.agenerate(messages)
+            
+            # 更新对话历史
+            await self.memory.add_message("user", input_text)
+            await self.memory.add_message("assistant", response)
+            
             return response
             
         except Exception as e:
@@ -87,27 +98,40 @@ class ZeroAgent(BaseAgent):
     async def astream_response(self, input_text: str) -> AsyncIterator[str]:
         """流式生成回复"""
         try:
-            # 先更新提示词
-            await self.update_prompt()
-            
-            # 添加用户消息到历史
-            self.messages.append(HumanMessage(content=input_text))
+            # 获取最近的对话历史
+            recent_messages = await self.memory.get_recent_messages()
             
             # 构建消息列表
             messages = [
                 {
                     "role": "system",
                     "content": self.config["system_prompt"]
-                },
-                {
-                    "role": "user",
-                    "content": input_text
                 }
             ]
             
-            # 直接使用 LLM 的流式接口
+            # 添加对话历史
+            for msg in recent_messages:
+                messages.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+            
+            # 添加当前用户输入
+            messages.append({
+                "role": "user",
+                "content": input_text
+            })
+
+            print(messages)
+            # 流式生成回复
+            response = ""
             async for chunk in self.llm.astream(messages):
+                response += chunk
                 yield chunk
+                
+            # 更新对话历史
+            await self.memory.add_message("user", input_text)
+            await self.memory.add_message("assistant", response)
                 
         except Exception as e:
             self._logger.error(f"ZeroAgent stream error: {str(e)}")

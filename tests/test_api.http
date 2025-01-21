@@ -57,7 +57,7 @@ POST http://localhost:8000/api/v1/chat/qiyu_001/stream
 Content-Type: application/json
 
 {
-  "message": "你好，你怎么称呼我"
+  "message": "你叫我什么"
 }
 
 

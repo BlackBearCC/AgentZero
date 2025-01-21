@@ -8,9 +8,39 @@ from langchain.schema import (
 )
 
 class ZeroAgent(BaseAgent):
+    def __init__(self, config: Dict[str, Any], llm=None, memory=None, tools=None):
+        super().__init__(config, llm, memory, tools)
+        # 初始化系统提示词
+        if config.get("system_prompt"):
+            processed_prompt = self._process_template(config["system_prompt"])
+            self.messages.append(SystemMessage(content=processed_prompt))
+            self.config["system_prompt"] = processed_prompt
+
     async def load_prompt(self) -> str:
         """加载角色提示词"""
         return self.config.get("system_prompt", "")
+
+    async def update_prompt(self, **kwargs) -> str:
+        """更新角色提示词和变量"""
+        if kwargs:
+            if "system_prompt" in kwargs:
+                self.config["system_prompt"] = kwargs["system_prompt"]
+            
+            if "variables" in kwargs:
+                self.variables.update(kwargs["variables"])
+        
+        # 处理模板
+        processed_prompt = self._process_template(self.config["system_prompt"])
+        self.config["system_prompt"] = processed_prompt
+        
+        # 更新系统消息
+        for i, msg in enumerate(self.messages):
+            if isinstance(msg, SystemMessage):
+                self.messages[i] = SystemMessage(content=processed_prompt)
+                break
+
+        print(f"[ZeroAgent] Updated prompt: {processed_prompt}")  
+        return processed_prompt
 
     async def think(self, context: Dict[str, Any]) -> List[str]:
         """思考是否需要调用工具"""
@@ -19,18 +49,55 @@ class ZeroAgent(BaseAgent):
     async def generate_response(self, input_text: str) -> str:
         """生成回复"""
         try:
-            # 使用父类的 generate_response 方法
-            return  super().generate_response(input_text)
+            # 先更新提示词
+            await self.update_prompt()
+            
+            # 添加用户消息
+            self.messages.append(HumanMessage(content=input_text))
+            
+            # 构建消息列表
+            messages = [
+                {
+                    "role": "system",
+                    "content": self.config["system_prompt"]
+                },
+                {
+                    "role": "user", 
+                    "content": input_text
+                }
+            ]
+            
+            # 生成回复
+            response = await self.llm.agenerate(messages)
+            return response
             
         except Exception as e:
             self._logger.error(f"Error generating response: {str(e)}")
             raise
-
+            
     async def astream_response(self, input_text: str) -> AsyncIterator[str]:
         """流式生成回复"""
         try:
-            # 使用父类的 astream_response 方法
-            async for chunk in super().astream_response(input_text):
+            # 先更新提示词
+            await self.update_prompt()
+            
+            # 添加用户消息到历史
+            self.messages.append(HumanMessage(content=input_text))
+            
+            # 构建消息列表
+            messages = [
+                {
+                    "role": "system",
+                    "content": self.config["system_prompt"]
+                },
+                {
+                    "role": "user",
+                    "content": input_text
+                }
+            ]
+            
+            # 直接使用 LLM 的流式接口
+            async for chunk in self.llm.astream(messages):
                 yield chunk
                 
         except Exception as e:

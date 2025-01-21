@@ -4,23 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat:移除历史配置文件">
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T175300-1.200.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-17T175308.200.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-20T102605.200.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-20T102620.200.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-20T155721.200.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-20T155735.200.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-20T162434.500.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-20T170104.200.json" beforeDir="false" />
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat:添加占位符替换功能">
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-20T170106.200.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2025-01-20T170558.200.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/app.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/agents/base_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/base_agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/agents/zero_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/zero_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/prompts/system/qiyu-20250120.txt" beforeDir="false" afterPath="$PROJECT_DIR$/src/prompts/system/qiyu-20250120.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/agent_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/agent_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_api.http" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_api.http" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -234,7 +224,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737366104351</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="feat:添加占位符替换功能">
+      <option name="closed" value="true" />
+      <created>1737441139237</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1737441139237</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -271,6 +269,7 @@
     <MESSAGE value="feat:简化roleconfig参数" />
     <MESSAGE value="feat:通过配置文件创建agent实例" />
     <MESSAGE value="feat:移除历史配置文件" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat:移除历史配置文件" />
+    <MESSAGE value="feat:添加占位符替换功能" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat:添加占位符替换功能" />
   </component>
 </project>

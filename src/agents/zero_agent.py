@@ -59,7 +59,7 @@ class ZeroAgent(BaseAgent):
         """生成回复"""
         try:
             # 获取最近的对话历史
-            recent_messages = await self.memory.get_recent_messages()
+            recent_messages = await self.memory.get_recent_messages(limit=20)
             
             # 构建消息列表
             messages = [
@@ -82,6 +82,12 @@ class ZeroAgent(BaseAgent):
                 "content": input_text
             })
             
+            # 打印消息列表，每条消息单独一行
+            print("\n当前对话上下文:")
+            for msg in messages:
+                print(f"\n{msg['role']}: {msg['content']}")
+            print("\n" + "="*50 + "\n")  # 分隔线
+            
             # 生成回复
             response = await self.llm.agenerate(messages)
             
@@ -99,7 +105,7 @@ class ZeroAgent(BaseAgent):
         """流式生成回复"""
         try:
             # 获取最近的对话历史
-            recent_messages = await self.memory.get_recent_messages()
+            recent_messages = await self.memory.get_recent_messages(limit=20)
             
             # 构建消息列表
             messages = [
@@ -122,7 +128,12 @@ class ZeroAgent(BaseAgent):
                 "content": input_text
             })
 
-            print(messages)
+            # 打印消息列表，每条消息单独一行
+            print("\n当前对话上下文:")
+            for msg in messages:
+                print(f"\n{msg['role']}: {msg['content']}")
+            print("\n" + "="*50 + "\n")  # 分隔线
+
             # 流式生成回复
             response = ""
             async for chunk in self.llm.astream(messages):

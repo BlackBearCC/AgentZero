@@ -58,12 +58,46 @@ class ZeroAgent(BaseAgent):
     async def _build_messages(self, input_text: str) -> List[Dict[str, str]]:
         """构建消息列表"""
         recent_messages = await self.memory.get_recent_messages(limit=20)
-                        # 获取最新对话概要
+        
+        # 获取最新对话概要
         summary = await self.memory.get_summary()
         
-        # 更新提示词中的概要
+        # 查询相关实体记忆
+        entity_memories = await self.memory.query_entity_memory(input_text)
+
+        entity_context = ""
+        if entity_memories and isinstance(entity_memories, dict):
+            # 处理记忆事件
+            if 'memory_events' in entity_memories:
+                entity_context += "历史事件：\n"
+                for event in entity_memories['memory_events']:
+                    update_time = event.get('updatetime', '')
+                    description = event.get('description', '')
+                    deepinsight = event.get('deepinsight', '')
+                    entity_context += f"- {update_time}：{description}"
+                    if deepinsight:
+                        entity_context += f" ({deepinsight})"
+                    entity_context += "\n"
+            
+            # 处理记忆实体        
+            if 'memory_entities' in entity_memories:
+                if entity_memories['memory_entities']:
+                    entity_context += "\n相关记忆：\n"
+                    for entity in entity_memories['memory_entities']:
+                        # 提取关键信息
+                        description = entity.get('description', '')
+                        update_time = entity.get('updatetime', '').split('T')[0]  # 只保留日期部分
+                        
+                        if description:
+                            entity_context += f"- {update_time} {description}"
+                            entity_context += "\n"
+                else:
+                    entity_context += "- 无\n"
+        # 更新提示词中的概要和实体记忆
         sys_prompt = self.config["system_prompt"]
         sys_prompt = sys_prompt.replace("{{chat_summary}}", summary or "无")
+        sys_prompt = sys_prompt.replace("{{entity_memory}}", entity_context or "无")
+        
         messages = [
             {
                 "role": "system",

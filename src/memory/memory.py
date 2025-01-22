@@ -3,6 +3,7 @@ from src.types.message import Message
 from src.utils.logger import Logger
 import json
 from datetime import datetime
+import requests
 
 class Memory:
     def __init__(self, llm=None, max_history: int = 20, min_recent: int = 5):
@@ -12,6 +13,8 @@ class Memory:
         self.min_recent = min_recent
         self.llm = llm
         self._logger = Logger()
+        self.entity_api_url = "http://192.168.52.114:8014/query"
+        self.entity_api_headers = {"Content-Type": "application/json"}
         
     async def add_message(self, role: str, content: str):
         """添加新消息并在需要时生成概要"""
@@ -85,7 +88,7 @@ class Memory:
                 except json.JSONDecodeError:
                     summary = response
 
-                summary = summary.replace("USER", "琦琦").replace("AI", "祁煜")
+                summary = summary.replace("USER", "木木").replace("AI", "祁煜")
                 self.summary = summary
                       
                 # 更新历史记录
@@ -107,7 +110,51 @@ class Memory:
         """获取最近的消息"""
         return self.chat_history[-limit:]
         
-    async def query_entity_memory(self, query: str) -> List[Dict[str, Any]]:
-        """查询实体记忆"""
-        # TODO: 实现 RAG 检索逻辑
+    async def query_entity_memory(self, query: str, limit: int = 5) -> Optional[List[Dict[str, Any]]]:
+        """查询实体记忆
+        
+        Args:
+            query: 查询文本
+            limit: 返回结果数量限制
+            
+        Returns:
+            List[Dict]: 实体记忆列表，每个实体包含相关信息
+            None: 查询失败时返回
+        """
+        try:
+            response = requests.post(
+                url=self.entity_api_url,
+                headers=self.entity_api_headers,
+                json={"query": query, "limit": limit}
+            )
+            response.raise_for_status()
+            return response.json()
+            
+        except Exception as e:
+            self._logger.error(f"查询实体记忆失败: {str(e)}")
+            return None
+            
+    async def add_entity_memory(self, entity_data: Dict[str, Any]) -> bool:
+        """添加实体记忆（预留接口）
+        
+        Args:
+            entity_data: 实体数据
+            
+        Returns:
+            bool: 是否添加成功
+        """
+        # TODO: 实现实体记忆存储逻辑
+        pass
+        
+    async def update_entity_memory(self, entity_id: str, entity_data: Dict[str, Any]) -> bool:
+        """更新实体记忆（预留接口）
+        
+        Args:
+            entity_id: 实体ID
+            entity_data: 更新的实体数据
+            
+        Returns:
+            bool: 是否更新成功
+        """
+        # TODO: 实现实体记忆更新逻辑
         pass 

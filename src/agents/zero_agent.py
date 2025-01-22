@@ -58,11 +58,16 @@ class ZeroAgent(BaseAgent):
     async def _build_messages(self, input_text: str) -> List[Dict[str, str]]:
         """构建消息列表"""
         recent_messages = await self.memory.get_recent_messages(limit=20)
+                        # 获取最新对话概要
+        summary = await self.memory.get_summary()
         
+        # 更新提示词中的概要
+        sys_prompt = self.config["system_prompt"]
+        sys_prompt = sys_prompt.replace("{{chat_summary}}", summary or "无")
         messages = [
             {
                 "role": "system",
-                "content": self.config["system_prompt"]
+                "content": sys_prompt
             }
         ]
         

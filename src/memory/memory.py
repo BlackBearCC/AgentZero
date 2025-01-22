@@ -100,6 +100,10 @@ class Memory:
     async def get_full_memory(self) -> Tuple[str, List[Message]]:
         """获取完整上下文（概要 + 最近消息）"""
         return self.summary, self.chat_history
+    
+    async def get_summary(self) -> str:
+        """获取对话概要"""
+        return self.summary
         
     async def get_recent_messages(self, limit: int = 10) -> List[Message]:
         """获取最近的消息"""

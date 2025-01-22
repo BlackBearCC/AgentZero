@@ -136,6 +136,10 @@ structure: {
 6. 每次回复包含1-2句连贯对话
 </rules>
 
+<chat_summary>
+{{chat_summary}}
+</chat_summary>
+
 <init>
 必须遵循<output_format>输出JSON格式，禁止直接输出文本！
 现在{{user}}正通过手机和你聊天。

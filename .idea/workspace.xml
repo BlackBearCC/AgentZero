@@ -53,31 +53,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "HTTP 请求.test_api | 健康检查.executor": "Run",
-    "HTTP 请求.test_api | 列出所有 Agents.executor": "Run",
-    "HTTP 请求.test_api | 创建 Agent.executor": "Run",
-    "HTTP 请求.test_api | 创建 Zero酱.executor": "Run",
-    "HTTP 请求.test_api | 发送聊天消息.executor": "Run",
-    "HTTP 请求.test_api | 和 Zero酱对话.executor": "Run",
-    "HTTP 请求.test_api | 和 Zero酱聊天.executor": "Run",
-    "HTTP 请求.test_api | 和祁煜对话.executor": "Run",
-    "HTTP 请求.test_api | 获取 Agent 信息.executor": "Run",
-    "HTTP 请求.test_api | 获取 Zero酱信息.executor": "Run",
-    "HTTP 请求.test_main | #1.executor": "Run",
-    "HTTP 请求.test_main | #2.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;HTTP 请求.test_api | 健康检查.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP 请求.test_api | 列出所有 Agents.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP 请求.test_api | 创建 Agent.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP 请求.test_api | 创建 Zero酱.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP 请求.test_api | 发送聊天消息.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP 请求.test_api | 和 Zero酱对话.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP 请求.test_api | 和 Zero酱聊天.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP 请求.test_api | 和祁煜对话.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP 请求.test_api | 获取 Agent 信息.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP 请求.test_api | 获取 Zero酱信息.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP 请求.test_main | #1.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP 请求.test_main | #2.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="FastAPI.AgentZero">
     <configuration name="test_api | 列出所有 Agents" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="3" requestIdentifier="列出所有 Agents" runType="运行单个请求">
       <method v="2" />
@@ -94,10 +94,10 @@
     <configuration name="test_api | 创建 Zero酱" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="2" requestIdentifier="创建 Zero酱" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
+    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
+    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
       <method v="2" />
     </configuration>
     <configuration name="AgentZero" type="Python.FastAPI">
@@ -118,10 +118,8 @@
     <recent_temporary>
       <list>
         <item itemvalue="HTTP 请求.test_api | 和祁煜对话" />
-        <item itemvalue="HTTP 请求.test_api | 获取 Zero酱信息" />
         <item itemvalue="HTTP 请求.test_api | 和 Zero酱对话" />
         <item itemvalue="HTTP 请求.test_api | 列出所有 Agents" />
-        <item itemvalue="HTTP 请求.test_api | 健康检查" />
       </list>
     </recent_temporary>
   </component>

@@ -14,6 +14,8 @@ import json
 from string import Template
 from abc import ABC, abstractmethod
 from datetime import datetime
+from src.utils.redis_client import RedisClient
+import uuid
 
 class BaseAgent(ABC):
     def __init__(self, 
@@ -32,20 +34,16 @@ class BaseAgent(ABC):
             temperature=0.7,
             max_tokens=4096
         )
-
-        # 将 llm 传给 Memory
-        # self.memory = memory 
-        self.memory =  Memory(memory_llm)
+        
+        self.memory = Memory(memory_llm)
         self.tools = tools or []
         self._logger = Logger()
         self.messages: List[BaseMessage] = []
+        self.redis = RedisClient()
+        if not self.redis.test_connection():
+            raise Exception("Redis connection failed!")
+        self.chat_id = str(uuid.uuid4())
         
-        # 初始化系统提示词
-        if config.get("system_prompt"):
-            processed_prompt = self._process_template(config["system_prompt"])
-            self.messages.append(SystemMessage(content=processed_prompt))
-            self.config["system_prompt"] = processed_prompt
-    
     def _process_template(self, template: str) -> str:
         """处理提示词模板，替换变量"""
         try:
@@ -55,7 +53,7 @@ class BaseAgent(ABC):
         except Exception as e:
             self._logger.error(f"Error processing template: {str(e)}")
             return template
-    
+        
     @abstractmethod
     async def load_prompt(self) -> str:
         """加载角色提示词"""
@@ -80,3 +78,4 @@ class BaseAgent(ABC):
     async def astream_response(self, input_text: str) -> AsyncIterator[str]:
         """流式生成回复"""
         pass
+

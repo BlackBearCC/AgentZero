@@ -6,6 +6,8 @@ from langchain.schema import (
     AIMessage,
     BaseMessage
 )
+import json
+from datetime import datetime
 
 class ZeroAgent(BaseAgent):
     def __init__(self, config: Dict[str, Any], llm=None, memory_llm=None, tools=None):
@@ -55,16 +57,22 @@ class ZeroAgent(BaseAgent):
         """思考是否需要调用工具"""
         return []  # Zero酱暂时不使用工具
 
-    async def _build_messages(self, input_text: str) -> List[Dict[str, str]]:
-        """构建消息列表"""
+    async def _build_context(self, input_text: str) -> Dict[str, Any]:
+        """构建上下文信息
+        
+        Returns:
+            Dict 包含:
+            - messages: 消息列表
+            - summary: 对话概要
+            - entity_memory: 实体记忆
+            - history: 历史记录
+        """
+        # 获取最新对话概要和历史消息
         recent_messages = await self.memory.get_recent_messages(limit=20)
-        
-        # 获取最新对话概要
         summary = await self.memory.get_summary()
-        
-        # 查询相关实体记忆
         entity_memories = await self.memory.query_entity_memory(input_text)
-
+        
+        # 处理实体记忆
         entity_context = ""
         if entity_memories and isinstance(entity_memories, dict):
             # 处理记忆事件
@@ -84,56 +92,69 @@ class ZeroAgent(BaseAgent):
                 if entity_memories['memory_entities']:
                     entity_context += "\n相关记忆：\n"
                     for entity in entity_memories['memory_entities']:
-                        # 提取关键信息
                         description = entity.get('description', '')
-                        update_time = entity.get('updatetime', '').split('T')[0]  # 只保留日期部分
-                        
+                        update_time = entity.get('updatetime', '').split('T')[0]
                         if description:
-                            entity_context += f"- {update_time} {description}"
-                            entity_context += "\n"
+                            entity_context += f"- {update_time} {description}\n"
                 else:
                     entity_context += "- 无\n"
-        # 更新提示词中的概要和实体记忆
+                    
+        # 更新提示词
         sys_prompt = self.config["system_prompt"]
         sys_prompt = sys_prompt.replace("{{chat_summary}}", summary or "无")
         sys_prompt = sys_prompt.replace("{{entity_memory}}", entity_context or "无")
         
-        messages = [
-            {
-                "role": "system",
-                "content": sys_prompt
-            }
-        ]
-        
+        # 构建消息列表
+        messages = [{"role": "system", "content": sys_prompt}]
         for msg in recent_messages:
             messages.append({
                 "role": msg.role,
                 "content": msg.content
             })
-        
         messages.append({
             "role": "user",
             "content": input_text
         })
         
-        # 打印调试信息
-        print("\n当前对话上下文:")
-        for msg in messages:
-            print(f"\n{msg['role']}: {msg['content']}")
-        print("\n" + "="*50 + "\n")
+        return {
+            "messages": messages,
+            "summary": summary,
+            "entity_memory": entity_memories,
+            "history": messages,
+            "prompt": sys_prompt
+        }
+
+    async def _save_interaction(self, 
+                              input_text: str,
+                              output_text: str,
+                              context: Dict[str, Any]) -> None:
+        """保存交互记录"""
+        data = {
+            "input": input_text,
+            "output": output_text,
+            "summary": context["summary"],
+            "entity_memory": context["entity_memory"],
+            "history": context["history"],
+            "prompt": context["prompt"],
+            "timestamp": datetime.now().isoformat()
+        }
         
-        return messages
+        await self.redis.save_chat_record(
+            role_id=self.role_id,
+            chat_id=self.chat_id,
+            data=data
+        )
+        
+        # 更新对话历史
+        await self.memory.add_message("user", input_text)
+        await self.memory.add_message("assistant", output_text)
 
     async def generate_response(self, input_text: str) -> str:
         """生成回复"""
         try:
-            messages = await self._build_messages(input_text)
-            response = await self.llm.agenerate(messages)
-            
-            # 更新对话历史
-            await self.memory.add_message("user", input_text)
-            await self.memory.add_message("assistant", response)
-            
+            context = await self._build_context(input_text)
+            response = await self.llm.agenerate(context["messages"])
+            await self._save_interaction(input_text, response, context)
             return response
             
         except Exception as e:
@@ -143,13 +164,15 @@ class ZeroAgent(BaseAgent):
     async def astream_response(self, input_text: str) -> AsyncIterator[str]:
         """流式生成回复"""
         try:
-            messages = await self._build_messages(input_text)
-            
+            context = await self._build_context(input_text)
             response = ""
-            async for chunk in self.llm.astream(messages):
+            
+            async for chunk in self.llm.astream(context["messages"]):
                 response += chunk
                 yield chunk
                 
+            await self._save_interaction(input_text, response, context)
+            
             # 更新对话历史
             await self.memory.add_message("user", input_text)
             await self.memory.add_message("assistant", response)

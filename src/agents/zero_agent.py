@@ -55,40 +55,40 @@ class ZeroAgent(BaseAgent):
         """思考是否需要调用工具"""
         return []  # Zero酱暂时不使用工具
 
+    async def _build_messages(self, input_text: str) -> List[Dict[str, str]]:
+        """构建消息列表"""
+        recent_messages = await self.memory.get_recent_messages(limit=20)
+        
+        messages = [
+            {
+                "role": "system",
+                "content": self.config["system_prompt"]
+            }
+        ]
+        
+        for msg in recent_messages:
+            messages.append({
+                "role": msg.role,
+                "content": msg.content
+            })
+        
+        messages.append({
+            "role": "user",
+            "content": input_text
+        })
+        
+        # 打印调试信息
+        print("\n当前对话上下文:")
+        for msg in messages:
+            print(f"\n{msg['role']}: {msg['content']}")
+        print("\n" + "="*50 + "\n")
+        
+        return messages
+
     async def generate_response(self, input_text: str) -> str:
         """生成回复"""
         try:
-            # 获取最近的对话历史
-            recent_messages = await self.memory.get_recent_messages(limit=20)
-            
-            # 构建消息列表
-            messages = [
-                {
-                    "role": "system",
-                    "content": self.config["system_prompt"]
-                }
-            ]
-            
-            # 添加对话历史
-            for msg in recent_messages:
-                messages.append({
-                    "role": msg.role,
-                    "content": msg.content
-                })
-            
-            # 添加当前用户输入
-            messages.append({
-                "role": "user",
-                "content": input_text
-            })
-            
-            # 打印消息列表，每条消息单独一行
-            print("\n当前对话上下文:")
-            for msg in messages:
-                print(f"\n{msg['role']}: {msg['content']}")
-            print("\n" + "="*50 + "\n")  # 分隔线
-            
-            # 生成回复
+            messages = await self._build_messages(input_text)
             response = await self.llm.agenerate(messages)
             
             # 更新对话历史
@@ -104,37 +104,8 @@ class ZeroAgent(BaseAgent):
     async def astream_response(self, input_text: str) -> AsyncIterator[str]:
         """流式生成回复"""
         try:
-            # 获取最近的对话历史
-            recent_messages = await self.memory.get_recent_messages(limit=20)
+            messages = await self._build_messages(input_text)
             
-            # 构建消息列表
-            messages = [
-                {
-                    "role": "system",
-                    "content": self.config["system_prompt"]
-                }
-            ]
-            
-            # 添加对话历史
-            for msg in recent_messages:
-                messages.append({
-                    "role": msg.role,
-                    "content": msg.content
-                })
-            
-            # 添加当前用户输入
-            messages.append({
-                "role": "user",
-                "content": input_text
-            })
-
-            # 打印消息列表，每条消息单独一行
-            print("\n当前对话上下文:")
-            for msg in messages:
-                print(f"\n{msg['role']}: {msg['content']}")
-            print("\n" + "="*50 + "\n")  # 分隔线
-
-            # 流式生成回复
             response = ""
             async for chunk in self.llm.astream(messages):
                 response += chunk

@@ -14,9 +14,9 @@ import json
 from string import Template
 from abc import ABC, abstractmethod
 from datetime import datetime
-from src.utils.mysql_client import MySQLClient
-from src.utils.redis_client import RedisClient
+
 import uuid
+from src.services.db_service import DBService
 
 class BaseAgent(ABC):
     def __init__(self, 
@@ -40,12 +40,16 @@ class BaseAgent(ABC):
         self.tools = tools or []
         self._logger = Logger()
         self.messages: List[BaseMessage] = []
-        self.redis = RedisClient()
-        self.mysql = MySQLClient()
-        if not self.redis.test_connection():
-            raise Exception("Redis connection failed!")
         self.chat_id = str(uuid.uuid4())
         
+        # 移除直接初始化，改为异步获取
+        self._db = None
+        
+    async def _ensure_db(self):
+        """确保数据库服务可用"""
+        if not self._db:
+            self._db = await DBService.get_instance()
+            
     def _process_template(self, template: str) -> str:
         """处理提示词模板，替换变量"""
         try:

@@ -8,6 +8,7 @@ from langchain.schema import (
 )
 import json
 from datetime import datetime
+from src.services.db_service import DBService
 
 class ZeroAgent(BaseAgent):
     def __init__(self, config: Dict[str, Any], llm=None, memory_llm=None, tools=None):
@@ -129,6 +130,8 @@ class ZeroAgent(BaseAgent):
                               output_text: str,
                               context: Dict[str, Any]) -> None:
         """保存交互记录"""
+        await self._ensure_db()  # 确保数据库服务可用
+        
         data = {
             "input": input_text,
             "output": output_text,
@@ -139,15 +142,14 @@ class ZeroAgent(BaseAgent):
             "timestamp": datetime.now().isoformat()
         }
         
-        # 保存到Redis (用于快速访问)
-        await self.redis.save_chat_record(
+        # 使用数据库服务实例
+        await self._db.redis.save_chat_record(
             role_id=self.role_id,
             chat_id=self.chat_id,
             data=data
         )
         
-        # 保存到MySQL (用于持久化存储)
-        await self.mysql.save_chat_record(
+        await self._db.mysql.save_chat_record(
             role_id=self.role_id,
             chat_id=self.chat_id,
             data=data

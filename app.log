@@ -474,3 +474,52 @@
 2025-01-21 09:02:17,485 - ai-chat - INFO - Default agents initialized successfully
 2025-01-21 09:11:33,312 - ai-chat - INFO - Default agents initialized successfully
 2025-01-21 09:23:35,456 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 09:41:02,248 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 09:44:12,436 - ai-chat - INFO - Default agents initialized successfully
+2025-01-21 09:52:33,959 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 01:37:21,124 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 01:45:09,074 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 01:46:23,099 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 01:50:55,252 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 01:53:11,459 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 01:53:16,403 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 01:57:09,962 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 01:59:19,812 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:02:18,711 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:02:50,372 - ai-chat - ERROR - ZeroAgent stream error: object async_generator can't be used in 'await' expression
+2025-01-22 02:02:50,372 - ai-chat - ERROR - Error streaming message: object async_generator can't be used in 'await' expression
+2025-01-22 02:02:53,249 - ai-chat - ERROR - ZeroAgent stream error: object async_generator can't be used in 'await' expression
+2025-01-22 02:02:53,250 - ai-chat - ERROR - Error streaming message: object async_generator can't be used in 'await' expression
+2025-01-22 02:02:56,101 - ai-chat - ERROR - ZeroAgent stream error: object async_generator can't be used in 'await' expression
+2025-01-22 02:02:56,102 - ai-chat - ERROR - Error streaming message: object async_generator can't be used in 'await' expression
+2025-01-22 02:02:59,126 - ai-chat - ERROR - ZeroAgent stream error: object async_generator can't be used in 'await' expression
+2025-01-22 02:02:59,127 - ai-chat - ERROR - Error streaming message: object async_generator can't be used in 'await' expression
+2025-01-22 02:03:01,943 - ai-chat - ERROR - ZeroAgent stream error: object async_generator can't be used in 'await' expression
+2025-01-22 02:03:01,943 - ai-chat - ERROR - Error streaming message: object async_generator can't be used in 'await' expression
+2025-01-22 02:03:40,701 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:03:45,682 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:07:26,024 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:15:36,672 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:20:31,501 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:23:07,880 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:24:21,674 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:25:34,609 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:33:24,925 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:47:10,242 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 02:48:43,438 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 03:06:56,131 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 03:06:56,651 - ai-chat - ERROR - ZeroAgent stream error: 'DeepSeekLLM' object has no attribute 'get_recent_messages'
+2025-01-22 03:06:56,652 - ai-chat - ERROR - Error streaming message: 'DeepSeekLLM' object has no attribute 'get_recent_messages'
+2025-01-22 03:06:57,675 - ai-chat - ERROR - ZeroAgent stream error: 'DeepSeekLLM' object has no attribute 'get_recent_messages'
+2025-01-22 03:06:57,676 - ai-chat - ERROR - Error streaming message: 'DeepSeekLLM' object has no attribute 'get_recent_messages'
+2025-01-22 03:06:58,691 - ai-chat - ERROR - ZeroAgent stream error: 'DeepSeekLLM' object has no attribute 'get_recent_messages'
+2025-01-22 03:06:58,692 - ai-chat - ERROR - Error streaming message: 'DeepSeekLLM' object has no attribute 'get_recent_messages'
+2025-01-22 03:06:59,709 - ai-chat - ERROR - ZeroAgent stream error: 'DeepSeekLLM' object has no attribute 'get_recent_messages'
+2025-01-22 03:06:59,709 - ai-chat - ERROR - Error streaming message: 'DeepSeekLLM' object has no attribute 'get_recent_messages'
+2025-01-22 03:09:08,935 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 03:11:37,203 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 03:17:13,604 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 03:19:01,351 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 03:21:19,613 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 03:26:53,606 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 03:32:28,840 - ai-chat - INFO - Default agents initialized successfully

@@ -78,7 +78,17 @@ class AgentService:
                     }
                 }
             ]
+                    # 从环境变量获取 API key
+            deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+            if not deepseek_api_key:
+                raise ValueError("DEEPSEEK_API_KEY not found in environment variables")
             
+            # 使用自定义的 DeepSeekLLM
+            memery_llm = DeepSeekLLM(
+                model_name="deepseek-chat",
+                temperature=0.7,
+                api_key=deepseek_api_key
+            )            
             for role in default_roles:
                 system_prompt = self._load_system_prompt(role["prompt_file"])
                 
@@ -93,7 +103,7 @@ class AgentService:
                 agent = ZeroAgent(
                     config=config,  # 直接传递字典，而不是 RoleConfig.dict()
                     llm=llm,
-                    memory=None,
+                    memory=memery_llm,
                     tools=None
                 )
                 self.agents[role["role_id"]] = agent

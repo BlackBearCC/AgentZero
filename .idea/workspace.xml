@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="refactor(memory): 将 Memory 类独立为单独模块&#10;&#10;- 将 Memory 类从 base_agent.py 中分离，创建独立的 memory.py 文件- 新增 message.py 文件，定义 Message 数据结构&#10;- 更新 zero_agent.py，使用新的 Memory 模块&#10;- 重构 base_agent.py，移除与 Memory 相关的代码" />
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat: 添加多轮对话测试脚本和 memory 框架- 在 qiyu-20250120.txt 中添加了多轮对话示例- 在 zero_agent.py 中实现了对话历史获取和打印功能&#10;- 新增了 qiyu-20250120-def.txt 文件，定义了更详细的角色属性和对话规则&#10;- 修改了 app.log，增加了多条日志记录">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/app.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/agents/base_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/base_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/agents/zero_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/zero_agent.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -257,23 +262,7 @@
       <option name="project" value="LOCAL" />
       <updated>1737451515363</updated>
     </task>
-    <task id="LOCAL-00015" summary="feat: 添加多轮对话测试脚本和 memory 框架&#10;&#10;- 在 qiyu-20250120.txt 中添加了多轮对话示例&#10;- 在 zero_agent.py 中实现了对话历史获取和打印功能&#10;- 新增了 qiyu-20250120-def.txt 文件，定义了更详细的角色属性和对话规则&#10;- 在 base_agent.py 中实现了 Memory 类的扩展功能，包括对话概要生成和历史记录压缩">
-      <option name="closed" value="true" />
-      <created>1737517251638</created>
-      <option name="number" value="00015" />
-      <option name="presentableId" value="LOCAL-00015" />
-      <option name="project" value="LOCAL" />
-      <updated>1737517251638</updated>
-    </task>
-    <task id="LOCAL-00016" summary="refactor(memory): 将 Memory 类独立为单独模块&#10;&#10;- 将 Memory 类从 base_agent.py 中分离，创建独立的 memory.py 文件- 新增 message.py 文件，定义 Message 数据结构&#10;- 更新 zero_agent.py，使用新的 Memory 模块&#10;- 重构 base_agent.py，移除与 Memory 相关的代码">
-      <option name="closed" value="true" />
-      <created>1737524619505</created>
-      <option name="number" value="00016" />
-      <option name="presentableId" value="LOCAL-00016" />
-      <option name="project" value="LOCAL" />
-      <updated>1737524619505</updated>
-    </task>
-    <option name="localTasksCounter" value="17" />
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -315,8 +304,6 @@
     <MESSAGE value="feat:添加注释" />
     <MESSAGE value="feat:添加多轮对话测试脚本/memory框架" />
     <MESSAGE value="feat: 添加多轮对话测试脚本和 memory 框架- 在 qiyu-20250120.txt 中添加了多轮对话示例- 在 zero_agent.py 中实现了对话历史获取和打印功能&#10;- 新增了 qiyu-20250120-def.txt 文件，定义了更详细的角色属性和对话规则&#10;- 修改了 app.log，增加了多条日志记录" />
-    <MESSAGE value="feat: 添加多轮对话测试脚本和 memory 框架&#10;&#10;- 在 qiyu-20250120.txt 中添加了多轮对话示例&#10;- 在 zero_agent.py 中实现了对话历史获取和打印功能&#10;- 新增了 qiyu-20250120-def.txt 文件，定义了更详细的角色属性和对话规则&#10;- 在 base_agent.py 中实现了 Memory 类的扩展功能，包括对话概要生成和历史记录压缩" />
-    <MESSAGE value="refactor(memory): 将 Memory 类独立为单独模块&#10;&#10;- 将 Memory 类从 base_agent.py 中分离，创建独立的 memory.py 文件- 新增 message.py 文件，定义 Message 数据结构&#10;- 更新 zero_agent.py，使用新的 Memory 模块&#10;- 重构 base_agent.py，移除与 Memory 相关的代码" />
-    <option name="LAST_COMMIT_MESSAGE" value="refactor(memory): 将 Memory 类独立为单独模块&#10;&#10;- 将 Memory 类从 base_agent.py 中分离，创建独立的 memory.py 文件- 新增 message.py 文件，定义 Message 数据结构&#10;- 更新 zero_agent.py，使用新的 Memory 模块&#10;- 重构 base_agent.py，移除与 Memory 相关的代码" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: 添加多轮对话测试脚本和 memory 框架- 在 qiyu-20250120.txt 中添加了多轮对话示例- 在 zero_agent.py 中实现了对话历史获取和打印功能&#10;- 新增了 qiyu-20250120-def.txt 文件，定义了更详细的角色属性和对话规则&#10;- 修改了 app.log，增加了多条日志记录" />
   </component>
 </project>

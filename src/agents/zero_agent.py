@@ -139,7 +139,15 @@ class ZeroAgent(BaseAgent):
             "timestamp": datetime.now().isoformat()
         }
         
+        # 保存到Redis (用于快速访问)
         await self.redis.save_chat_record(
+            role_id=self.role_id,
+            chat_id=self.chat_id,
+            data=data
+        )
+        
+        # 保存到MySQL (用于持久化存储)
+        await self.mysql.save_chat_record(
             role_id=self.role_id,
             chat_id=self.chat_id,
             data=data

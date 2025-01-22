@@ -528,3 +528,89 @@
 2025-01-22 06:00:35,215 - ai-chat - INFO - Default agents initialized successfully
 2025-01-22 06:05:45,243 - ai-chat - INFO - Default agents initialized successfully
 2025-01-22 06:14:04,271 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 09:05:06,642 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 09:05:48,147 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:05:50,084 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 745
+2025-01-22 09:05:51,792 - aiomysql - DEBUG - caching sha2: Trying fast path
+2025-01-22 09:05:51,793 - aiomysql - DEBUG - caching sha2: Trying full auth...
+2025-01-22 09:05:51,793 - aiomysql - DEBUG - -----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtn2kRHJZ1zT0yxXQyQ4a
+ePLasMmckzfrvX8l322er7dXRpuzjB1ALPzFl/d1dM0yAVnrkh0iLPSElLRFbytN
+M2laqnlLvnDHHcfYareszqEFLJ6V50yUX0OSqPGNAL0s0b8b088o+RDjC2H8/vTk
+h/r8DZ3vZte3z7vUr58OBSVMh8z/eMTjGyXOvUkTPekEjHownoleZE3tI5xKY0nA
+NFuNEuiVxd6+PfaNhgSd9J47mT+CkP8QK4CFGXOtjrWLKaoBe1XhhopQJNvh2trv
+25hjOiqQlEhXubg+IbNA1vaQgsG2BoIqvOI013qBpVrRqTS0yBXMHCiqZzIkX1mU
+OwIDAQAB
+-----END PUBLIC KEY-----
+
+2025-01-22 09:05:51,803 - ai-chat - ERROR - ZeroAgent stream error: (1045, "Access denied for user 'root'@'172.19.0.4' (using password: YES)")
+2025-01-22 09:05:51,804 - ai-chat - ERROR - Error streaming message: (1045, "Access denied for user 'root'@'172.19.0.4' (using password: YES)")
+2025-01-22 09:05:52,827 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:05:54,121 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 304
+2025-01-22 09:05:56,356 - aiomysql - DEBUG - caching sha2: Trying fast path
+2025-01-22 09:05:56,357 - aiomysql - DEBUG - caching sha2: Trying full auth...
+2025-01-22 09:05:56,357 - aiomysql - DEBUG - -----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtn2kRHJZ1zT0yxXQyQ4a
+ePLasMmckzfrvX8l322er7dXRpuzjB1ALPzFl/d1dM0yAVnrkh0iLPSElLRFbytN
+M2laqnlLvnDHHcfYareszqEFLJ6V50yUX0OSqPGNAL0s0b8b088o+RDjC2H8/vTk
+h/r8DZ3vZte3z7vUr58OBSVMh8z/eMTjGyXOvUkTPekEjHownoleZE3tI5xKY0nA
+NFuNEuiVxd6+PfaNhgSd9J47mT+CkP8QK4CFGXOtjrWLKaoBe1XhhopQJNvh2trv
+25hjOiqQlEhXubg+IbNA1vaQgsG2BoIqvOI013qBpVrRqTS0yBXMHCiqZzIkX1mU
+OwIDAQAB
+-----END PUBLIC KEY-----
+
+2025-01-22 09:05:56,360 - ai-chat - ERROR - ZeroAgent stream error: (1045, "Access denied for user 'root'@'172.19.0.4' (using password: YES)")
+2025-01-22 09:05:56,360 - ai-chat - ERROR - Error streaming message: (1045, "Access denied for user 'root'@'172.19.0.4' (using password: YES)")
+2025-01-22 09:07:40,281 - ai-chat - INFO - Default agents initialized successfully
+2025-01-22 09:07:45,584 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:07:46,999 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 743
+2025-01-22 09:07:49,568 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:07:50,889 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 304
+2025-01-22 09:07:54,045 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:07:55,252 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 1891
+2025-01-22 09:07:58,248 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:08:01,155 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 4105
+2025-01-22 09:08:04,562 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:08:05,957 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 2850
+2025-01-22 09:08:10,020 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:08:12,996 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 4334
+2025-01-22 09:08:20,308 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:08:21,777 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 2710
+2025-01-22 09:08:24,947 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:08:26,366 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 720
+2025-01-22 09:08:29,512 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:08:32,608 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 4024
+2025-01-22 09:08:35,837 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:08:38,825 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 3915
+2025-01-22 09:08:48,297 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:08:51,257 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 6192
+2025-01-22 09:08:54,748 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:08:56,085 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 1527
+2025-01-22 09:08:59,338 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:09:00,688 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 2510
+2025-01-22 09:09:03,591 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:09:04,894 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 304
+2025-01-22 09:09:16,028 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:09:19,024 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 4023
+2025-01-22 09:09:22,237 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:09:23,568 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 296
+2025-01-22 09:09:26,972 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:09:28,253 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 1797
+2025-01-22 09:09:31,803 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:09:34,689 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 4528
+2025-01-22 09:09:48,045 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:09:49,288 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 743
+2025-01-22 09:09:52,149 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:09:53,489 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 1720
+2025-01-22 09:09:56,201 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:09:57,494 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 296
+2025-01-22 09:10:01,046 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:10:02,250 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 311
+2025-01-22 09:10:18,682 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:10:22,355 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 4815
+2025-01-22 09:10:25,529 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:10:26,855 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 985
+2025-01-22 09:10:30,165 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:10:31,384 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 1083
+2025-01-22 09:10:34,693 - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): 192.168.52.114:8014
+2025-01-22 09:10:35,991 - urllib3.connectionpool - DEBUG - http://192.168.52.114:8014 "POST /query HTTP/1.1" 200 305

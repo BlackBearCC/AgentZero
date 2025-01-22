@@ -7,6 +7,8 @@
     <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat: 添加多轮对话测试脚本和 memory 框架- 在 qiyu-20250120.txt 中添加了多轮对话示例- 在 zero_agent.py 中实现了对话历史获取和打印功能&#10;- 新增了 qiyu-20250120-def.txt 文件，定义了更详细的角色属性和对话规则&#10;- 修改了 app.log，增加了多条日志记录">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/app.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/agents/base_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/base_agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/agents/zero_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/zero_agent.py" afterDir="false" />
     </list>
@@ -94,10 +96,10 @@
     <configuration name="test_api | 创建 Zero酱" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="2" requestIdentifier="创建 Zero酱" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
+    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
+    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
       <method v="2" />
     </configuration>
     <configuration name="AgentZero" type="Python.FastAPI">
@@ -117,7 +119,6 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="HTTP 请求.test_api | 和祁煜对话" />
         <item itemvalue="HTTP 请求.test_api | 和 Zero酱对话" />
         <item itemvalue="HTTP 请求.test_api | 列出所有 Agents" />
       </list>

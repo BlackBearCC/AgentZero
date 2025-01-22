@@ -12,3 +12,4 @@ httpx==0.25.2
 PyYAML==6.0.1 
 cryptography
 redis==5.2.1
+aiomysql

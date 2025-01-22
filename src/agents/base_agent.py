@@ -14,6 +14,7 @@ import json
 from string import Template
 from abc import ABC, abstractmethod
 from datetime import datetime
+from src.utils.mysql_client import MySQLClient
 from src.utils.redis_client import RedisClient
 import uuid
 
@@ -40,6 +41,7 @@ class BaseAgent(ABC):
         self._logger = Logger()
         self.messages: List[BaseMessage] = []
         self.redis = RedisClient()
+        self.mysql = MySQLClient()
         if not self.redis.test_connection():
             raise Exception("Redis connection failed!")
         self.chat_id = str(uuid.uuid4())

@@ -74,7 +74,6 @@ class AgentService:
                     "variables": {
                         "user": "琦琦",
                         "scene": "在画廊里",
-                        "examples": "示例对话1\n示例对话2"
                     }
                 }
             ]
@@ -103,7 +102,7 @@ class AgentService:
                 agent = ZeroAgent(
                     config=config,  # 直接传递字典，而不是 RoleConfig.dict()
                     llm=llm,
-                    memory=memery_llm,
+                    memory_llm=memery_llm,
                     tools=None
                 )
                 self.agents[role["role_id"]] = agent

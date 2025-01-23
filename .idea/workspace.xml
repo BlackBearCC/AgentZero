@@ -4,8 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat(agent_service): 重构并添加数据库支持&#10;&#10;- 为 AgentService 类添加数据库服务属性&#10;-重构 get_instance 方法，确保单例模式正确实现&#10;- 添加 init 方法进行服务初始化&#10;- 更新 create_agent 方法，使用与默认 agents 相同的 LLM 配置- 确保每个 agent 的数据库服务正确初始化">
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="chore: 添加 .env 文件到 .gitignore&#10;&#10;- 新建 .gitignore 文件，避免环境变量配置文件被提交到仓库">
+      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/AgentZero.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/AgentZero.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3/storage_v2/_src_/schema/information_schema.FNRwLQ.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3/storage_v2/_src_/schema/information_schema.FNRwLQ.zip" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3/storage_v2/_src_/schema/sys.zb4BAA.zip" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3/storage_v2/_src_/schema/sys.zb4BAA.zip" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent_zero.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/app.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/init.sql" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/init.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/agents/zero_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/zero_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/memory/memory.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/memory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/mysql_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/mysql_client.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,31 +63,33 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;HTTP 请求.test_api | 健康检查.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP 请求.test_api | 列出所有 Agents.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP 请求.test_api | 创建 Agent.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP 请求.test_api | 创建 Zero酱.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP 请求.test_api | 发送聊天消息.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP 请求.test_api | 和 Zero酱对话.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP 请求.test_api | 和 Zero酱聊天.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP 请求.test_api | 和祁煜对话.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP 请求.test_api | 获取 Agent 信息.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP 请求.test_api | 获取 Zero酱信息.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP 请求.test_main | #1.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP 请求.test_main | #2.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "HTTP 请求.test_api | 健康检查.executor": "Run",
+    "HTTP 请求.test_api | 列出所有 Agents.executor": "Run",
+    "HTTP 请求.test_api | 创建 Agent.executor": "Run",
+    "HTTP 请求.test_api | 创建 Zero酱.executor": "Run",
+    "HTTP 请求.test_api | 发送聊天消息.executor": "Run",
+    "HTTP 请求.test_api | 和 Zero酱对话.executor": "Run",
+    "HTTP 请求.test_api | 和 Zero酱聊天.executor": "Run",
+    "HTTP 请求.test_api | 和祁煜对话.executor": "Run",
+    "HTTP 请求.test_api | 获取 Agent 信息.executor": "Run",
+    "HTTP 请求.test_api | 获取 Zero酱信息.executor": "Run",
+    "HTTP 请求.test_main | #1.executor": "Run",
+    "HTTP 请求.test_main | #2.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "database.data.extractors.current.export.id": "HTML-Groovy.html.groovy",
+    "database.data.extractors.current.id": "CSV-Groovy.csv.groovy",
+    "git-widget-placeholder": "main",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="FastAPI.AgentZero">
     <configuration name="test_api | 列出所有 Agents" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="3" requestIdentifier="列出所有 Agents" runType="运行单个请求">
       <method v="2" />
@@ -91,10 +106,10 @@
     <configuration name="test_api | 创建 Zero酱" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="2" requestIdentifier="创建 Zero酱" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
+    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
+    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
       <method v="2" />
     </configuration>
     <configuration name="AgentZero" type="Python.FastAPI">
@@ -143,6 +158,7 @@
       <workItem from="1736947219392" duration="358000" />
       <workItem from="1736950884199" duration="83000" />
       <workItem from="1737018622395" duration="12007000" />
+      <workItem from="1737596165839" duration="2329000" />
     </task>
     <task id="LOCAL-00001" summary="feat:基础框架">
       <option name="closed" value="true" />
@@ -272,7 +288,23 @@
       <option name="project" value="LOCAL" />
       <updated>1737538362920</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="feat(agent_service): 重构并添加数据库支持&#10;&#10;- 为 AgentService 类添加数据库服务属性&#10;-重构 get_instance 方法，确保单例模式正确实现&#10;- 添加 init 方法进行服务初始化&#10;- 更新 create_agent 方法，使用与默认 agents 相同的 LLM 配置- 确保每个 agent 的数据库服务正确初始化">
+      <option name="closed" value="true" />
+      <created>1737596245039</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1737596245039</updated>
+    </task>
+    <task id="LOCAL-00018" summary="chore: 添加 .env 文件到 .gitignore&#10;&#10;- 新建 .gitignore 文件，避免环境变量配置文件被提交到仓库">
+      <option name="closed" value="true" />
+      <created>1737596303307</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1737596303307</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -316,6 +348,7 @@
     <MESSAGE value="feat: 添加多轮对话测试脚本和 memory 框架- 在 qiyu-20250120.txt 中添加了多轮对话示例- 在 zero_agent.py 中实现了对话历史获取和打印功能&#10;- 新增了 qiyu-20250120-def.txt 文件，定义了更详细的角色属性和对话规则&#10;- 修改了 app.log，增加了多条日志记录" />
     <MESSAGE value="feat(database): 添加 MySQL 数据库支持并保存聊天记录&#10;&#10;- 在 BaseAgent 中集成 MySQLClient&#10;- 在 ZeroAgent 中实现聊天记录保存到 MySQL&#10;- 更新 Docker Compose配置，添加 MySQL 服务- 更新 requirements.txt，添加 aiomysql 依赖" />
     <MESSAGE value="feat(agent_service): 重构并添加数据库支持&#10;&#10;- 为 AgentService 类添加数据库服务属性&#10;-重构 get_instance 方法，确保单例模式正确实现&#10;- 添加 init 方法进行服务初始化&#10;- 更新 create_agent 方法，使用与默认 agents 相同的 LLM 配置- 确保每个 agent 的数据库服务正确初始化" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(agent_service): 重构并添加数据库支持&#10;&#10;- 为 AgentService 类添加数据库服务属性&#10;-重构 get_instance 方法，确保单例模式正确实现&#10;- 添加 init 方法进行服务初始化&#10;- 更新 create_agent 方法，使用与默认 agents 相同的 LLM 配置- 确保每个 agent 的数据库服务正确初始化" />
+    <MESSAGE value="chore: 添加 .env 文件到 .gitignore&#10;&#10;- 新建 .gitignore 文件，避免环境变量配置文件被提交到仓库" />
+    <option name="LAST_COMMIT_MESSAGE" value="chore: 添加 .env 文件到 .gitignore&#10;&#10;- 新建 .gitignore 文件，避免环境变量配置文件被提交到仓库" />
   </component>
 </project>

@@ -130,19 +130,25 @@ class ZeroAgent(BaseAgent):
                               output_text: str,
                               context: Dict[str, Any]) -> None:
         """保存交互记录"""
-        await self._ensure_db()  # 确保数据库服务可用
+        await self._ensure_db()
+        
+        # 只获取非系统消息的历史记录
+        history_messages = [
+            msg for msg in context["history"] 
+            if msg["role"] != "system"
+        ]
         
         data = {
             "input": input_text,
             "output": output_text,
             "summary": context["summary"],
             "entity_memory": context["entity_memory"],
-            "history": context["history"],
+            "history_messages": history_messages,  # 只存储对话消息
             "prompt": context["prompt"],
             "timestamp": datetime.now().isoformat()
         }
         
-        # 使用数据库服务实例
+        # 保存到Redis和MySQL
         await self._db.redis.save_chat_record(
             role_id=self.role_id,
             chat_id=self.chat_id,

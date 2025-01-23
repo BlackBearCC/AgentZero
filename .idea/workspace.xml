@@ -4,11 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat(database): 添加 MySQL 数据库支持并保存聊天记录&#10;&#10;- 在 BaseAgent 中集成 MySQLClient&#10;- 在 ZeroAgent 中实现聊天记录保存到 MySQL&#10;- 更新 Docker Compose配置，添加 MySQL 服务- 更新 requirements.txt，添加 aiomysql 依赖">
-      <change beforePath="$PROJECT_DIR$/src/agents/base_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/base_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/agents/zero_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/zero_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/db_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/db_service.py" afterDir="false" />
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat(agent_service): 重构并添加数据库支持&#10;&#10;- 为 AgentService 类添加数据库服务属性&#10;-重构 get_instance 方法，确保单例模式正确实现&#10;- 添加 init 方法进行服务初始化&#10;- 更新 create_agent 方法，使用与默认 agents 相同的 LLM 配置- 确保每个 agent 的数据库服务正确初始化">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -267,7 +264,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737537088100</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="feat(agent_service): 重构并添加数据库支持&#10;&#10;- 为 AgentService 类添加数据库服务属性&#10;-重构 get_instance 方法，确保单例模式正确实现&#10;- 添加 init 方法进行服务初始化&#10;- 更新 create_agent 方法，使用与默认 agents 相同的 LLM 配置- 确保每个 agent 的数据库服务正确初始化">
+      <option name="closed" value="true" />
+      <created>1737538362920</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1737538362920</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -310,6 +315,7 @@
     <MESSAGE value="feat:添加多轮对话测试脚本/memory框架" />
     <MESSAGE value="feat: 添加多轮对话测试脚本和 memory 框架- 在 qiyu-20250120.txt 中添加了多轮对话示例- 在 zero_agent.py 中实现了对话历史获取和打印功能&#10;- 新增了 qiyu-20250120-def.txt 文件，定义了更详细的角色属性和对话规则&#10;- 修改了 app.log，增加了多条日志记录" />
     <MESSAGE value="feat(database): 添加 MySQL 数据库支持并保存聊天记录&#10;&#10;- 在 BaseAgent 中集成 MySQLClient&#10;- 在 ZeroAgent 中实现聊天记录保存到 MySQL&#10;- 更新 Docker Compose配置，添加 MySQL 服务- 更新 requirements.txt，添加 aiomysql 依赖" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(database): 添加 MySQL 数据库支持并保存聊天记录&#10;&#10;- 在 BaseAgent 中集成 MySQLClient&#10;- 在 ZeroAgent 中实现聊天记录保存到 MySQL&#10;- 更新 Docker Compose配置，添加 MySQL 服务- 更新 requirements.txt，添加 aiomysql 依赖" />
+    <MESSAGE value="feat(agent_service): 重构并添加数据库支持&#10;&#10;- 为 AgentService 类添加数据库服务属性&#10;-重构 get_instance 方法，确保单例模式正确实现&#10;- 添加 init 方法进行服务初始化&#10;- 更新 create_agent 方法，使用与默认 agents 相同的 LLM 配置- 确保每个 agent 的数据库服务正确初始化" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(agent_service): 重构并添加数据库支持&#10;&#10;- 为 AgentService 类添加数据库服务属性&#10;-重构 get_instance 方法，确保单例模式正确实现&#10;- 添加 init 方法进行服务初始化&#10;- 更新 create_agent 方法，使用与默认 agents 相同的 LLM 配置- 确保每个 agent 的数据库服务正确初始化" />
   </component>
 </project>

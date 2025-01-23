@@ -2,7 +2,7 @@ from typing import Dict, Optional
 from fastapi import Depends
 from src.agents.base_agent import BaseAgent
 from src.agents.zero_agent import ZeroAgent
-from src.agents.role_config import RoleConfig
+from src.agents.role_config import RoleConfig, LLMConfig
 from src.utils.logger import Logger
 from src.llm.deepseek import DeepSeekLLM
 from src.llm.doubao import DoubaoLLM
@@ -68,48 +68,53 @@ class AgentService:
             self.logger.error(f"Failed to initialize AgentService: {str(e)}")
             raise
     
+    def _create_llm(self, llm_config: LLMConfig):
+        """根据配置创建 LLM 实例"""
+        if llm_config.model_type == "doubao-pro":
+            return DoubaoLLM(
+                model_name=os.getenv("DOUBAO_MODEL_PRO"),
+                temperature=llm_config.temperature,
+                max_tokens=llm_config.max_tokens
+            )
+        elif llm_config.model_type == "doubao":
+            return DoubaoLLM(
+                model_name=os.getenv("DOUBAO_MODEL"),
+                temperature=llm_config.temperature,
+                max_tokens=llm_config.max_tokens
+            )
+        elif llm_config.model_type == "deepseek-chat":
+            deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+            if not deepseek_api_key:
+                raise ValueError("DEEPSEEK_API_KEY not found")
+            return DeepSeekLLM(
+                model_name="deepseek-chat",
+                temperature=llm_config.temperature,
+                api_key=deepseek_api_key
+            )
+        else:
+            raise ValueError(f"Unsupported LLM type: {llm_config.model_type}")
+
     async def _create_default_agents(self):
         """初始化默认角色"""
         try:
-            # # 从环境变量获取 API key
-            # deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
-            # if not deepseek_api_key:
-            #     raise ValueError("DEEPSEEK_API_KEY not found in environment variables")
-            
-            # 使用自定义的 DeepSeekLLM
-            # llm = DeepSeekLLM(
-            #     model_name="deepseek-chat",
-            #     temperature=0.7,
-            #     api_key=deepseek_api_key
-            # )
             # 获取数据库服务
             db = await self.db_service
             
-            # 初始化 LLM
-            llm = DoubaoLLM(
-                model_name=os.getenv("DOUBAO_MODEL_PRO"),
-                temperature=0.8,
-                max_tokens=4096
-            )
-            
-            # 从环境变量获取 API key
-            deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
-            if not deepseek_api_key:
-                raise ValueError("DEEPSEEK_API_KEY not found in environment variables")
-            
-            # 使用自定义的 DeepSeekLLM
-            memory_llm = DeepSeekLLM(
-                model_name="deepseek-chat",
-                temperature=0.7,
-                api_key=deepseek_api_key
-            )
-            
-            # 初始化所有默认角色
+            # 默认角色配置
             default_roles = [
                 {
                     "role_id": "zero_001",
                     "name": "Zero酱",
-                    "prompt_file": "zero"
+                    "prompt_file": "zero",
+                    "llm_config": LLMConfig(
+                        model_type="doubao-pro",
+                        temperature=0.8,
+                        max_tokens=4096
+                    ),
+                    "memory_llm_config": LLMConfig(
+                        model_type="deepseek-chat",
+                        temperature=1
+                    )
                 },
                 {
                     "role_id": "qiyu_001",
@@ -118,7 +123,16 @@ class AgentService:
                     "variables": {
                         "user": "木木",
                         "scene": "",
-                    }
+                    },
+                    "llm_config": LLMConfig(
+                        model_type="doubao-pro",
+                        temperature=0.8,
+                        max_tokens=4096
+                    ),
+                    "memory_llm_config": LLMConfig(
+                        model_type="deepseek-chat",
+                        temperature=1
+                    )
                 }
             ]
             
@@ -128,8 +142,14 @@ class AgentService:
                     "role_id": role["role_id"],
                     "name": role["name"],
                     "system_prompt": system_prompt,
-                    "variables": role.get("variables", {})
+                    "variables": role.get("variables", {}),
+                    "llm_config": role["llm_config"],
+                    "memory_llm_config": role["memory_llm_config"]
                 }
+                
+                # 创建 LLM 实例
+                llm = self._create_llm(role["llm_config"])
+                memory_llm = self._create_llm(role["memory_llm_config"])
                 
                 agent = ZeroAgent(
                     config=config,
@@ -137,7 +157,6 @@ class AgentService:
                     memory_llm=memory_llm,
                     tools=None
                 )
-                # 确保 agent 的数据库服务已初始化
                 await agent._ensure_db()
                 self.agents[role["role_id"]] = agent
                 
@@ -150,23 +169,9 @@ class AgentService:
     async def create_agent(self, config: RoleConfig) -> str:
         """创建新的 Agent 实例"""
         try:
-            # 使用与默认 agents 相同的 LLM 配置
-            llm = DoubaoLLM(
-                model_name=os.getenv("DOUBAO_MODEL_PRO"),
-                temperature=0.7,
-                max_tokens=4096
-            )
-            
-            # 获取 DeepSeek API key
-            deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
-            if not deepseek_api_key:
-                raise ValueError("DEEPSEEK_API_KEY not found")
-                
-            memory_llm = DeepSeekLLM(
-                model_name="deepseek-chat",
-                temperature=0.7,
-                api_key=deepseek_api_key
-            )
+            # 创建 LLM 实例
+            llm = self._create_llm(config.llm_config)
+            memory_llm = self._create_llm(config.memory_llm_config) if config.memory_llm_config else None
             
             agent = ZeroAgent(
                 config=config.dict(),
@@ -175,6 +180,7 @@ class AgentService:
                 memory_llm=memory_llm,
                 tools=None
             )
+
             self.agents[config.role_id] = agent
             return config.role_id
             

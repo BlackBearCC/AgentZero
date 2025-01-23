@@ -4,6 +4,8 @@ from src.utils.logger import Logger
 import json
 from datetime import datetime
 import requests
+import asyncio
+from collections import deque
 
 class Memory:
     def __init__(self, llm=None, max_history: int = 20, min_recent: int = 5):
@@ -16,8 +18,13 @@ class Memory:
         self.entity_api_url = "http://192.168.52.114:8014/query"
         self.entity_api_headers = {"Content-Type": "application/json"}
         
+        # 新增：异步任务相关
+        self._summary_task = None  # 当前运行的summary生成任务
+        self._summary_queue = deque()  # 等待处理的消息队列
+        self._is_generating = False  # 是否正在生成summary
+        
     async def add_message(self, role: str, content: str):
-        """添加新消息并在需要时生成概要"""
+        """添加新消息并在需要时触发异步生成概要"""
         if role == "assistant":
             try:
                 response_json = json.loads(content)
@@ -29,16 +36,30 @@ class Memory:
         
         # 检查是否需要生成概要
         if len(self.chat_history) > self.max_history:
-            await self._generate_summary()
+            # 将需要总结的消息添加到队列
+            messages_to_summarize = self.chat_history[:-self.min_recent]
+            self._summary_queue.append(messages_to_summarize)
             
-    async def _generate_summary(self):
-        """生成对话概要并压缩历史记录"""
-        recent_messages = self.chat_history[-self.min_recent:]
-        messages_to_summarize = self.chat_history[:-self.min_recent]
-        print(f"生成近期概要中================")
-        
-        if messages_to_summarize:
-            # 先构建对话内容
+            # 如果没有正在运行的任务，启动新任务
+            if not self._is_generating:
+                self._summary_task = asyncio.create_task(self._process_summary_queue())
+            
+    async def _process_summary_queue(self):
+        """处理概要生成队列"""
+        try:
+            self._is_generating = True
+            while self._summary_queue:
+                messages = self._summary_queue.popleft()
+                await self._generate_summary_for_messages(messages)
+                
+        finally:
+            self._is_generating = False
+            self._summary_task = None
+            
+    async def _generate_summary_for_messages(self, messages_to_summarize: List[Message]):
+        """为指定消息生成概要"""
+        try:
+            # 构建对话内容
             new_lines = ""
             for msg in messages_to_summarize:
                 new_lines += f"{msg.role}: {msg.content}\n"
@@ -82,28 +103,26 @@ class Memory:
 
 请直接输出更新后的对话概要："""
 
+            response = ""
+            async for chunk in self.llm.astream(full_prompt):
+                response += chunk
+            
+            # 解析响应
             try:
-                response = ""
-                async for chunk in self.llm.astream(full_prompt):
-                    response += chunk
-                
-                # 解析响应
-                try:
-                    summary_json = json.loads(response)
-                    summary = summary_json.get("content", response)
-                except json.JSONDecodeError:
-                    summary = response
+                summary_json = json.loads(response)
+                summary = summary_json.get("content", response)
+            except json.JSONDecodeError:
+                summary = response
 
-                summary = summary.replace("USER", "木木").replace("AI", "祁煜")
-                self.summary = summary
-                      
-                # 更新历史记录
-                self.chat_history = recent_messages
+            summary = summary.replace("USER", "木木").replace("AI", "祁煜")
+            self.summary = summary
+            
+            # 更新历史记录
+            self.chat_history = self.chat_history[-self.min_recent:]
                 
-            except Exception as e:
-                self._logger.error(f"生成概要时出错: {str(e)}")
-                return
-                
+        except Exception as e:
+            self._logger.error(f"生成概要时出错: {str(e)}")
+        
     async def get_full_memory(self) -> Tuple[str, List[Message]]:
         """获取完整上下文（概要 + 最近消息）"""
         return self.summary, self.chat_history

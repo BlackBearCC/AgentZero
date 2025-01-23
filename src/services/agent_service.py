@@ -122,7 +122,6 @@ class AgentService:
                     "prompt_file": "qiyu-20250120",
                     "variables": {
                         "user": "木木",
-                        "scene": "",
                     },
                     "llm_config": LLMConfig(
                         model_type="doubao-pro",

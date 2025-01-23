@@ -7,7 +7,7 @@ from langchain.schema import (
     BaseMessage
 )
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from src.services.db_service import DBService
 
 class ZeroAgent(BaseAgent):
@@ -58,6 +58,33 @@ class ZeroAgent(BaseAgent):
         """思考是否需要调用工具"""
         return []  # Zero酱暂时不使用工具
 
+    def _build_scene_info(self) -> str:
+        """构建场景信息"""
+        # 设置时区为UTC+8
+        tz = timezone(timedelta(hours=8))
+        now = datetime.now(tz)
+        
+        # 格式化日期时间
+        date_str = now.strftime("%Y年%m月%d日")
+        time_str = now.strftime("%H:%M")
+        weekday_map = {
+            0: "一",
+            1: "二", 
+            2: "三",
+            3: "四",
+            4: "五",
+            5: "六",
+            6: "日"
+        }
+        weekday = f"星期{weekday_map[now.weekday()]}"
+        
+
+        
+        scene = f"当前时间：{date_str} {time_str} {weekday}"
+
+            
+        return scene
+
     async def _build_context(self, input_text: str) -> Dict[str, Any]:
         """构建上下文信息
         
@@ -72,6 +99,9 @@ class ZeroAgent(BaseAgent):
         recent_messages = await self.memory.get_recent_messages(limit=20)
         summary = await self.memory.get_summary()
         entity_memories = await self.memory.query_entity_memory(input_text)
+        
+        # 构建场景信息
+        scene_info = self._build_scene_info()
         
         # 处理实体记忆
         processed_entity_context = ""
@@ -104,6 +134,7 @@ class ZeroAgent(BaseAgent):
         sys_prompt = self.config["system_prompt"]
         sys_prompt = sys_prompt.replace("{{chat_summary}}", summary or "无")
         sys_prompt = sys_prompt.replace("{{entity_memory}}", processed_entity_context or "无")
+        sys_prompt = sys_prompt.replace("{{scene}}", scene_info)
         
         # 构建消息列表
         messages = [{"role": "system", "content": sys_prompt}]
@@ -124,7 +155,8 @@ class ZeroAgent(BaseAgent):
             "processed_entity_memory": processed_entity_context,  # 处理后的实体记忆
             "raw_history": recent_messages,  # 原始历史消息
             "processed_history": messages,  # 处理后的消息列表
-            "prompt": sys_prompt
+            "prompt": sys_prompt,
+            "scene": scene_info  # 添加场景信息到返回数据
         }
 
     async def _save_interaction(self, 

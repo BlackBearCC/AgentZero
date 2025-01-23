@@ -32,17 +32,17 @@ class MySQLClient:
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 try:
-                    # 直接插入所有数据到单一表
                     sql = """
                     INSERT INTO chat_records 
                     (role_id, chat_id, input_text, output_text, summary, 
-                     entity_memory, history_messages, prompt)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                     entity_memory, history_messages, prompt, llm_info)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     
-                    # 确保 JSON 字段正确序列化
+                    # 序列化 JSON 字段
                     entity_memory_json = json.dumps(data.get('entity_memory', {}), ensure_ascii=False)
                     history_messages_json = json.dumps(data.get('history_messages', []), ensure_ascii=False)
+                    llm_info_json = json.dumps(data.get('llm_info', {}), ensure_ascii=False)
                     
                     await cur.execute(sql, (
                         role_id,
@@ -52,7 +52,8 @@ class MySQLClient:
                         data.get('summary', ''),
                         entity_memory_json,
                         history_messages_json,
-                        data.get('prompt', '')
+                        data.get('prompt', ''),
+                        llm_info_json
                     ))
                     
                     return cur.lastrowid

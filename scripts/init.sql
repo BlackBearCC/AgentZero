@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS chat_records (
     entity_memory JSON COMMENT '实体记忆',
     history_messages JSON COMMENT '历史对话消息',
     prompt TEXT COMMENT '完整提示词',
+    llm_info JSON COMMENT 'LLM相关信息',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     
     -- 索引

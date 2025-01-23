@@ -4,20 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="chore: 添加 .env 文件到 .gitignore&#10;&#10;- 新建 .gitignore 文件，避免环境变量配置文件被提交到仓库">
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/AgentZero.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/AgentZero.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3/storage_v2/_src_/schema/information_schema.FNRwLQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3/storage_v2/_src_/schema/information_schema.FNRwLQ.zip" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3/storage_v2/_src_/schema/sys.zb4BAA.zip" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/b56ea36c-b658-4d98-846f-be9cfb7a55b3/storage_v2/_src_/schema/sys.zb4BAA.zip" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent_zero.log" beforeDir="false" />
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat(env): 添加新的模型 ID并移除旧的日志文件- 在 .env 文件中添加新的 DOUBAO_MODEL_PRO 模型 ID&#10;- 删除了 agent_zero.log 文件中的所有错误日志&#10;- 移除了 .idea/AgentZero.iml 文件中的模板文件夹配置">
       <change beforePath="$PROJECT_DIR$/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/app.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/init.sql" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/init.sql" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/agents/zero_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/zero_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/memory/memory.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/memory.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils/mysql_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/mysql_client.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -158,7 +148,7 @@
       <workItem from="1736947219392" duration="358000" />
       <workItem from="1736950884199" duration="83000" />
       <workItem from="1737018622395" duration="12007000" />
-      <workItem from="1737596165839" duration="2329000" />
+      <workItem from="1737596165839" duration="2640000" />
     </task>
     <task id="LOCAL-00001" summary="feat:基础框架">
       <option name="closed" value="true" />
@@ -304,7 +294,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737596303307</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="feat(env): 添加新的模型 ID并移除旧的日志文件- 在 .env 文件中添加新的 DOUBAO_MODEL_PRO 模型 ID&#10;- 删除了 agent_zero.log 文件中的所有错误日志&#10;- 移除了 .idea/AgentZero.iml 文件中的模板文件夹配置">
+      <option name="closed" value="true" />
+      <created>1737598538973</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1737598538973</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -349,6 +347,7 @@
     <MESSAGE value="feat(database): 添加 MySQL 数据库支持并保存聊天记录&#10;&#10;- 在 BaseAgent 中集成 MySQLClient&#10;- 在 ZeroAgent 中实现聊天记录保存到 MySQL&#10;- 更新 Docker Compose配置，添加 MySQL 服务- 更新 requirements.txt，添加 aiomysql 依赖" />
     <MESSAGE value="feat(agent_service): 重构并添加数据库支持&#10;&#10;- 为 AgentService 类添加数据库服务属性&#10;-重构 get_instance 方法，确保单例模式正确实现&#10;- 添加 init 方法进行服务初始化&#10;- 更新 create_agent 方法，使用与默认 agents 相同的 LLM 配置- 确保每个 agent 的数据库服务正确初始化" />
     <MESSAGE value="chore: 添加 .env 文件到 .gitignore&#10;&#10;- 新建 .gitignore 文件，避免环境变量配置文件被提交到仓库" />
-    <option name="LAST_COMMIT_MESSAGE" value="chore: 添加 .env 文件到 .gitignore&#10;&#10;- 新建 .gitignore 文件，避免环境变量配置文件被提交到仓库" />
+    <MESSAGE value="feat(env): 添加新的模型 ID并移除旧的日志文件- 在 .env 文件中添加新的 DOUBAO_MODEL_PRO 模型 ID&#10;- 删除了 agent_zero.log 文件中的所有错误日志&#10;- 移除了 .idea/AgentZero.iml 文件中的模板文件夹配置" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(env): 添加新的模型 ID并移除旧的日志文件- 在 .env 文件中添加新的 DOUBAO_MODEL_PRO 模型 ID&#10;- 删除了 agent_zero.log 文件中的所有错误日志&#10;- 移除了 .idea/AgentZero.iml 文件中的模板文件夹配置" />
   </component>
 </project>

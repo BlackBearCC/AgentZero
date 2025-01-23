@@ -132,6 +132,14 @@ class ZeroAgent(BaseAgent):
         """保存交互记录"""
         await self._ensure_db()
         
+        # 获取 LLM 信息
+        llm_info = {
+            "name": self.llm.__class__.__name__,  # 如 "DoubaoLLM"
+            "model_name": getattr(self.llm, "model_name", "unknown"),  # 如 "ep-20241113173739-b6v4g"
+            "temperature": getattr(self.llm, "temperature", 0.7),
+            "max_tokens": getattr(self.llm, "max_tokens", 4096)
+        }
+        
         # 只获取非系统消息的历史记录
         history_messages = [
             msg for msg in context["history"] 
@@ -143,8 +151,9 @@ class ZeroAgent(BaseAgent):
             "output": output_text,
             "summary": context["summary"],
             "entity_memory": context["entity_memory"],
-            "history_messages": history_messages,  # 只存储对话消息
+            "history_messages": history_messages,
             "prompt": context["prompt"],
+            "llm_info": llm_info,  # 添加 LLM 信息
             "timestamp": datetime.now().isoformat()
         }
         

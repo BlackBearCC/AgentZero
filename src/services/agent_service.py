@@ -87,8 +87,8 @@ class AgentService:
             
             # 初始化 LLM
             llm = DoubaoLLM(
-                model_name="ep-20241113173739-b6v4g",
-                temperature=0.7,
+                model_name=os.getenv("DOUBAO_MODEL_PRO"),
+                temperature=0.8,
                 max_tokens=4096
             )
             

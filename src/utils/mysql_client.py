@@ -35,13 +35,16 @@ class MySQLClient:
                     sql = """
                     INSERT INTO chat_records 
                     (role_id, chat_id, input_text, output_text, summary, 
-                     entity_memory, history_messages, prompt, llm_info)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     raw_entity_memory, processed_entity_memory, 
+                     raw_history, processed_history, 
+                     prompt, llm_info)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     
                     # 序列化 JSON 字段
-                    entity_memory_json = json.dumps(data.get('entity_memory', {}), ensure_ascii=False)
-                    history_messages_json = json.dumps(data.get('history_messages', []), ensure_ascii=False)
+                    raw_entity_memory_json = json.dumps(data.get('raw_entity_memory', {}), ensure_ascii=False)
+                    raw_history_json = json.dumps(data.get('raw_history', []), ensure_ascii=False)
+                    processed_history_json = json.dumps(data.get('processed_history', []), ensure_ascii=False)
                     llm_info_json = json.dumps(data.get('llm_info', {}), ensure_ascii=False)
                     
                     await cur.execute(sql, (
@@ -50,8 +53,10 @@ class MySQLClient:
                         data['input'],
                         data['output'],
                         data.get('summary', ''),
-                        entity_memory_json,
-                        history_messages_json,
+                        raw_entity_memory_json,
+                        data.get('processed_entity_memory', ''),
+                        raw_history_json,
+                        processed_history_json,
                         data.get('prompt', ''),
                         llm_info_json
                     ))
@@ -91,10 +96,13 @@ class MySQLClient:
                             'input': record[3],
                             'output': record[4],
                             'summary': record[5],
-                            'entity_memory': json.loads(record[6]) if record[6] else {},
-                            'history_messages': json.loads(record[7]) if record[7] else [],
-                            'prompt': record[8],
-                            'created_at': record[9].isoformat()
+                            'raw_entity_memory': json.loads(record[6]) if record[6] else {},
+                            'processed_entity_memory': record[7],
+                            'raw_history': json.loads(record[8]) if record[8] else [],
+                            'processed_history': json.loads(record[9]) if record[9] else [],
+                            'prompt': record[10],
+                            'llm_info': json.loads(record[11]) if record[11] else {},
+                            'created_at': record[12].isoformat()
                         })
                     
                     return result

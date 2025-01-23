@@ -74,36 +74,36 @@ class ZeroAgent(BaseAgent):
         entity_memories = await self.memory.query_entity_memory(input_text)
         
         # 处理实体记忆
-        entity_context = ""
+        processed_entity_context = ""
         if entity_memories and isinstance(entity_memories, dict):
             # 处理记忆事件
             if 'memory_events' in entity_memories:
-                entity_context += "历史事件：\n"
+                processed_entity_context += "历史事件：\n"
                 for event in entity_memories['memory_events']:
                     update_time = event.get('updatetime', '')
                     description = event.get('description', '')
                     deepinsight = event.get('deepinsight', '')
-                    entity_context += f"- {update_time}：{description}"
+                    processed_entity_context += f"- {update_time}：{description}"
                     if deepinsight:
-                        entity_context += f" ({deepinsight})"
-                    entity_context += "\n"
+                        processed_entity_context += f" ({deepinsight})"
+                    processed_entity_context += "\n"
             
             # 处理记忆实体        
             if 'memory_entities' in entity_memories:
                 if entity_memories['memory_entities']:
-                    entity_context += "\n相关记忆：\n"
+                    processed_entity_context += "\n相关记忆：\n"
                     for entity in entity_memories['memory_entities']:
                         description = entity.get('description', '')
                         update_time = entity.get('updatetime', '').split('T')[0]
                         if description:
-                            entity_context += f"- {update_time} {description}\n"
+                            processed_entity_context += f"- {update_time} {description}\n"
                 else:
-                    entity_context += "- 无\n"
+                    processed_entity_context += "- 无\n"
                     
         # 更新提示词
         sys_prompt = self.config["system_prompt"]
         sys_prompt = sys_prompt.replace("{{chat_summary}}", summary or "无")
-        sys_prompt = sys_prompt.replace("{{entity_memory}}", entity_context or "无")
+        sys_prompt = sys_prompt.replace("{{entity_memory}}", processed_entity_context or "无")
         
         # 构建消息列表
         messages = [{"role": "system", "content": sys_prompt}]
@@ -120,8 +120,10 @@ class ZeroAgent(BaseAgent):
         return {
             "messages": messages,
             "summary": summary,
-            "entity_memory": entity_memories,
-            "history": messages,
+            "raw_entity_memory": entity_memories,  # 原始实体记忆
+            "processed_entity_memory": processed_entity_context,  # 处理后的实体记忆
+            "raw_history": recent_messages,  # 原始历史消息
+            "processed_history": messages,  # 处理后的消息列表
             "prompt": sys_prompt
         }
 
@@ -134,15 +136,23 @@ class ZeroAgent(BaseAgent):
         
         # 获取 LLM 信息
         llm_info = {
-            "name": self.llm.__class__.__name__,  # 如 "DoubaoLLM"
-            "model_name": getattr(self.llm, "model_name", "unknown"),  # 如 "ep-20241113173739-b6v4g"
+            "name": self.llm.__class__.__name__,
+            "model_name": getattr(self.llm, "model_name", "unknown"),
             "temperature": getattr(self.llm, "temperature", 0.7),
             "max_tokens": getattr(self.llm, "max_tokens", 4096)
         }
         
+        # 序列化原始历史消息
+        raw_history = [
+            {
+                "role": msg.role,
+                "content": msg.content
+            } for msg in context["raw_history"]
+        ]
+        
         # 只获取非系统消息的历史记录
         history_messages = [
-            msg for msg in context["history"] 
+            msg for msg in context["processed_history"] 
             if msg["role"] != "system"
         ]
         
@@ -150,10 +160,12 @@ class ZeroAgent(BaseAgent):
             "input": input_text,
             "output": output_text,
             "summary": context["summary"],
-            "entity_memory": context["entity_memory"],
-            "history_messages": history_messages,
+            "raw_entity_memory": context["raw_entity_memory"],
+            "processed_entity_memory": context["processed_entity_memory"],
+            "raw_history": raw_history,  # 使用手动序列化的历史消息
+            "processed_history": history_messages,
             "prompt": context["prompt"],
-            "llm_info": llm_info,  # 添加 LLM 信息
+            "llm_info": llm_info,
             "timestamp": datetime.now().isoformat()
         }
         

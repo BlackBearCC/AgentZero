@@ -159,6 +159,10 @@ reference: 《夏目友人帐》中的斑/猫咪老师, 《水果篮子》中的
 {{chat_summary}}
 
 相关事实信息：
+历史事件：
+{{event_memory}}
+
+相关记忆：
 {{entity_memory}}
 </memory>
 

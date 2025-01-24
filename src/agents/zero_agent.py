@@ -22,6 +22,11 @@ class ZeroAgent(BaseAgent):
         - tools: 可用工具的列表，默认为None。
         """
         super().__init__(config, llm, memory_llm, tools)
+        # 初始化记忆队列
+        self.memory_queue_limit = config.get("memory_queue_limit", 10)  # 默认队列长度为3
+        self.event_queue = []    # 存储历史事件
+        self.entity_queue = []   # 存储相关记忆
+        self.max_memory_length = 500  # 每类记忆的最大长度
         self._logger.debug(f"[ZeroAgent] 初始化完成，角色ID: {self.role_id}, 名称: {config.get('name')}")
         # 初始化系统提示词
         if config.get("system_prompt"):
@@ -104,16 +109,32 @@ class ZeroAgent(BaseAgent):
             self._logger.error(f"[ZeroAgent] 记忆排序失败: {str(e)}")
             return []
 
-    async def _build_context(self, input_text: str) -> Dict[str, Any]:
-        """构建上下文信息
+    def _process_memory_queue(self, new_memory: str, queue: List[str]) -> None:
+        """处理记忆队列
         
-        Returns:
-            Dict 包含:
-            - messages: 消息列表
-            - summary: 对话概要
-            - entity_memory: 实体记忆
-            - history: 历史记录
+        Args:
+            new_memory: 新的记忆内容
+            queue: 要处理的队列
         """
+        # 如果新记忆已在队列中，则移除旧的
+        if new_memory in queue:
+            queue.remove(new_memory)
+        
+        # 添加新记忆
+        queue.append(new_memory)
+        
+        # 如果超出队列长度限制，移除最早的记忆
+        while len(queue) > self.memory_queue_limit:
+            queue.pop(0)
+
+    def _format_memory_content(self, content: str) -> str:
+        """格式化记忆内容，确保不超过最大长度"""
+        if len(content) <= self.max_memory_length:
+            return content
+        return "..." + content[-self.max_memory_length:]
+
+    async def _build_context(self, input_text: str) -> Dict[str, Any]:
+        """构建上下文信息"""
         self._logger.debug(f"[ZeroAgent] 开始构建上下文，输入文本: {input_text}")
         
         # 获取最新对话概要和历史消息
@@ -131,13 +152,14 @@ class ZeroAgent(BaseAgent):
         scence_info  = self._build_scene_info()
         
         # 处理实体记忆
-        processed_entity_context = ""
+        event_memory = ""
+        entity_memory = ""
+        
         if entity_memories and isinstance(entity_memories, dict):
             self._logger.debug("[ZeroAgent] 开始处理实体记忆...")
             
             # 处理记忆事件（按事件时间排序）
             if 'memory_events' in entity_memories:
-                processed_entity_context += "历史事件：\n"
                 sorted_events = self._sort_memories(entity_memories['memory_events'], 'updatetime')
                 self._logger.debug(f"[ZeroAgent] 记忆事件按发生时间排序完成，共{len(sorted_events)}条")
                 
@@ -145,32 +167,41 @@ class ZeroAgent(BaseAgent):
                     event_time = event['updatetime'].split('T')[0] if event.get('updatetime') else ''
                     description = event.get('description', '')
                     deepinsight = event.get('deepinsight', '')
-                    processed_entity_context += f"- {event_time}：{description}"
+                    memory_line = f"- {event_time}：{description}"
                     if deepinsight:
-                        processed_entity_context += f" ({deepinsight})"
-                    processed_entity_context += "\n"
+                        memory_line += f" ({deepinsight})"
+                    memory_line += "\n"
+                    self._process_memory_queue(memory_line, self.event_queue)
+                
+                # 合并历史事件队列
+                event_memory = "".join(self.event_queue)
+                event_memory = self._format_memory_content(event_memory)
             
             # 处理记忆实体（按实体时间排序）       
             if 'memory_entities' in entity_memories:
                 if entity_memories['memory_entities']:
-                    processed_entity_context += "\n相关记忆：\n"
                     sorted_entities = self._sort_memories(entity_memories['memory_entities'], 'updatetime')
                     self._logger.debug(f"[ZeroAgent] 实体记忆按发生时间排序完成，共{len(sorted_entities)}条")
                     
                     for entity in sorted_entities:
                         if description := entity.get('description'):
                             entity_time = entity['updatetime'].split('T')[0] if entity.get('updatetime') else ''
-                            processed_entity_context += f"- {entity_time} {description}\n"
-                else:
-                    processed_entity_context += "- 无\n"
+                            memory_line = f"- {entity_time} {description}\n"
+                            self._process_memory_queue(memory_line, self.entity_queue)
+                    
+                    # 合并相关记忆队列
+                    entity_memory = "".join(self.entity_queue)
+                    entity_memory = self._format_memory_content(entity_memory)
         
-        self._logger.debug(f"[ZeroAgent] 处理后的实体记忆: {processed_entity_context}")
+        self._logger.debug(f"[ZeroAgent] 处理后的历史事件: {event_memory}")
+        self._logger.debug(f"[ZeroAgent] 处理后的相关记忆: {entity_memory}")
                     
         # 更新提示词
         self._logger.debug("[ZeroAgent] 正在更新系统提示词...")
         sys_prompt = self.config["system_prompt"]
         sys_prompt = sys_prompt.replace("{{chat_summary}}", summary or "无")
-        sys_prompt = sys_prompt.replace("{{entity_memory}}", processed_entity_context or "无")
+        sys_prompt = sys_prompt.replace("{{event_memory}}", event_memory or "无")
+        sys_prompt = sys_prompt.replace("{{entity_memory}}", entity_memory or "无")
         sys_prompt = sys_prompt.replace("{{scene}}", scence_info or "无")
         
         # 构建消息列表
@@ -190,7 +221,7 @@ class ZeroAgent(BaseAgent):
             "messages": messages,
             "summary": summary,
             "raw_entity_memory": entity_memories,
-            "processed_entity_memory": processed_entity_context,
+            "processed_entity_memory": f"历史事件：\n{event_memory}\n相关记忆：\n{entity_memory}",
             "raw_history": recent_messages,
             "processed_history": messages,
             "prompt": sys_prompt
@@ -198,7 +229,6 @@ class ZeroAgent(BaseAgent):
         
         self._logger.debug("[ZeroAgent] 上下文构建完成")
         return context
-
     async def _save_interaction(self, 
                               input_text: str,
                               output_text: str,

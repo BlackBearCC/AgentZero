@@ -8,11 +8,16 @@ from pathlib import Path
 import logging
 
 class ChatTester:
-    def __init__(self):
-        """初始化测试配置"""
+    def __init__(self, remark: str = ''):
+        """初始化测试配置
+        
+        Args:
+            remark: 测试备注信息，将用于所有测试用例
+        """
         self.base_url = "http://localhost:8000"
         self.api_version = "v1"
         self.agent_id = "qiyu_001"
+        self.remark = remark  # 存储备注信息
         
         # 设置日志
         logging.basicConfig(
@@ -57,7 +62,11 @@ class ChatTester:
         """调用流式对话 API"""
         url = f"{self.base_url}/api/{self.api_version}/chat/{self.agent_id}/stream"
         try:
-            async with session.post(url, json={"message": message}) as response:
+            # 添加备注到请求体
+            async with session.post(url, json={
+                "message": message,
+                "remark": self.remark
+            }) as response:
                 if response.status != 200:
                     error_text = await response.text()
                     raise Exception(f"API error: {response.status} - {error_text}")
@@ -202,7 +211,10 @@ class ChatTester:
             raise
 
 async def main():
-    tester = ChatTester()
+    """主函数"""
+    remark = "默认测试场景"
+    
+    tester = ChatTester(remark=remark)
     await tester.run_tests()
 
 if __name__ == "__main__":

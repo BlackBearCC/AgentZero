@@ -22,8 +22,12 @@ class ChatService:
             if not agent:
                 raise ValueError(f"Agent {agent_id} not found")
 
+            # 确保 context 存在
+            context = context or {}
+            remark = context.get("remark", "")
+            
             # 生成回复
-            response = await agent.generate_response(message, context)
+            response = await agent.generate_response(message, remark=remark)
             return response
 
         except Exception as e:
@@ -34,6 +38,7 @@ class ChatService:
         self,
         agent_id: str,
         message: str,
+        context: Optional[Dict[str, Any]] = None
     ) -> AsyncIterator[str]:
         """流式处理聊天消息"""
         try:
@@ -42,15 +47,13 @@ class ChatService:
             if not agent:
                 raise ValueError(f"Agent {agent_id} not found")
 
-            print(f"\nStarting stream for agent {agent_id}", flush=True)
-            response_text = ""
+            # 确保 context 存在
+            context = context or {}
+            remark = context.get("remark", "")
+            
             # 生成流式回复
-            async for chunk in agent.astream_response(message):
-                response_text += chunk
-                yield  chunk  # SSE 格式
-
-            print(f'\n{response_text}', flush=True)
-            print("\nStream completed", flush=True)
+            async for chunk in agent.astream_response(message, remark=remark):
+                yield chunk
 
         except Exception as e:
             self.logger.error(f"Error streaming message: {str(e)}")

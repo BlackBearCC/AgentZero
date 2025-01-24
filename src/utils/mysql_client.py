@@ -34,31 +34,32 @@ class MySQLClient:
                 try:
                     sql = """
                     INSERT INTO chat_records 
-                    (role_id, chat_id, input_text, output_text, summary, 
-                     raw_entity_memory, processed_entity_memory, 
-                     raw_history, processed_history, 
-                     prompt, llm_info)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    (role_id, chat_id, input_text, output_text, query_text, remark,
+                     summary, raw_entity_memory, processed_entity_memory, 
+                     raw_history, processed_history, prompt, agent_info)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     
                     # 序列化 JSON 字段
                     raw_entity_memory_json = json.dumps(data.get('raw_entity_memory', {}), ensure_ascii=False)
                     raw_history_json = json.dumps(data.get('raw_history', []), ensure_ascii=False)
                     processed_history_json = json.dumps(data.get('processed_history', []), ensure_ascii=False)
-                    llm_info_json = json.dumps(data.get('llm_info', {}), ensure_ascii=False)
+                    agent_info_json = json.dumps(data.get('agent_info', {}), ensure_ascii=False)
                     
                     await cur.execute(sql, (
                         role_id,
                         chat_id,
                         data['input'],
                         data['output'],
+                        data.get('query_text', ''),
+                        data.get('remark', ''),
                         data.get('summary', ''),
                         raw_entity_memory_json,
                         data.get('processed_entity_memory', ''),
                         raw_history_json,
                         processed_history_json,
                         data.get('prompt', ''),
-                        llm_info_json
+                        agent_info_json
                     ))
                     
                     return cur.lastrowid
@@ -101,7 +102,7 @@ class MySQLClient:
                             'raw_history': json.loads(record[8]) if record[8] else [],
                             'processed_history': json.loads(record[9]) if record[9] else [],
                             'prompt': record[10],
-                            'llm_info': json.loads(record[11]) if record[11] else {},
+                            'agent_info': json.loads(record[11]) if record[11] else {},
                             'created_at': record[12].isoformat()
                         })
                     

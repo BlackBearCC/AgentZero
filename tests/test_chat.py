@@ -212,7 +212,7 @@ class ChatTester:
 
 async def main():
     """主函数"""
-    remark = "默认测试场景"
+    remark = "单轮召回无队列"
     
     tester = ChatTester(remark=remark)
     await tester.run_tests()

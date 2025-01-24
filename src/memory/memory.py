@@ -101,7 +101,7 @@ class Memory:
 新的对话内容：
 {new_lines}
 
-请直接输出更新后的对话概要："""
+请直接输出更新后的对话概要，不需要包含具体时间："""
 
             response = ""
             async for chunk in self.llm.astream(full_prompt):

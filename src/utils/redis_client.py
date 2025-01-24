@@ -45,9 +45,6 @@ class RedisClient:
             self.redis.hset(key, mapping=processed_data)
             self.redis.expire(key, expire)
             
-            # 验证数据是否写入
-            saved_data = self.redis.hgetall(key)
-            print(f"Verified saved data")
             
         except Exception as e:
             print(f"Redis save error: {str(e)}")

@@ -86,6 +86,24 @@ class ZeroAgent(BaseAgent):
             
         return scene
 
+    def _sort_memories(self, memories: List[Dict[str, Any]], time_key: str = 'time') -> List[Dict[str, Any]]:
+        """对记忆按实际发生时间排序
+        
+        Args:
+            memories: 记忆列表
+            time_key: 时间字段的键名
+            
+        Returns:
+            排序后的记忆列表
+        """
+        try:
+            # 只保留有实际时间的记忆，并按时间排序
+            valid_memories = [m for m in memories if m.get(time_key)]
+            return sorted(valid_memories, key=lambda x: x[time_key], reverse=False)
+        except Exception as e:
+            self._logger.error(f"[ZeroAgent] 记忆排序失败: {str(e)}")
+            return []
+
     async def _build_context(self, input_text: str) -> Dict[str, Any]:
         """构建上下文信息
         
@@ -116,27 +134,33 @@ class ZeroAgent(BaseAgent):
         processed_entity_context = ""
         if entity_memories and isinstance(entity_memories, dict):
             self._logger.debug("[ZeroAgent] 开始处理实体记忆...")
-            # 处理记忆事件
+            
+            # 处理记忆事件（按事件时间排序）
             if 'memory_events' in entity_memories:
                 processed_entity_context += "历史事件：\n"
-                for event in entity_memories['memory_events']:
-                    update_time = event.get('updatetime', '')
+                sorted_events = self._sort_memories(entity_memories['memory_events'], 'updatetime')
+                self._logger.debug(f"[ZeroAgent] 记忆事件按发生时间排序完成，共{len(sorted_events)}条")
+                
+                for event in sorted_events:
+                    event_time = event['updatetime'].split('T')[0] if event.get('updatetime') else ''
                     description = event.get('description', '')
                     deepinsight = event.get('deepinsight', '')
-                    processed_entity_context += f"- {update_time}：{description}"
+                    processed_entity_context += f"- {event_time}：{description}"
                     if deepinsight:
                         processed_entity_context += f" ({deepinsight})"
                     processed_entity_context += "\n"
             
-            # 处理记忆实体        
+            # 处理记忆实体（按实体时间排序）       
             if 'memory_entities' in entity_memories:
                 if entity_memories['memory_entities']:
                     processed_entity_context += "\n相关记忆：\n"
-                    for entity in entity_memories['memory_entities']:
-                        description = entity.get('description', '')
-                        update_time = entity.get('updatetime', '').split('T')[0]
-                        if description:
-                            processed_entity_context += f"- {update_time} {description}\n"
+                    sorted_entities = self._sort_memories(entity_memories['memory_entities'], 'updatetime')
+                    self._logger.debug(f"[ZeroAgent] 实体记忆按发生时间排序完成，共{len(sorted_entities)}条")
+                    
+                    for entity in sorted_entities:
+                        if description := entity.get('description'):
+                            entity_time = entity['updatetime'].split('T')[0] if entity.get('updatetime') else ''
+                            processed_entity_context += f"- {entity_time} {description}\n"
                 else:
                     processed_entity_context += "- 无\n"
         

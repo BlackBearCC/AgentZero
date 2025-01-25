@@ -10,23 +10,31 @@ import aiohttp
 class BaseCryptoTool(ABC):
     """加密货币工具基类"""
     
+    _exchange = None  # 类级别的单例 exchange
+    _markets_initialized = False
+    
     def __init__(self):
-        # 修改 CCXT 配置
-        self.exchange = ccxt.binance({
-            'enableRateLimit': True,
-            'options': {
-                'defaultType': 'future',  # 设置默认为合约市场
-                'defaultMarket': 'futures',
-                'fetchMarkets': True,
-                'warnOnFetchOHLCVLimitArgument': False,
-            },
-            'urls': {
-                'api': {
-                    'public': 'https://fapi.binance.com/fapi/v1',  # 使用合约市场 API
-                    'private': 'https://fapi.binance.com/fapi/v1',
+        if not BaseCryptoTool._exchange:
+            BaseCryptoTool._exchange = ccxt.binance({
+                'enableRateLimit': True,
+                'options': {
+                    'defaultType': 'future',
+                    'defaultMarket': 'futures',
+                    'fetchMarkets': True,
+                    'warnOnFetchOHLCVLimitArgument': False,
+                },
+                'urls': {
+                    'api': {
+                        'public': 'https://fapi.binance.com/fapi/v1',
+                        'private': 'https://fapi.binance.com/fapi/v1',
+                        'fapiPublic': 'https://fapi.binance.com/fapi/v1',
+                        'fapiPrivate': 'https://fapi.binance.com/fapi/v1',
+                        'dapiPublic': 'https://dapi.binance.com/dapi/v1',
+                        'dapiPrivate': 'https://dapi.binance.com/dapi/v1'
+                    }
                 }
-            }
-        })
+            })
+        self.exchange = BaseCryptoTool._exchange
         
         # 启用详细日志
         self.exchange.verbose = True  # 开启详细日志
@@ -74,15 +82,17 @@ class BaseCryptoTool(ABC):
     async def initialize(self):
         """初始化交易所连接和市场数据"""
         try:
-            # 确保使用合约市场
-            self.exchange.options['defaultType'] = 'future'
-            await self.exchange.load_markets(True)  # 强制重新加载市场数据
-            
-            # 验证市场数据是否正确加载
-            if not self.exchange.markets:
-                raise ValueError("无法加载合约市场数据")
+            if not BaseCryptoTool._markets_initialized:
+                self.exchange.options['defaultType'] = 'future'
+                await self.exchange.load_markets(True)
+                
+                if not self.exchange.markets:
+                    raise ValueError("无法加载合约市场数据")
+                    
+                BaseCryptoTool._markets_initialized = True
                 
         except Exception as e:
+            BaseCryptoTool._markets_initialized = False
             raise ValueError(f"初始化市场数据失败: {str(e)}")
 
     async def __aenter__(self):
@@ -138,10 +148,13 @@ class BaseCryptoTool(ABC):
 class NewsAggregatorTool(BaseCryptoTool):
     """新闻聚合工具"""
     
+    _news_cache = {}
+    
     def __init__(self):
         super().__init__()
         self.crypto_panic_url = "https://cryptopanic.com/api/v1/posts/"
-        self.crypto_panic_key = "YOUR_API_KEY"  # 可选的新闻API
+        self.crypto_panic_key = "YOUR_REAL_API_KEY"  # 替换为实际的 API key
+        self.cache_ttl = 300  # 5分钟缓存
         
     @property
     def name(self) -> str:
@@ -172,35 +185,55 @@ class NewsAggregatorTool(BaseCryptoTool):
         symbol = params['symbol']
         limit = params.get('limit', 5)
         
-        if not self.crypto_panic_key:
-            raise ValueError("未配置新闻 API key")
+        # 检查缓存
+        cache_key = f"{symbol}_{limit}"
+        if cache_key in self._news_cache:
+            cached_data, timestamp = self._news_cache[cache_key]
+            if datetime.now().timestamp() - timestamp < self.cache_ttl:
+                return cached_data
+                
+        if not self.crypto_panic_key or self.crypto_panic_key == "YOUR_REAL_API_KEY":
+            raise ValueError("未正确配置新闻 API key")
             
-        async with aiohttp.ClientSession() as session:
-            api_params = {
-                "auth_token": self.crypto_panic_key,
-                "currencies": symbol.split("/")[0] if "/" in symbol else symbol,
-                "kind": "news",
-                "limit": limit
-            }
-            async with session.get(self.crypto_panic_url, params=api_params) as response:
-                if response.status != 200:
-                    raise ValueError(f"新闻 API 请求失败: {await response.text()}")
-                    
-                data = await response.json()
-                if not data.get("results"):
-                    raise ValueError(f"未找到 {symbol} 相关新闻")
-                    
-                return {
-                    "news": [
-                        {
-                            "title": item["title"],
-                            "url": item["url"],
-                            "source": item["source"]["title"],
-                            "published_at": item["published_at"]
+        # 添加重试机制
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                async with aiohttp.ClientSession() as session:
+                    api_params = {
+                        "auth_token": self.crypto_panic_key,
+                        "currencies": symbol.split("/")[0],
+                        "kind": "news",
+                        "limit": limit
+                    }
+                    async with session.get(self.crypto_panic_url, params=api_params) as response:
+                        if response.status != 200:
+                            raise ValueError(f"新闻 API 请求失败: {await response.text()}")
+                            
+                        data = await response.json()
+                        if not data.get("results"):
+                            raise ValueError(f"未找到 {symbol} 相关新闻")
+                            
+                        result = {
+                            "news": [
+                                {
+                                    "title": item["title"],
+                                    "url": item["url"],
+                                    "source": item["source"]["title"],
+                                    "published_at": item["published_at"]
+                                }
+                                for item in data["results"][:limit]
+                            ]
                         }
-                        for item in data["results"][:limit]
-                    ]
-                }
+                        
+                        # 更新缓存
+                        self._news_cache[cache_key] = (result, datetime.now().timestamp())
+                        return result
+                        
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    raise
+                await asyncio.sleep(1)  # 重试前等待
 
 class TechnicalAnalysisTool(BaseCryptoTool):
     """技术分析工具"""

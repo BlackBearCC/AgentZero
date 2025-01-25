@@ -265,15 +265,36 @@ class CryptoAgent(BaseAgent):
                 
                 # 构建新的用户输入，包含工具输出结果
                 analysis_prompt = (
-                    f"以下是您请求的市场数据分析结果：\n\n"
-                    f"{formatted_data}\n\n"
-                    f"请基于以上数据，分析：{input_text}\n\n"
-                    f"请从以下几个方面进行分析：\n"
-                    f"1. 技术指标分析（MA、RSI、MACD等）\n"
-                    f"2. 当前趋势判断\n"
-                    f"3. 支撑和阻力位\n"
-                    f"4. 短期走势预测\n"
-                    f"5. 风险提示"
+                    f"我已经根据您的问题「{input_text}」调用了相关工具获取实时数据。\n\n"
+                    f"=== 工具调用结果开始 ===\n"
+                )
+                
+                # 添加每个工具的结果说明
+                for tool_config in think_result["tools"]:
+                    tool_name = tool_config["name"]
+                    params = tool_config["params"]
+                    analysis_prompt += (
+                        f"\n## {tool_name.upper()} 工具结果\n"
+                        f"调用参数: {json.dumps(params, ensure_ascii=False, indent=2)}\n"
+                        f"数据时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                    )
+                
+                analysis_prompt += (
+                    f"{formatted_data}\n"
+                    f"=== 工具调用结果结束 ===\n\n"
+                    f"请你作为专业的加密货币分析师，基于以上实时数据进行分析。\n\n"
+                    f"分析要求：\n"
+                    f"1. 首先说明你看到了哪些关键数据，以及这些数据的重要性\n"
+                    f"2. 根据数据特点，选择合适的技术指标进行分析\n"
+                    f"3. 结合多个维度，给出你的专业判断\n"
+                    f"4. 清晰指出潜在风险\n"
+                    f"5. 如果数据不足，请明确指出还需要哪些补充信息\n\n"
+                    f"请记住：\n"
+                    f"- 分析要基于实际数据，而不是主观臆测\n"
+                    f"- 关注数据的时效性和相关性\n"
+                    f"- 保持客观专业的分析态度\n"
+                    f"- 如果发现异常或矛盾的数据，请指出\n\n"
+                    f"现在，请基于以上数据，分析：{input_text}"
                 )
                 
                 # 使用系统提示词和新的用户输入调用 LLM

@@ -63,7 +63,7 @@ class CryptoAgent(BaseAgent):
 
     async def think(self, context: Dict[str, Any]) -> Union[Dict[str, Any], str]:
         """分析用户意图并决定是否使用工具"""
-        max_retries = 3  # 定义最大重试次数
+        max_retries = 3
         
         for attempt in range(max_retries):
             try:
@@ -119,9 +119,24 @@ class CryptoAgent(BaseAgent):
                         if "```json" in text:
                             text = text.split("```json")[1].split("```")[0].strip()
                         text = text[text.find("{"):text.rfind("}") + 1]
+                                            # 如果文本中包含 JSON
+                    if "{" in text and "}" in text:
+                        # 提取 JSON 部分
+                        json_start = text.find("{")
+                        json_end = text.rfind("}") + 1
+                        json_text = text[json_start:json_end]
                         
-                        tools_config = json.loads(text)
+                        # 提取非 JSON 部分（如果有）
+                        pre_tool_message = text[:json_start].strip()
+                        
+                        # 解析 JSON
+                        tools_config = json.loads(json_text)
                         validated_config = self._validate_tools_config(tools_config)
+                        
+                        # 如果有工具调用前的消息，将其添加到配置中
+                        if pre_tool_message:
+                            validated_config["pre_tool_message"] = pre_tool_message
+                            
                         return validated_config
                     else:
                         # 直接返回文本回答
@@ -129,10 +144,9 @@ class CryptoAgent(BaseAgent):
                         
                 except json.JSONDecodeError as e:
                     if attempt == max_retries - 1:
-                        # 如果不是有效的 JSON，且达到重试次数，则作为普通回答处理
                         return text
                     self._logger.warning(f"[CryptoAgent] JSON 解析失败 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
-                    await asyncio.sleep(1)  # 添加延迟
+                    await asyncio.sleep(1)
                     continue
                 
             except Exception as e:
@@ -246,56 +260,54 @@ class CryptoAgent(BaseAgent):
         
         try:
             # 1. 构建基础上下文
-            self._logger.debug("[CryptoAgent] 正在构建上下文...")
             context = await self._build_context(input_text, remark)
             
             # 2. 分析用户意图，确定需要使用的工具
-            self._logger.debug("[CryptoAgent] 正在分析用户意图...")
             think_result = await self.think(context)
             self._logger.debug(f"[CryptoAgent] 思考结果: {think_result}")
             
-            # 3. 如果是工具配置，则调用工具并进行分析
-            market_data = None
+            # 3. 如果有问候语，先发送问候
+            greeting = None
+            if isinstance(think_result, dict) and "greeting" in think_result:
+                greeting = think_result.pop("greeting")
+            
+            # 4. 如果是工具配置，则调用工具并进行分析
             if isinstance(think_result, dict):
                 # 获取市场数据
-                self._logger.debug("[CryptoAgent] 正在获取市场数据...")
                 market_data = await self._analyze_market(think_result)
                 formatted_data = self._format_market_data(market_data)
-                self._logger.debug(f"[CryptoAgent] 格式化后的市场数据:\n{formatted_data}")
                 
-                # 构建新的用户输入，包含工具输出结果
-                analysis_prompt = (
-                    f"我已经根据您的问题「{input_text}」调用了相关工具获取实时数据。\n\n"
-                    f"=== 工具调用结果开始 ===\n"
-                )
+                # 构建分析提示词
+                analysis_prompt = []
                 
-                # 添加每个工具的结果说明
-                for tool_config in think_result["tools"]:
-                    tool_name = tool_config["name"]
-                    params = tool_config["params"]
-                    analysis_prompt += (
-                        f"\n## {tool_name.upper()} 工具结果\n"
-                        f"调用参数: {json.dumps(params, ensure_ascii=False, indent=2)}\n"
-                        f"数据时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-                    )
+                # 如果有问候语，添加到开头
+                if greeting:
+                    analysis_prompt.append(greeting)
+                    analysis_prompt.append("")  # 添加空行
                 
-                analysis_prompt += (
-                    f"{formatted_data}\n"
-                    f"=== 工具调用结果结束 ===\n\n"
-                    f"请你作为专业的加密货币分析师，基于以上实时数据进行分析。\n\n"
-                    f"分析要求：\n"
-                    f"1. 首先说明你看到了哪些关键数据，以及这些数据的重要性\n"
-                    f"2. 根据数据特点，选择合适的技术指标进行分析\n"
-                    f"3. 结合多个维度，给出你的专业判断\n"
-                    f"4. 清晰指出潜在风险\n"
-                    f"5. 如果数据不足，请明确指出还需要哪些补充信息\n\n"
-                    f"请记住：\n"
-                    f"- 分析要基于实际数据，而不是主观臆测\n"
-                    f"- 关注数据的时效性和相关性\n"
-                    f"- 保持客观专业的分析态度\n"
-                    f"- 如果发现异常或矛盾的数据，请指出\n\n"
-                    f"现在，请基于以上数据，分析：{input_text}"
-                )
+                analysis_prompt.extend([
+                    "=== 工具调用结果开始 ===",
+                    formatted_data,
+                    "=== 工具调用结果结束 ===",
+                    "",
+                    f"请基于以上数据，分析：{input_text}",
+                    "",
+                    "分析要求：",
+                    "1. 首先说明你看到了哪些关键数据，以及这些数据的重要性",
+                    "2. 根据数据特点，选择合适的技术指标进行分析",
+                    "3. 结合多个维度，给出你的专业判断",
+                    "4. 清晰指出潜在风险",
+                    "5. 如果数据不足，请明确指出还需要哪些补充信息",
+                    "",
+                    "请记住：",
+                    "- 分析要基于实际数据，而不是主观臆测",
+                    "- 关注数据的时效性和相关性",
+                    "- 保持客观专业的分析态度",
+                    "- 如果发现异常或矛盾的数据，请指出"
+                ])
+                
+                # 将列表转换为字符串
+                analysis_prompt = "\n".join(analysis_prompt)
                 
                 # 使用系统提示词和新的用户输入调用 LLM
                 system_prompt = await self._load_prompt_template("crypto-analyst")

@@ -28,6 +28,11 @@ class ChatService:
             
             # 生成回复
             response = await agent.generate_response(message, remark=remark)
+            
+            # 如果是字典类型且包含 pre_tool_message，直接返回
+            if isinstance(response, dict) and "pre_tool_message" in response:
+                return response
+                
             return response
 
         except Exception as e:

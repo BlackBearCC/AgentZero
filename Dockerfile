@@ -7,4 +7,10 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+ENV SERVICE_TYPE=api
+
+# 使用脚本来处理不同的启动命令
+COPY scripts/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

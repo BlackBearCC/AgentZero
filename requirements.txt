@@ -21,3 +21,4 @@ numpy>=1.24.0
 # 替换 ta-lib 为 pandas-ta
 pandas-ta>=0.3.14b
 aiohttp>=3.9.0
+python-telegram-bot>=20.0

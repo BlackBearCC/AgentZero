@@ -103,6 +103,25 @@ class AgentService:
             # 默认角色配置
             default_roles = [
                 {
+                    "role_id": "crypto_001",
+                    "name": "CryptoAnalyst",
+                    "prompt_file": "crypto-analyst",
+                    "llm_config": LLMConfig(
+                        model_type="deepseek-chat",  # 使用 deepseek 模型
+                        temperature=0.3,  # 降低温度以获得更稳定的分析
+                        max_tokens=4096
+                    ),
+                    "memory_llm_config": LLMConfig(
+                        model_type="deepseek-chat",
+                        temperature=0.7,
+                        max_tokens=4096
+                    ),
+                    "variables": {
+                        "cache_ttl": "300",  # 缓存时间5分钟
+                    },
+                    "use_tools": True  # 标记需要使用工具
+                },
+                {
                     "role_id": "zero_001",
                     "name": "Zero酱",
                     "prompt_file": "zero",
@@ -133,25 +152,6 @@ class AgentService:
                         temperature=1
                     )
                 },
-                # 添加加密货币分析师角色
-                {
-                    "role_id": "crypto_001",
-                    "name": "CryptoAnalyst",
-                    "prompt_file": "crypto-analyst",
-                    "llm_config": LLMConfig(
-                        model_type="deepseek-chat",  # 使用 deepseek 模型
-                        temperature=0.3,  # 降低温度以获得更稳定的分析
-                        max_tokens=4096
-                    ),
-                    "memory_llm_config": LLMConfig(
-                        model_type="deepseek-chat",
-                        temperature=1
-                    ),
-                    "variables": {
-                        "cache_ttl": "300",  # 缓存时间5分钟
-                    },
-                    "use_tools": True  # 标记需要使用工具
-                }
             ]
             
             for role in default_roles:

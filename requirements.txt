@@ -13,3 +13,11 @@ PyYAML==6.0.1
 cryptography
 redis==5.2.1
 aiomysql
+
+# 加密关依赖
+ccxt>=4.2.15
+pandas>=2.0.0
+numpy>=1.24.0
+# 替换 ta-lib 为 pandas-ta
+pandas-ta>=0.3.14b
+aiohttp>=3.9.0

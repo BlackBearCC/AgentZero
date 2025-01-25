@@ -41,6 +41,34 @@ class DeepSeekLLM(LLM):
             "max_tokens": self.max_tokens
         }
 
+    def _process_messages(self, prompt: str | List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """处理输入消息格式
+        
+        Args:
+            prompt: 字符串或消息列表
+            
+        Returns:
+            List[Dict[str, str]]: 标准化的消息列表
+        """
+        if isinstance(prompt, str):
+            return [{"role": "user", "content": prompt}]
+        elif isinstance(prompt, (list, tuple)):
+            # 验证消息格式
+            messages = []
+            for msg in prompt:
+                if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                    if msg["role"] not in ["system", "user", "assistant"]:
+                        raise ValueError(f"Invalid role: {msg['role']}")
+                    messages.append({
+                        "role": msg["role"],
+                        "content": str(msg["content"])
+                    })
+                else:
+                    raise ValueError("Invalid message format")
+            return messages
+        else:
+            raise ValueError("Prompt must be string or list of messages")
+
     def _call(
         self,
         prompt: str,
@@ -77,7 +105,7 @@ class DeepSeekLLM(LLM):
 
     async def _acall(
         self,
-        prompt: str,
+        prompt: str | List[Dict[str, str]],
         stop: Optional[List[str]] = None,
         run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
         **kwargs: Any,
@@ -88,9 +116,11 @@ class DeepSeekLLM(LLM):
             "Content-Type": "application/json"
         }
         
+        messages = self._process_messages(prompt)
+        
         data = {
             "model": self.model_name,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens
         }
@@ -125,23 +155,34 @@ class DeepSeekLLM(LLM):
             generations.append([Generation(text=text)])
         return LLMResult(generations=generations)
 
-    async def _agenerate(
+    async def agenerate(
         self,
-        prompts: List[str],
+        prompts: List[str] | List[List[Dict[str, str]]],
         stop: Optional[List[str]] = None,
         run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> LLMResult:
-        """异步批量生成回复"""
+        """异步生成回复"""
         generations = []
         for prompt in prompts:
             text = await self._acall(prompt, stop=stop, run_manager=run_manager, **kwargs)
             generations.append([Generation(text=text)])
         return LLMResult(generations=generations)
 
+    async def astream(
+        self,
+        prompt: str | List[Dict[str, str]],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[Generation]:
+        """异步流式生成回复"""
+        async for chunk in self._astream(prompt, stop=stop, run_manager=run_manager, **kwargs):
+            yield Generation(text=chunk)
+
     async def _astream(
         self,
-        prompt: str,
+        prompt: str | List[Dict[str, str]],
         stop: Optional[List[str]] = None,
         run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
         **kwargs: Any,
@@ -152,24 +193,11 @@ class DeepSeekLLM(LLM):
             "Content-Type": "application/json"
         }
         
-        # 处理消息列表或字符串输入
-        if isinstance(prompt, list):
-            messages = [
-                {
-                    "role": msg.get("role", "user"),
-                    "content": msg.get("content", "")
-                }
-                for msg in prompt
-            ]
-        else:
-            messages = [{
-                "role": "user",
-                "content": prompt
-            }]
+        messages = self._process_messages(prompt)
         
         data = {
             "model": self.model_name,
-            "messages": messages,  # 使用处理后的消息列表
+            "messages": messages,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "stream": True
@@ -200,15 +228,4 @@ class DeepSeekLLM(LLM):
                                     content = chunk["choices"][0]["delta"]["content"]
                                     yield content
                             except json.JSONDecodeError:
-                                continue
-
-    async def astream(
-        self,
-        prompt: str,
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
-        **kwargs: Any,
-    ) -> AsyncIterator[str]:
-        """公开的流式接口"""
-        async for chunk in self._astream(prompt, stop, run_manager, **kwargs):
-            yield chunk 
+                                continue 

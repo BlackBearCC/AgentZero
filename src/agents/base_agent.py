@@ -85,3 +85,37 @@ class BaseAgent(ABC):
         """流式生成回复"""
         pass
 
+    async def _build_context(self, input_text: str, remark: str = '') -> Dict[str, Any]:
+        """构建基础上下文
+        
+        Args:
+            input_text: 用户输入文本
+            remark: 备注信息
+            
+        Returns:
+            包含基础上下文信息的字典
+        """
+        # 确保系统消息存在
+        if not self.messages or not isinstance(self.messages[0], SystemMessage):
+            system_prompt = await self.load_prompt()
+            self.messages = [SystemMessage(content=system_prompt)] + self.messages
+
+        # 添加用户输入
+        self.messages.append(HumanMessage(content=input_text))
+        
+        # 构建基础上下文
+        context = {
+            "messages": [
+                {"role": msg.type, "content": msg.content}
+                for msg in self.messages
+            ],
+            "input_text": input_text,
+            "remark": remark,
+            "agent_info": {
+                "name": self.name,
+                "role_id": self.role_id
+            }
+        }
+        
+        return context
+

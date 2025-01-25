@@ -132,6 +132,25 @@ class AgentService:
                         model_type="deepseek-chat",
                         temperature=1
                     )
+                },
+                # 添加加密货币分析师角色
+                {
+                    "role_id": "crypto_001",
+                    "name": "CryptoAnalyst",
+                    "prompt_file": "crypto-analyst",
+                    "llm_config": LLMConfig(
+                        model_type="deepseek-chat",  # 使用 deepseek 模型
+                        temperature=0.3,  # 降低温度以获得更稳定的分析
+                        max_tokens=4096
+                    ),
+                    "memory_llm_config": LLMConfig(
+                        model_type="deepseek-chat",
+                        temperature=1
+                    ),
+                    "variables": {
+                        "cache_ttl": "300",  # 缓存时间5分钟
+                    },
+                    "use_tools": True  # 标记需要使用工具
                 }
             ]
             
@@ -150,12 +169,37 @@ class AgentService:
                 llm = self._create_llm(role["llm_config"])
                 memory_llm = self._create_llm(role["memory_llm_config"])
                 
-                agent = ZeroAgent(
-                    config=config,
-                    llm=llm,
-                    memory_llm=memory_llm,
-                    tools=None
-                )
+                # 根据角色类型创建不同的 Agent
+                if role["role_id"].startswith("crypto"):
+                    from src.agents.crypto_agent import CryptoAgent
+                    from src.tools.crypto_tools import (
+                        MarketDataTool,
+                        NewsAggregatorTool,
+                        TechnicalAnalysisTool
+                    )
+                    
+                    # 初始化加密货币工具
+                    tools = [
+                        MarketDataTool(),
+                        NewsAggregatorTool(),
+                        TechnicalAnalysisTool()
+                    ]
+                    
+                    agent = CryptoAgent(
+                        config=config,
+                        llm=llm,
+                        memory_llm=memory_llm,
+                        tools=tools
+                    )
+                else:
+                    # 其他角色使用 ZeroAgent
+                    agent = ZeroAgent(
+                        config=config,
+                        llm=llm,
+                        memory_llm=memory_llm,
+                        tools=None
+                    )
+                
                 await agent._ensure_db()
                 self.agents[role["role_id"]] = agent
                 

@@ -26,6 +26,23 @@ Content-Type: application/json
   }
 }
 
+### 创建分析师
+POST http://localhost:8000/api/v1/agents/create
+Content-Type: application/json
+
+{
+  "config": {
+    "role_id": "crypto_001",
+    "name": "CryptoAnalyst",
+    "system_prompt": "file:crypto-analyst",
+    "llm_config": {
+      "model_type": "deepseek-chat",
+      "temperature": 0.3,
+      "max_tokens": 4096
+    }
+  }
+}
+
 ### 列出所有 Agents
 GET http://localhost:8000/api/v1/agents
 Accept: application/json
@@ -67,5 +84,61 @@ Content-Type: application/json
 
 {
   "message": "我今天心情不太好，能帮我打起精神吗？",
+  "context": {}
+}
+
+### 获取加密货币分析师信息
+GET http://localhost:8000/api/v1/agents/crypto_001
+Accept: application/json
+
+### 请求 BTC 分析（流式）
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
+Content-Type: application/json
+
+{
+  "message": "分析一下 BTC 最近的走势和技术指标"
+}
+
+### 请求 ETH 分析（非流式）
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+### 请求多币种对比分析
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
+Content-Type: application/json
+
+{
+  "message": "对比分析 BTC 和 ETH 的市场表现",
+  "context": {}
+}
+
+### 请求技术指标详细分析
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+
+{
+  "message": "详细分析一下 BTC 的 RSI、MACD 和均线系统",
+  "context": {}
+}
+
+### 请求市场新闻分析
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
+Content-Type: application/json
+
+{
+  "message": "有什么重要的市场新闻会影响 BTC 价格吗？"
+}
+
+### 请求市场情绪分析
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+
+{
+  "message": "现在的市场情绪如何？有什么需要注意的风险？",
   "context": {}
 } 

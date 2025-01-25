@@ -1,535 +1,451 @@
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+POST http://localhost:8000/api/v1/chat/crypto_001
 Content-Type: application/json
-Content-Length: 34
+Content-Length: 70
 User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
 Accept: */*
 
 {
-  "message": "你叫我什么"
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T155927.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T154816.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
+Content-Type: application/json
+Content-Length: 66
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "分析一下 BTC 最近的走势和技术指标"
 }
 
 ###
 
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+POST http://localhost:8000/api/v1/chat/crypto_001
 Content-Type: application/json
-Content-Length: 46
+Content-Length: 70
 User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
 Accept: */*
 
 {
-  "message": "你好，你怎么称呼我"
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T150450.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T150225.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T145951.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T145821.500.txt
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T143547.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T143139.500.txt
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T135952.500.txt
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T135859.500.txt
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T134718.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T134451.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T134040.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T133422.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T133129.500.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T132935.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T132657.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T132303.500.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T121035.500.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T120235.404.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T120117.500.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T115812.404.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T115807.404.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
+Content-Type: application/json
+Content-Length: 66
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "分析一下 BTC 最近的走势和技术指标"
 }
 
 ###
 
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
 Content-Type: application/json
-Content-Length: 46
+Content-Length: 66
 User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
 Accept: */*
 
 {
-  "message": "你好，你怎么称呼我"
+  "message": "分析一下 BTC 最近的走势和技术指标"
 }
 
 ###
 
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+POST http://localhost:8000/api/v1/chat/crypto_001
 Content-Type: application/json
-Content-Length: 46
+Content-Length: 70
 User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
 Accept: */*
 
 {
-  "message": "你好，你怎么称呼我"
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
 }
 
+<> 2025-01-25T115129.500.json
+
 ###
 
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+POST http://localhost:8000/api/v1/chat/crypto_001
 Content-Type: application/json
-Content-Length: 47
+Content-Length: 70
 User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
 Accept: */*
 
 {
-  "message": "你好，你怎么称呼我"
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
 }
 
+<> 2025-01-25T114921.500.json
+
 ###
 
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
 Content-Type: application/json
-Content-Length: 46
+Content-Length: 66
 User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
 Accept: */*
 
 {
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-GET http://localhost:8000/api/v1/agents/zero_001
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-21T141239-2.200.json
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 49
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍"
-}
-
-###
-
-GET http://localhost:8000/api/v1/agents
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-21T141239-1.200.json
-
-###
-
-GET http://localhost:8000
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-21T141239.200.json
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-GET http://localhost:8000/api/v1/agents/zero_001
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-21T140453-2.200.json
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 49
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍"
-}
-
-###
-
-GET http://localhost:8000/api/v1/agents
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-21T140453-1.200.json
-
-###
-
-GET http://localhost:8000
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-21T140453.200.json
-
-###
-
-GET http://localhost:8000/api/v1/agents/zero_001
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-21T140114.200.json
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 49
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍"
-}
-
-###
-
-GET http://localhost:8000/api/v1/agents
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-21T140113-1.200.json
-
-###
-
-GET http://localhost:8000
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-21T140113.200.json
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 46
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，你怎么称呼我"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 37
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，我是谁"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 37
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，我是谁"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 49
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍"
-}
-
-###
-
-GET http://localhost:8000/api/v1/agents
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-20T174051-2.200.json
-
-###
-
-GET http://localhost:8000
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-20T174051.200.json
-
-###
-
-GET http://localhost:8000/api/v1/agents/zero_001
-Accept: application/json
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
-
-<> 2025-01-20T174051-1.200.json
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 37
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，我是谁"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 37
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，我是谁"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 49
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/qiyu_001/stream
-Content-Type: application/json
-Content-Length: 49
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍"
-}
-
-###
-
-POST http://localhost:8000/api/v1/chat/zero_001/stream
-Content-Type: application/json
-Content-Length: 49
-User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
-Accept-Encoding: br, deflate, gzip, x-gzip
-Accept: */*
-
-{
-  "message": "你好，请做个自我介绍"
+  "message": "分析一下 BTC 最近的走势和技术指标"
 }
 
 ###
@@ -540,27 +456,55 @@ User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
 content-length: 0
 
-<> 2025-01-20T173524.200.json
+<> 2025-01-25T114829.200.json
 
 ###
 
-GET http://localhost:8000
-Accept: application/json
+POST http://localhost:8000/api/v1/agents/create
+Content-Type: application/json
+Content-Length: 237
 User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
+Accept: */*
 
-<> 2025-01-20T173520.200.json
+{
+  "config": {
+    "role_id": "crypto_001",
+    "name": "CryptoAnalyst",
+    "system_prompt": "file:crypto-analyst",
+    "llm_config": {
+      "model_type": "deepseek-chat",
+      "temperature": 0.3,
+      "max_tokens": 4096
+    }
+  }
+}
+
+<> 2025-01-25T114542.400.json
 
 ###
 
-GET http://localhost:8000
-Accept: application/json
+POST http://localhost:8000/api/v1/agents/create
+Content-Type: application/json
+Content-Length: 237
 User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
-content-length: 0
+Accept: */*
 
-<> 2025-01-20T171639.200.json
+{
+  "config": {
+    "role_id": "crypto_001",
+    "name": "CryptoAnalyst",
+    "system_prompt": "file:crypto-analyst",
+    "llm_config": {
+      "model_type": "deepseek-chat",
+      "temperature": 0.3,
+      "max_tokens": 4096
+    }
+  }
+}
+
+<> 2025-01-25T114539.400.json
 
 ###
 
@@ -570,30 +514,267 @@ User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
 content-length: 0
 
-<> 2025-01-20T171636.200.json
+<> 2025-01-25T114534.200.json
 
 ###
 
-POST http://localhost:8000/api/v1/chat/zero_001/stream
+POST http://localhost:8000/api/v1/agents/create
 Content-Type: application/json
-Content-Length: 49
+Content-Length: 237
 User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
 Accept: */*
 
 {
-  "message": "你好，请做个自我介绍"
+  "config": {
+    "role_id": "crypto_001",
+    "name": "CryptoAnalyst",
+    "system_prompt": "file:crypto-analyst",
+    "llm_config": {
+      "model_type": "deepseek-chat",
+      "temperature": 0.3,
+      "max_tokens": 4096
+    }
+  }
 }
+
+<> 2025-01-25T114527.500.txt
 
 ###
 
-GET http://localhost:8000/api/v1/agents/zero_001
+GET http://localhost:8000
 Accept: application/json
 User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
 Accept-Encoding: br, deflate, gzip, x-gzip
 content-length: 0
 
-<> 2025-01-20T171625.200.json
+<> 2025-01-25T114513.200.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T114253.500.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
+Content-Type: application/json
+Content-Length: 66
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "分析一下 BTC 最近的走势和技术指标"
+}
+
+<> 2025-01-25T114246.500.txt
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
+Content-Type: application/json
+Content-Length: 76
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "对比分析 BTC 和 ETH 的市场表现",
+  "context": {}
+}
+
+<> 2025-01-25T114243.500.txt
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T114237.500.txt
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T114045.404.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
+Content-Type: application/json
+Content-Length: 66
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "分析一下 BTC 最近的走势和技术指标"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T114031.404.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T114025.404.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
+Content-Type: application/json
+Content-Length: 66
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "分析一下 BTC 最近的走势和技术指标"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
+Content-Type: application/json
+Content-Length: 66
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "分析一下 BTC 最近的走势和技术指标"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T114010.500.txt
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001/stream
+Content-Type: application/json
+Content-Length: 66
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "分析一下 BTC 最近的走势和技术指标"
+}
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T110845.500.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 54
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+}
+
+<> 2025-01-25T110737.422.json
+
+###
+
+POST http://localhost:8000/api/v1/chat/crypto_001
+Content-Type: application/json
+Content-Length: 70
+User-Agent: IntelliJ HTTP Client/PyCharm 2024.2.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "message": "ETH 现在的市场情况如何？",
+  "context": {}
+}
+
+<> 2025-01-25T110600.500.json
 
 ###
 

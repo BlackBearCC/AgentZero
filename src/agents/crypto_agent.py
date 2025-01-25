@@ -1,4 +1,5 @@
-from typing import Dict, Any, List, Optional, AsyncIterator
+import asyncio
+from typing import Dict, Any, List, Optional, AsyncIterator, Union
 from src.agents.base_agent import BaseAgent
 from src.tools.crypto_tools import (
     NewsAggregatorTool,
@@ -20,17 +21,8 @@ class CryptoAgent(BaseAgent):
             memory_llm: 记忆系统语言模型
             tools: 自定义工具列表
         """
-        # 初始化默认工具集
-        default_tools = [
-            NewsAggregatorTool(),  # 新闻聚合
-            TechnicalAnalysisTool()  # 技术分析
-        ]
-        
-        # 合并自定义工具
-        if tools:
-            default_tools.extend(tools)
             
-        super().__init__(config, llm, memory_llm, tools=default_tools)
+        super().__init__(config, llm, memory_llm, tools=tools)
         
         # 初始化市场数据缓存
         self.market_cache = {}
@@ -53,10 +45,6 @@ class CryptoAgent(BaseAgent):
         context.update({
             "market_cache": self.market_cache,
             "cache_ttl": self.cache_ttl,
-            "tools": {
-                tool.name: tool.description 
-                for tool in self.tools
-            }
         })
         
         return context
@@ -64,21 +52,8 @@ class CryptoAgent(BaseAgent):
     async def load_prompt(self) -> str:
         """加载角色提示词"""
         base_prompt = self.config.get("system_prompt", "")
-        tool_descriptions = "\n".join([
-            f"- {tool.name}: {tool.description}" 
-            for tool in self.tools
-        ])
         
-        return f"""{base_prompt}
-
-可用工具:
-{tool_descriptions}
-
-分析步骤:
-1. 收集相关市场数据和新闻
-2. 进行技术分析
-3. 综合分析并给出建议
-"""
+        return base_prompt
 
     async def update_prompt(self, **kwargs) -> str:
         """更新角色提示词"""
@@ -86,72 +61,89 @@ class CryptoAgent(BaseAgent):
             self.config["system_prompt"] = kwargs["system_prompt"]
         return await self.load_prompt()
 
-    async def think(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """分析用户意图并决定使用哪些工具"""
-        self._logger.debug(f"[CryptoAgent] 开始思考分析，上下文: {context}")
+    async def think(self, context: Dict[str, Any]) -> Union[Dict[str, Any], str]:
+        """分析用户意图并决定是否使用工具"""
+        max_retries = 3  # 定义最大重试次数
         
-        try:
-            # 1. 构建工具信息
-            tools_info = []
-            self._logger.debug("[CryptoAgent] 正在构建工具信息...")
-            for tool in self.tools:
-                tool_info = (
-                    f"- {tool.name}: {tool.description}\n"
-                    f"  参数:\n" + 
-                    "\n".join(
-                        f"    {name}: {param['description']} "
-                        f"(类型: {param['type']}, "
-                        f"必需: {param['required']}, "
-                        f"默认值: {param.get('default', 'None')})"
-                        for name, param in tool.parameters.items()
-                    )
-                )
-                tools_info.append(tool_info)
-            
-            # 加载并填充思考提示词
-            think_prompt = await self._load_prompt_template("crypto-think")
-            think_prompt = think_prompt.replace(
-                "{{tools_info}}", 
-                "\n\n".join(tools_info)
-            )
-            
-            # 3. 调用 LLM 分析
-            self._logger.debug("[CryptoAgent] 正在调用 LLM 分析...")
-            response = await self.llm.agenerate([[
-                {
-                    "role": "system",
-                    "content": think_prompt
-                },
-                {
-                    "role": "user",
-                    "content": context["input_text"]
-                }
-            ]])
-            
-            # 4. 提取并解析 JSON
-            text = response.generations[0][0].text
-            self._logger.debug(f"[CryptoAgent] LLM 返回结果: {text}")
-            
-            # 移除可能的 markdown 代码块标记
-            text = text.replace("```json", "").replace("```", "").strip()
-            
+        for attempt in range(max_retries):
             try:
-                tools_config = json.loads(text)
-                self._logger.debug(f"[CryptoAgent] 解析后的工具配置: {tools_config}")
-            except json.JSONDecodeError as e:
-                self._logger.error(f"[CryptoAgent] JSON 解析失败: {text}")
-                raise ValueError(f"无效的工具配置: {str(e)}")
-            
-            # 5. 验证工具配置
-            self._logger.debug("[CryptoAgent] 正在验证工具配置...")
-            validated_config = self._validate_tools_config(tools_config)
-            self._logger.debug(f"[CryptoAgent] 验证后的工具配置: {validated_config}")
-            
-            return validated_config
+                # 1. 构建工具信息为标准 JSON 格式
+                tools_info = {
+                    "available_tools": [
+                        {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "parameters": {
+                                name: {
+                                    "description": param["description"],
+                                    "type": param["type"],
+                                    "required": param["required"],
+                                    "default": param.get("default", None)
+                                }
+                                for name, param in tool.parameters.items()
+                            }
+                        }
+                        for tool in self.tools
+                    ]
+                }
                 
-        except Exception as e:
-            self._logger.error(f"[CryptoAgent] 思考过程出错: {str(e)}")
-            raise
+                # 转换为格式化的 JSON 字符串
+                formatted_tools = json.dumps(tools_info, indent=2, ensure_ascii=False)
+                
+                # 2. 加载并填充提示词
+                system_prompt = await self._load_prompt_template("crypto-analyst")
+                system_prompt = system_prompt.replace("{{tools_info}}", formatted_tools)
+                
+                self._logger.debug(f"[CryptoAgent] 工具信息:\n{formatted_tools}")
+                
+                # 3. 调用 LLM 分析
+                response = await self.llm.agenerate([[
+                    {
+                        "role": "system",
+                        "content": system_prompt
+                    },
+                    {
+                        "role": "user",
+                        "content": context["input_text"]
+                    }
+                ]])
+                
+                text = response.generations[0][0].text.strip()
+                self._logger.debug(f"[CryptoAgent] LLM 返回结果: {text}")
+                
+                # 4. 尝试解析为 JSON
+                try:
+                    # 如果包含 JSON 格式的工具调用
+                    if text.startswith("{") or "```json" in text:
+                        # 提取并清理 JSON
+                        if "```json" in text:
+                            text = text.split("```json")[1].split("```")[0].strip()
+                        text = text[text.find("{"):text.rfind("}") + 1]
+                        
+                        tools_config = json.loads(text)
+                        validated_config = self._validate_tools_config(tools_config)
+                        return validated_config
+                    else:
+                        # 直接返回文本回答
+                        return text
+                        
+                except json.JSONDecodeError as e:
+                    if attempt == max_retries - 1:
+                        # 如果不是有效的 JSON，且达到重试次数，则作为普通回答处理
+                        return text
+                    self._logger.warning(f"[CryptoAgent] JSON 解析失败 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
+                    await asyncio.sleep(1)  # 添加延迟
+                    continue
+                
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    self._logger.error(f"[CryptoAgent] 思考过程出错: {str(e)}")
+                    raise
+                self._logger.warning(f"[CryptoAgent] 思考失败 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
+                await asyncio.sleep(1)  # 添加延迟
+                continue
+        
+        raise ValueError("达到最大重试次数，思考过程失败")
 
     def _validate_tools_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """验证工具配置"""
@@ -259,48 +251,74 @@ class CryptoAgent(BaseAgent):
             
             # 2. 分析用户意图，确定需要使用的工具
             self._logger.debug("[CryptoAgent] 正在分析用户意图...")
-            tools_config = await self.think(context)
-            self._logger.debug(f"[CryptoAgent] 工具配置: {tools_config}")
+            think_result = await self.think(context)
+            self._logger.debug(f"[CryptoAgent] 思考结果: {think_result}")
             
-            # 3. 调用工具获取数据
-            self._logger.debug("[CryptoAgent] 正在获取市场数据...")
-            market_data = await self._analyze_market(tools_config)
-            self._logger.debug(f"[CryptoAgent] 市场数据: {market_data}")
-            
-            # 4. 格式化市场数据为易读格式
-            self._logger.debug("[CryptoAgent] 正在格式化市场数据...")
-            formatted_data = self._format_market_data(market_data)
-            
-            # 5. 更新系统提示词，插入市场数据
-            self._logger.debug("[CryptoAgent] 正在更新系统提示词...")
-            system_prompt = self.config["system_prompt"].replace(
-                "{{market_data}}", 
-                formatted_data
-            )
-            
-            # 6. 生成回复
-            self._logger.debug("[CryptoAgent] 正在生成回复...")
-            response = await self.llm.agenerate([[
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
-                {
-                    "role": "user",
-                    "content": input_text
+            # 3. 如果是工具配置，则调用工具并进行分析
+            market_data = None
+            if isinstance(think_result, dict):
+                # 获取市场数据
+                self._logger.debug("[CryptoAgent] 正在获取市场数据...")
+                market_data = await self._analyze_market(think_result)
+                formatted_data = self._format_market_data(market_data)
+                self._logger.debug(f"[CryptoAgent] 格式化后的市场数据:\n{formatted_data}")
+                
+                # 构建完整的系统提示词，包含工具信息和市场数据
+                system_prompt = await self._load_prompt_template("crypto-analyst")
+                tools_info = {
+                    "available_tools": [
+                        {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "parameters": {
+                                name: {
+                                    "description": param["description"],
+                                    "type": param["type"],
+                                    "required": param["required"],
+                                    "default": param.get("default", None)
+                                }
+                                for name, param in tool.parameters.items()
+                            }
+                        }
+                        for tool in self.tools
+                    ]
                 }
-            ]])
+                formatted_tools = json.dumps(tools_info, indent=2, ensure_ascii=False)
+                
+                # 替换提示词中的占位符
+                system_prompt = system_prompt.replace("{{tools_info}}", formatted_tools)
+                system_prompt = system_prompt.replace("{{market_data}}", formatted_data)
+                self._logger.debug("[CryptoAgent] 系统提示词..."+system_prompt)
+                self._logger.debug("[CryptoAgent] 正在生成分析结果...")
+                # 使用更新后的提示词再次调用 LLM 进行分析
+                response = await self.llm.agenerate([[
+                    {
+                        "role": "system",
+                        "content": system_prompt
+                    },
+                    {
+                        "role": "user",
+                        "content": f"请基于以上市场数据分析 {input_text}"
+                    }
+                ]])
+                
+                result = response
+                self._logger.debug(f"[CryptoAgent] 生成的分析结果: {result}")
+            else:
+                # 直接使用思考结果
+                result = think_result
             
-            result = response.generations[0][0].text
-            self._logger.debug(f"[CryptoAgent] 生成回复完成: {result}")
-            
-            # 7. 保存交互记录
+            # 4. 保存交互记录
             self._logger.debug("[CryptoAgent] 正在保存交互记录...")
-            await self._save_interaction(input_text, result, {
-                **context,
-                "tools_config": tools_config,
-                "market_data": market_data
-            })
+            try:
+                await self._save_interaction(input_text, result, {
+                    **context,
+                    "result": result,
+                    "market_data": market_data,
+                    "used_tools": isinstance(think_result, dict)
+                })
+            except Exception as e:
+                self._logger.error(f"[CryptoAgent] 保存交互记录失败: {str(e)}")
             
             return result
             
@@ -370,21 +388,40 @@ class CryptoAgent(BaseAgent):
             context = await self._build_context(input_text, remark)
             
             # 2. 分析用户意图，确定需要使用的工具
-            tools_config = await self.think(context)
+            think_result = await self.think(context)
             
-            # 3. 调用工具获取数据
-            market_data = await self._analyze_market(tools_config)
+            # 3. 如果是工具配置，则调用工具
+
+            market_data = None
+            if isinstance(think_result, dict):
+
+                # 获取市场数据
+                market_data = await self._analyze_market(think_result)
+                formatted_data = self._format_market_data(market_data)
+                
+                # 构建完整的系统提示词
+                system_prompt = await self._load_prompt_template("crypto-analyst")
+                tools_info = {
+                    "available_tools": [
+                        {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "parameters": tool.parameters
+                        }
+                        for tool in self.tools
+                    ]
+                }
+                formatted_tools = json.dumps(tools_info, indent=2, ensure_ascii=False)
+                
+                # 替换提示词中的占位符
+                system_prompt = system_prompt.replace("{{tools_info}}", formatted_tools)
+                system_prompt = system_prompt.replace("{{market_data}}", formatted_data)
+            else:
+                # 如果不需要工具，使用原始提示词
+                system_prompt = await self._load_prompt_template("crypto-analyst")
+                system_prompt = system_prompt.replace("{{market_data}}", "")
             
-            # 4. 格式化市场数据
-            formatted_data = self._format_market_data(market_data)
-            
-            # 5. 更新系统提示词
-            system_prompt = self.config["system_prompt"].replace(
-                "{{market_data}}", 
-                formatted_data
-            )
-            
-            # 6. 流式生成回复
+            # 4. 流式生成回复
             async for chunk in self.llm.astream([
                 {
                     "role": "system",
@@ -397,16 +434,16 @@ class CryptoAgent(BaseAgent):
             ]):
                 yield chunk.text
             
-            # 7. 保存交互记录
+            # 5. 保存交互记录
             await self._save_interaction(input_text, "流式回复", {
                 **context,
-                "tools_config": tools_config,
+                "think_result": think_result,
                 "market_data": market_data
             })
             
         except Exception as e:
-            self._logger.error(f"生成回复失败: {str(e)}")
-            raise 
+            self._logger.error(f"[CryptoAgent] 生成回复失败: {str(e)}")
+            raise
 
     async def _save_interaction(self, input_text: str, response: str, context: Dict[str, Any]) -> None:
         """保存交互记录

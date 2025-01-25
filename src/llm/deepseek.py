@@ -128,6 +128,8 @@ class DeepSeekLLM(LLM):
         if stop:
             data["stop"] = stop
             
+        print(f"[DeepSeekLLM] 发送请求: {json.dumps(data, ensure_ascii=False, indent=2)}")
+            
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 f"{self.api_base}/chat/completions",
@@ -136,9 +138,16 @@ class DeepSeekLLM(LLM):
             ) as response:
                 if response.status != 200:
                     error_text = await response.text()
+                    print(f"[DeepSeekLLM] API 调用失败: {error_text}")
                     raise Exception(f"API call failed: {error_text}")
                     
                 result = await response.json()
+                print(f"[DeepSeekLLM] API 响应: {json.dumps(result, ensure_ascii=False, indent=2)}")
+                
+                if not result.get("choices") or not result["choices"][0].get("message"):
+                    print("[DeepSeekLLM] API 响应中缺少必要的字段")
+                    raise Exception("Invalid API response format")
+                    
                 return result["choices"][0]["message"]["content"]
 
     def _generate(

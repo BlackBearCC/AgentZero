@@ -117,6 +117,17 @@ reference: 《夏目友人帐》中的斑/猫咪老师, 《水果篮子》中的
    - 角色想要表达亲密时
 </task_rules>
 
+<memory>
+近期事件：
+{{chat_summary}}
+
+历史事件：
+{{event_memory}}
+
+相关记忆：
+{{entity_memory}}
+</memory>
+
 <output_format>
 你必须严格按照以下JSON格式输出，禁止添加任何其他内容：
 
@@ -149,17 +160,6 @@ reference: 《夏目友人帐》中的斑/猫咪老师, 《水果篮子》中的
 9. content内容必须是纯对话，不能包含任何动作/表情描述
 10. 禁止不使用JSON输出
 </rules>
-
-<memory>
-近期事件：
-{{chat_summary}}
-
-历史事件：
-{{event_memory}}
-
-相关记忆：
-{{entity_memory}}
-</memory>
 
 <init>
 <memory>是角色知道的事实信息，角色将内容用作回答时的参考资料。

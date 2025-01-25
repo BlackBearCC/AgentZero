@@ -212,7 +212,7 @@ class ChatTester:
 
 async def main():
     """主函数"""
-    remark = "单轮召回无队列"
+    remark = "单轮召回记忆队列，无概要"
     
     tester = ChatTester(remark=remark)
     await tester.run_tests()

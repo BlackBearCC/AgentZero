@@ -152,12 +152,27 @@ class DeepSeekLLM(LLM):
             "Content-Type": "application/json"
         }
         
+        # 处理消息列表或字符串输入
+        if isinstance(prompt, list):
+            messages = [
+                {
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")
+                }
+                for msg in prompt
+            ]
+        else:
+            messages = [{
+                "role": "user",
+                "content": prompt
+            }]
+        
         data = {
             "model": self.model_name,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,  # 使用处理后的消息列表
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
-            "stream": True  # 启用流式输出
+            "stream": True
         }
         
         if stop:
@@ -173,10 +188,8 @@ class DeepSeekLLM(LLM):
                     error_text = await response.text()
                     raise Exception(f"API call failed: {error_text}")
                 
-                # 处理流式响应
                 async for line in response.content:
                     if line:
-                        # 移除 "data: " 前缀并解析 JSON
                         line = line.decode('utf-8').strip()
                         if line.startswith("data: "):
                             line = line[6:]

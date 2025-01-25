@@ -24,7 +24,7 @@ class ZeroAgent(BaseAgent):
         """
         super().__init__(config, llm, memory_llm, tools)
         # 初始化配置
-        self.use_memory_queue = config.get("use_memory_queue", False)  # 是否使用记忆队列
+        self.use_memory_queue = config.get("use_memory_queue", True)  # 是否使用记忆队列
         self.use_combined_query = config.get("use_combined_query", False)  # 是否使用组合查询
         self.memory_queue_limit = config.get("memory_queue_limit", 15)  # 默认队列长度为15
         self.event_queue = []    # 存储历史事件
@@ -248,7 +248,7 @@ class ZeroAgent(BaseAgent):
                     entity_memory = "\n".join(entity_lines)
                     entity_memory = self._format_memory_content(entity_memory)
         
-        # summary = ""
+        summary = ""
         # event_memory = ""
         # entity_memory = ""
         self._logger.debug(f"[ZeroAgent] 处理后的历史事件: {event_memory}")

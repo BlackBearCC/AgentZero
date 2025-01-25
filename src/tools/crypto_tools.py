@@ -93,47 +93,47 @@ class BaseCryptoTool(ABC):
         if hasattr(self, 'exchange'):
             await self.exchange.close()
 
-class MarketDataTool(BaseCryptoTool):
-    """市场数据工具"""
+# class MarketDataTool(BaseCryptoTool):
+#     """市场数据工具"""
     
-    @property
-    def name(self) -> str:
-        return "market_data"
+#     @property
+#     def name(self) -> str:
+#         return "market_data"
         
-    @property
-    def description(self) -> str:
-        return "获取市场深度数据"
+#     @property
+#     def description(self) -> str:
+#         return "获取市场深度数据"
         
-    @property
-    def parameters(self) -> Dict[str, Any]:
-        return {
-            "symbol": {
-                "type": "string",
-                "description": "交易对名称",
-                "required": True
-            }
-        }
+#     @property
+#     def parameters(self) -> Dict[str, Any]:
+#         return {
+#             "symbol": {
+#                 "type": "string",
+#                 "description": "交易对名称",
+#                 "required": True
+#             }
+#         }
         
-    async def _run(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """获取市场数据"""
-        try:
-            # 使用统一的 API 方法获取订单簿数据
-            orderbook = await self.exchange.fetch_order_book(
-                params['symbol'],
-                limit=5  # 只获取前5档深度
-            )
+#     async def _run(self, params: Dict[str, Any]) -> Dict[str, Any]:
+#         """获取市场数据"""
+#         try:
+#             # 使用统一的 API 方法获取订单簿数据
+#             orderbook = await self.exchange.fetch_order_book(
+#                 params['symbol'],
+#                 limit=5  # 只获取前5档深度
+#             )
             
-            if not orderbook or not orderbook.get('bids') or not orderbook.get('asks'):
-                raise ValueError("获取深度数据失败")
+#             if not orderbook or not orderbook.get('bids') or not orderbook.get('asks'):
+#                 raise ValueError("获取深度数据失败")
                 
-            return {
-                "bid": float(orderbook['bids'][0][0]),  # 最优买价
-                "ask": float(orderbook['asks'][0][0]),  # 最优卖价
-                "spread": float(orderbook['asks'][0][0]) - float(orderbook['bids'][0][0])  # 买卖价差
-            }
+#             return {
+#                 "bid": float(orderbook['bids'][0][0]),  # 最优买价
+#                 "ask": float(orderbook['asks'][0][0]),  # 最优卖价
+#                 "spread": float(orderbook['asks'][0][0]) - float(orderbook['bids'][0][0])  # 买卖价差
+#             }
             
-        except Exception as e:
-            raise ValueError(f"获取 {params['symbol']} 深度数据失败")
+#         except Exception as e:
+#             raise ValueError(f"获取 {params['symbol']} 深度数据失败")
 
 class NewsAggregatorTool(BaseCryptoTool):
     """新闻聚合工具"""
@@ -205,6 +205,12 @@ class NewsAggregatorTool(BaseCryptoTool):
 class TechnicalAnalysisTool(BaseCryptoTool):
     """技术分析工具"""
     
+    def __init__(self):
+        super().__init__()
+        self.initialized = False
+        self.cache = {}  # 添加缓存
+        self.cache_ttl = 300  # 缓存时间5分钟
+        
     @property
     def name(self) -> str:
         return "technical"
@@ -239,24 +245,63 @@ class TechnicalAnalysisTool(BaseCryptoTool):
                 "required": False
             }
         }        
+    async def _fetch_ohlcv(self, symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
+        """获取并处理K线数据"""
+        try:
+            # 使用缓存键
+            cache_key = f"{symbol}_{timeframe}_{limit}"
+            current_time = datetime.now().timestamp()
+            
+            # 检查缓存
+            if cache_key in self.cache:
+                cached_data, timestamp = self.cache[cache_key]
+                if current_time - timestamp < self.cache_ttl:
+                    return cached_data
+                    
+            # 获取K线数据
+            ohlcv = await self.exchange.fetch_ohlcv(
+                symbol,
+                timeframe,
+                limit=limit,
+                params={
+                    'limit': limit,
+                    'warnOnFetchOHLCVLimitArgument': False
+                }
+            )
+            
+            print(f"{ohlcv}\nxxxxxxxxxxxxxx==========================================================")
+            if not ohlcv:
+                raise ValueError(f"无法获取 {symbol} 的K线数据")
+                
+            # 转换为DataFrame
+            df = pd.DataFrame(
+                ohlcv, 
+                columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
+            )
+            
+            # 转换时间戳
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            
+            # 更新缓存
+            self.cache[cache_key] = (df, current_time)
+            
+            return df
+            
+        except Exception as e:
+            raise ValueError(f"获取K线数据失败: {str(e)}")
+            
     async def _run(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """进行技术分析"""
+        if not self.initialized:
+            await self.initialize()
+            self.initialized = True
+            
         symbol = params['symbol']
         timeframe = params.get("timeframe", "1h")
         limit = params.get("limit", 100)
         
-        # 只获取必要的K线数据
-        ohlcv = await self.exchange.fetch_ohlcv(
-            symbol, 
-            timeframe, 
-            limit=limit,
-            params={'limit': limit}  # 确保限制数据量
-        )
-        
-        if not ohlcv:
-            raise ValueError(f"无法获取 {symbol} 的K线数据")
-            
-        df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+        # 使用新的获取数据方法
+        df = await self._fetch_ohlcv(symbol, timeframe, limit)
         
         # 计算指标
         df.ta.rsi(length=14, append=True)

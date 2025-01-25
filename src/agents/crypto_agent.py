@@ -1,7 +1,6 @@
 from typing import Dict, Any, List, Optional, AsyncIterator
 from src.agents.base_agent import BaseAgent
 from src.tools.crypto_tools import (
-    MarketDataTool, 
     NewsAggregatorTool,
     TechnicalAnalysisTool
 )
@@ -23,7 +22,6 @@ class CryptoAgent(BaseAgent):
         """
         # 初始化默认工具集
         default_tools = [
-            MarketDataTool(),    # 市场数据
             NewsAggregatorTool(),  # 新闻聚合
             TechnicalAnalysisTool()  # 技术分析
         ]

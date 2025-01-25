@@ -153,9 +153,23 @@ class NewsAggregatorTool(BaseCryptoTool):
     def __init__(self):
         super().__init__()
         self.crypto_panic_url = "https://cryptopanic.com/api/v1/posts/"
-        self.crypto_panic_key = "YOUR_REAL_API_KEY"  # 替换为实际的 API key
+        self.crypto_panic_key = "7b9a7b637b6f6b394d8cf09c6619d52ea45f2cee"
         self.cache_ttl = 300  # 5分钟缓存
         
+        # 初始化内置 LLM
+        from src.llm.deepseek import DeepSeekLLM
+        import os
+        
+        deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+        if not deepseek_api_key:
+            raise ValueError("DEEPSEEK_API_KEY not found")
+            
+        self.llm = DeepSeekLLM(
+            model_name="deepseek-chat",
+            temperature=0.3,  # 降低温度以获得更稳定的分析
+            api_key=deepseek_api_key
+        )
+    
     @property
     def name(self) -> str:
         return "news"
@@ -175,15 +189,54 @@ class NewsAggregatorTool(BaseCryptoTool):
             "limit": {
                 "type": "integer",
                 "description": "新闻条数",
-                "default": 5,
-                "required": False
+                "default": 20,
+                "required": True
             }
         }
         
+    async def analyze_news(self, news_data: List[Dict[str, Any]]) -> str:
+        """使用 LLM 分析新闻"""
+        # 构建新闻时间线
+        news_timeline = "\n".join([
+            f"- [{item['published_at']}] {item['title']} (来源: {item['source']})"
+            for item in sorted(news_data, key=lambda x: x['published_at'], reverse=True)
+        ])
+        
+        prompt = f"""作为加密货币分析师，请分析以下最新新闻事件的市场影响：
+
+新闻时间线：
+{news_timeline}
+
+请从以下维度进行分析：
+1. 核心事件概述
+   - 最重要的2-3个新闻要点
+   - 事件的关联性和影响链
+
+2. 市场影响评估
+   - 对市场情绪的影响
+   - 可能的价格影响方向
+   - 影响持续时间评估
+
+3. 风险与机会
+   - 潜在的市场风险
+   - 值得关注的机会点
+   - 需要持续跟踪的指标
+
+请用专业、客观的语言进行分析，避免过度推测，注重数据支持。
+"""
+        try:
+            response = await self.llm.agenerate([[
+                {"role": "system", "content": "你是一位专业的加密货币市场分析师，擅长新闻分析和事件影响评估。你的分析始终基于事实，注重客观性和谨慎性。"},
+                {"role": "user", "content": prompt}
+            ]])
+            return response.generations[0][0].text
+        except Exception as e:
+            return f"新闻分析失败: {str(e)}"
+            
     async def _run(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """获取新闻数据"""
+        """获取并分析新闻数据"""
         symbol = params['symbol']
-        limit = params.get('limit', 5)
+        limit = params.get('limit', 30)
         
         # 检查缓存
         cache_key = f"{symbol}_{limit}"
@@ -192,10 +245,10 @@ class NewsAggregatorTool(BaseCryptoTool):
             if datetime.now().timestamp() - timestamp < self.cache_ttl:
                 return cached_data
                 
-        if not self.crypto_panic_key or self.crypto_panic_key == "YOUR_REAL_API_KEY":
+        if not self.crypto_panic_key:
             raise ValueError("未正确配置新闻 API key")
             
-        # 添加重试机制
+        # 获取新闻数据
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -214,16 +267,22 @@ class NewsAggregatorTool(BaseCryptoTool):
                         if not data.get("results"):
                             raise ValueError(f"未找到 {symbol} 相关新闻")
                             
+                        news_list = [
+                            {
+                                "title": item["title"],
+                                "url": item["url"],
+                                "source": item["source"]["title"],
+                                "published_at": item["published_at"]
+                            }
+                            for item in data["results"][:limit]
+                        ]
+                        
+                        # 使用 LLM 分析新闻
+                        analysis = await self.analyze_news(news_list)
+                        
                         result = {
-                            "news": [
-                                {
-                                    "title": item["title"],
-                                    "url": item["url"],
-                                    "source": item["source"]["title"],
-                                    "published_at": item["published_at"]
-                                }
-                                for item in data["results"][:limit]
-                            ]
+                            "news": news_list,
+                            "analysis": analysis  # 添加 LLM 分析结果
                         }
                         
                         # 更新缓存
@@ -233,7 +292,7 @@ class NewsAggregatorTool(BaseCryptoTool):
             except Exception as e:
                 if attempt == max_retries - 1:
                     raise
-                await asyncio.sleep(1)  # 重试前等待
+                await asyncio.sleep(1)
 
 class TechnicalAnalysisTool(BaseCryptoTool):
     """技术分析工具"""

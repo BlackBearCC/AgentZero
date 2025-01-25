@@ -104,7 +104,7 @@ POST http://localhost:8000/api/v1/chat/crypto_001
 Content-Type: application/json
 
 {
-  "message": "ETH 现在的市场情况如何？",
+  "message": "ETH 现在的市场情况如何？最近15分钟，结合新闻30条",
   "context": {}
 }
 

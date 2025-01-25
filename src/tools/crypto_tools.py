@@ -202,31 +202,43 @@ class NewsAggregatorTool(BaseCryptoTool):
             for item in sorted(news_data, key=lambda x: x['published_at'], reverse=True)
         ])
         
-        prompt = f"""作为加密货币分析师，请分析以下最新新闻事件的市场影响：
+        prompt = f"""作为加密货币分析师，请分析以下最新新闻事件的市场影响。
 
-新闻时间线：
-{news_timeline}
+    新闻时间线：
+    {news_timeline}
 
-请从以下维度进行分析：
-1. 核心事件概述
-   - 最重要的2-3个新闻要点
-   - 事件的关联性和影响链
+    请按以下格式输出分析报告：
 
-2. 市场影响评估
-   - 对市场情绪的影响
-   - 可能的价格影响方向
-   - 影响持续时间评估
+    ### 最新新闻概要
+    [请列出3-5条最重要的新闻，用简短的一句话概括每条新闻的核心内容]
 
-3. 风险与机会
-   - 潜在的市场风险
-   - 值得关注的机会点
-   - 需要持续跟踪的指标
+    ### 市场影响分析
+    1. 核心事件分析
+    - 最重要的2-3个新闻要点及其关联性
+    - 事件影响链分析
 
-请用专业、客观的语言进行分析，避免过度推测，注重数据支持。
-"""
+    2. 市场影响评估
+    - 市场情绪影响：[积极/中性/消极]
+    - 可能的价格影响方向
+    - 影响持续时间评估
+
+    3. 风险与机会分析
+    - 潜在市场风险
+    - 值得关注的机会
+    - 需要持续跟踪的指标
+
+    请用专业、客观的语言进行分析，避免过度推测，注重数据支持。
+    """
         try:
             response = await self.llm.agenerate([[
-                {"role": "system", "content": "你是一位专业的加密货币市场分析师，擅长新闻分析和事件影响评估。你的分析始终基于事实，注重客观性和谨慎性。"},
+                {
+                    "role": "system", 
+                    "content": """你是一位专业的加密货币市场分析师，擅长新闻分析和事件影响评估。
+                    - 分析始终基于事实，注重客观性和谨慎性
+                    - 使用清晰的结构化格式输出
+                    - 重点突出关键信息和实际影响
+                    - 避免过度推测和主观判断"""
+                },
                 {"role": "user", "content": prompt}
             ]])
             return response.generations[0][0].text
@@ -236,7 +248,7 @@ class NewsAggregatorTool(BaseCryptoTool):
     async def _run(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """获取并分析新闻数据"""
         symbol = params['symbol']
-        limit = params.get('limit', 30)
+        limit = params.get('limit', 20)
         
         # 检查缓存
         cache_key = f"{symbol}_{limit}"

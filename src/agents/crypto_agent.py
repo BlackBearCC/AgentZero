@@ -339,17 +339,17 @@ class CryptoAgent(BaseAgent):
                         section.append(f"买卖价差: ${tool_data['spread']:,.2f}")
                         
                     elif tool_name == "technical":
-                        section.append("\n技术指标:")
+                        section.append("\n### 技术指标:")
                         section.append(f"RSI(14): {tool_data['rsi']:.2f}")
                         ma_data = tool_data['ma']
                         section.append(f"MA7/25/99: ${ma_data['ma7']:,.2f} / ${ma_data['ma25']:,.2f} / ${ma_data['ma99']:,.2f}")
                         macd_data = tool_data['macd']
                         section.append(f"MACD: {macd_data['macd']:.2f} (Signal: {macd_data['signal']:.2f}, Hist: {macd_data['hist']:.2f})")
                         
-                    elif tool_name == "news" and tool_data.get("news"):
-                        section.append("\n最新新闻:")
-                        for news in tool_data["news"][:3]:
-                            section.append(f"- {news['title']}")
+                    elif tool_name == "news":
+                        section.append("\n### 加密货币新闻分析")
+                        if "analysis" in tool_data:
+                            section.append(tool_data["analysis"])  # 直接添加完整的分析报告
                             
                 formatted_section = "\n".join(section)
                 self._logger.debug(f"[CryptoAgent] {symbol} 格式化结果:\n{formatted_section}")

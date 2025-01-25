@@ -263,34 +263,21 @@ class CryptoAgent(BaseAgent):
                 formatted_data = self._format_market_data(market_data)
                 self._logger.debug(f"[CryptoAgent] 格式化后的市场数据:\n{formatted_data}")
                 
-                # 构建完整的系统提示词，包含工具信息和市场数据
-                system_prompt = await self._load_prompt_template("crypto-analyst")
-                tools_info = {
-                    "available_tools": [
-                        {
-                            "name": tool.name,
-                            "description": tool.description,
-                            "parameters": {
-                                name: {
-                                    "description": param["description"],
-                                    "type": param["type"],
-                                    "required": param["required"],
-                                    "default": param.get("default", None)
-                                }
-                                for name, param in tool.parameters.items()
-                            }
-                        }
-                        for tool in self.tools
-                    ]
-                }
-                formatted_tools = json.dumps(tools_info, indent=2, ensure_ascii=False)
+                # 构建新的用户输入，包含工具输出结果
+                analysis_prompt = (
+                    f"以下是您请求的市场数据分析结果：\n\n"
+                    f"{formatted_data}\n\n"
+                    f"请基于以上数据，分析：{input_text}\n\n"
+                    f"请从以下几个方面进行分析：\n"
+                    f"1. 技术指标分析（MA、RSI、MACD等）\n"
+                    f"2. 当前趋势判断\n"
+                    f"3. 支撑和阻力位\n"
+                    f"4. 短期走势预测\n"
+                    f"5. 风险提示"
+                )
                 
-                # 替换提示词中的占位符
-                system_prompt = system_prompt.replace("{{tools_info}}", formatted_tools)
-                system_prompt = system_prompt.replace("{{market_data}}", formatted_data)
-                self._logger.debug("[CryptoAgent] 系统提示词..."+system_prompt)
-                self._logger.debug("[CryptoAgent] 正在生成分析结果...")
-                # 使用更新后的提示词再次调用 LLM 进行分析
+                # 使用系统提示词和新的用户输入调用 LLM
+                system_prompt = await self._load_prompt_template("crypto-analyst")
                 response = await self.llm.agenerate([[
                     {
                         "role": "system",
@@ -298,11 +285,11 @@ class CryptoAgent(BaseAgent):
                     },
                     {
                         "role": "user",
-                        "content": f"请基于以上市场数据分析 {input_text}"
+                        "content": analysis_prompt
                     }
                 ]])
                 
-                result = response
+                result = response.generations[0][0].text
                 self._logger.debug(f"[CryptoAgent] 生成的分析结果: {result}")
             else:
                 # 直接使用思考结果
@@ -314,7 +301,7 @@ class CryptoAgent(BaseAgent):
                 await self._save_interaction(input_text, result, {
                     **context,
                     "result": result,
-                    "market_data": market_data,
+                    "market_data": market_data if 'market_data' in locals() else None,
                     "used_tools": isinstance(think_result, dict)
                 })
             except Exception as e:

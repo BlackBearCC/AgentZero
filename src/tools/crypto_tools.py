@@ -36,8 +36,8 @@ class BaseCryptoTool(ABC):
             })
         self.exchange = BaseCryptoTool._exchange
         
-        # 启用详细日志
-        self.exchange.verbose = True  # 开启详细日志
+        # 仅在开发环境启用详细日志
+        self.exchange.verbose = False  # 关闭 CCXT 详细日志
         self.cache = {}
         self.cache_ttl = 300
         
@@ -281,7 +281,6 @@ class TechnicalAnalysisTool(BaseCryptoTool):
     async def _fetch_ohlcv(self, symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
         """获取并处理K线数据"""
         try:
-            # 使用缓存键
             cache_key = f"{symbol}_{timeframe}_{limit}"
             current_time = datetime.now().timestamp()
             
@@ -302,7 +301,6 @@ class TechnicalAnalysisTool(BaseCryptoTool):
                 }
             )
             
-            print(f"{ohlcv}\nxxxxxxxxxxxxxx==========================================================")
             if not ohlcv:
                 raise ValueError(f"无法获取 {symbol} 的K线数据")
                 

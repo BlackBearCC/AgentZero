@@ -427,3 +427,199 @@ class TechnicalAnalysisTool(BaseCryptoTool):
                 "hist": float(latest['MACDh_12_26_9'])
             }
         } 
+
+class ChartPatternTool(BaseCryptoTool):
+    """图形形态分析工具"""
+    
+    def __init__(self):
+        super().__init__()
+        self.cache = {}
+        self.cache_ttl = 300  # 5分钟缓存
+        
+    @property
+    def name(self) -> str:
+        return "pattern"
+        
+    @property
+    def description(self) -> str:
+        return "分析价格图形形态，识别常见技术形态如头肩底、双顶双底、三角形等"
+        
+    @property
+    def parameters(self) -> Dict[str, Any]:
+        return {
+            "symbol": {
+                "type": "string",
+                "description": "交易对名称",
+                "required": True
+            },
+            "timeframe": {
+                "type": "string",
+                "description": "时间周期，如 15m、1h、4h、1d 等",
+                "default": "4h",
+                "required": False
+            },
+            "limit": {
+                "type": "integer",
+                "description": "获取的K线数量",
+                "default": 100,
+                "required": False
+            }
+        }
+        
+    async def _fetch_klines(self, symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
+        """获取K线数据"""
+        try:
+            cache_key = f"{symbol}_{timeframe}_{limit}"
+            current_time = datetime.now().timestamp()
+            
+            # 检查缓存
+            if cache_key in self.cache:
+                cached_data, timestamp = self.cache[cache_key]
+                if current_time - timestamp < self.cache_ttl:
+                    return cached_data
+                    
+            # 获取K线数据
+            ohlcv = await self.exchange.fetch_ohlcv(
+                symbol,
+                timeframe,
+                limit=limit
+            )
+            
+            if not ohlcv:
+                raise ValueError(f"无法获取 {symbol} 的K线数据")
+                
+            # 转换为DataFrame
+            df = pd.DataFrame(
+                ohlcv,
+                columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
+            )
+            
+            # 转换时间戳
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            
+            # 计算一些基本指标
+            df['sma_20'] = df['close'].rolling(window=20).mean()
+            df['sma_50'] = df['close'].rolling(window=50).mean()
+            df['rsi'] = ta.rsi(df['close'], length=14)
+            
+            # 计算波动率
+            df['volatility'] = df['close'].pct_change().rolling(window=20).std()
+            
+            # 更新缓存
+            self.cache[cache_key] = (df, current_time)
+            
+            return df
+            
+        except Exception as e:
+            raise ValueError(f"获取K线数据失败: {str(e)}")
+            
+    def _prepare_pattern_analysis(self, df: pd.DataFrame) -> str:
+        """准备图形分态分析数据"""
+        latest = df.iloc[-1]
+        
+        # 计算关键价格水平
+        recent_high = df['high'].tail(20).max()
+        recent_low = df['low'].tail(20).min()
+        
+        # 计算趋势信息
+        trend_20 = "上升" if latest['sma_20'] > df['sma_20'].iloc[-2] else "下降"
+        trend_50 = "上升" if latest['sma_50'] > df['sma_50'].iloc[-2] else "下降"
+        
+        # 构建分析文本
+        analysis_text = f"""
+最近20根K线的价格数据分析：
+
+1. 价格区间：
+- 最高点：{recent_high:.2f}
+- 最低点：{recent_low:.2f}
+- 当前价：{latest['close']:.2f}
+
+2. 移动平均线：
+- MA20：{latest['sma_20']:.2f}，趋势{trend_20}
+- MA50：{latest['sma_50']:.2f}，趋势{trend_50}
+
+3. 技术指标：
+- RSI(14)：{latest['rsi']:.2f}
+- 20日波动率：{latest['volatility']*100:.2f}%
+
+4. 价格走势：
+{df['close'].tail(20).tolist()}
+
+5. 成交量趋势：
+{df['volume'].tail(20).tolist()}
+"""
+        return analysis_text
+            
+    async def _run(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """运行图形形态分析"""
+        try:
+            symbol = params['symbol']
+            timeframe = params.get('timeframe', '4h')
+            limit = params.get('limit', 100)
+            
+            # 获取K线数据
+            df = await self._fetch_klines(symbol, timeframe, limit)
+            
+            # 准备分析数据
+            analysis_data = self._prepare_pattern_analysis(df)
+            
+            # 使用 LLM 分析图形形态
+            from src.llm.deepseek import DeepSeekLLM
+            import os
+            
+            deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+            if not deepseek_api_key:
+                raise ValueError("DEEPSEEK_API_KEY not found")
+                
+            llm = DeepSeekLLM(
+                model_name="deepseek-chat",
+                temperature=0.3,
+                api_key=deepseek_api_key
+            )
+            
+            # 构建分析提示词
+            prompt = f"""作为一位专业的技术分析师，请基于以下数据分析价格图形形态。
+
+{analysis_data}
+
+请重点关注：
+1. 主要图形形态（如头肩底、双顶双底、三角形、旗形、楔形等）
+2. 调和形态（如蝙蝠形态、蝴蝶形态、AB=CD等）
+3. 支撑位和阻力位
+4. 趋势线和通道
+5. 可能的突破点或反转点
+
+分析要求：
+- 基于数据给出明确的形态判断
+- 说明形成该判断的理由
+- 指出关键价格水平
+- 评估形态的可靠性
+- 预测可能的发展方向
+
+请用专业、客观的语言进行分析。"""
+
+            response = await llm.agenerate([[
+                {
+                    "role": "system",
+                    "content": """你是一位专业的技术分析师，擅长识别各种价格形态。
+                    - 分析始终基于数据
+                    - 保持客观专业
+                    - 清晰说明判断依据
+                    - 注意形态的完整性和可靠性"""
+                },
+                {"role": "user", "content": prompt}
+            ]])
+            
+            pattern_analysis = response.generations[0][0].text
+            
+            return {
+                "timeframe": timeframe,
+                "pattern_analysis": pattern_analysis,
+                "latest_price": float(df['close'].iloc[-1]),
+                "ma20": float(df['sma_20'].iloc[-1]),
+                "ma50": float(df['sma_50'].iloc[-1]),
+                "rsi": float(df['rsi'].iloc[-1])
+            }
+            
+        except Exception as e:
+            raise ValueError(f"图形形态分析失败: {str(e)}") 

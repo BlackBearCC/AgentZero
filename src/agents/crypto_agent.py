@@ -291,14 +291,7 @@ class CryptoAgent(BaseAgent):
                     "=== 工具调用结果结束 ===",
                     "",
                     f"请基于以上数据，分析：{input_text}",
-                    "",
-                    "分析要求：",
-                    "1. 首先说明你看到了哪些关键数据，以及这些数据的重要性",
-                    "2. 根据数据特点，选择合适的技术指标进行分析",
-                    "3. 结合多个维度，给出你的专业判断",
-                    "4. 清晰指出潜在风险",
-                    "5. 如果数据不足，请明确指出还需要哪些补充信息",
-                    "",
+                    ""
                     "请记住：",
                     "- 分析要基于实际数据，而不是主观臆测",
                     "- 关注数据的时效性和相关性",
@@ -384,22 +377,27 @@ class CryptoAgent(BaseAgent):
                         macd_data = tool_data['macd']
                         section.append(f"MACD: {macd_data['macd']:.2f} (Signal: {macd_data['signal']:.2f}, Hist: {macd_data['hist']:.2f})")
                         
+                    elif tool_name == "pattern":
+                        section.append("\n### 图形形态分析:")
+                        section.append(f"时间周期: {tool_data['timeframe']}")
+                        section.append(f"MA20/50: ${tool_data['ma20']:,.2f} / ${tool_data['ma50']:,.2f}")
+                        section.append(f"RSI(14): {tool_data['rsi']:.2f}")
+                        section.append("\n形态分析结果:")
+                        section.append(tool_data['pattern_analysis'])
+                        
                     elif tool_name == "news":
                         section.append("\n### 加密货币新闻分析")
                         if "analysis" in tool_data:
-                            section.append(tool_data["analysis"])  # 直接添加完整的分析报告
+                            section.append(tool_data["analysis"])
                             
-                formatted_section = "\n".join(section)
-                self._logger.debug(f"[CryptoAgent] {symbol} 格式化结果:\n{formatted_section}")
-                formatted.append(formatted_section)
+                section.append("\n")  # 添加空行分隔
+                formatted.extend(section)
                 
-            final_result = "\n\n".join(formatted) if formatted else "无可用市场数据"
-            self._logger.debug(f"[CryptoAgent] 最终格式化结果:\n{final_result}")
-            return final_result
+            return "\n".join(formatted)
             
         except Exception as e:
             self._logger.error(f"[CryptoAgent] 格式化市场数据失败: {str(e)}")
-            return "数据格式化失败"
+            return f"格式化数据时出错: {str(e)}"
 
     async def astream_response(self, input_text: str, remark: str = "") -> AsyncIterator[str]:
         """流式生成市场分析回复"""

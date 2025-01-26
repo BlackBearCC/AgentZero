@@ -4,6 +4,7 @@ from src.services.chat_service import ChatService
 from src.services.agent_service import get_agent_service
 from src.utils.logger import Logger
 import logging  # 添加日志导入
+import asyncio
 
 class TelegramBotService:
     def __init__(self, token: str):
@@ -96,35 +97,69 @@ class TelegramBotService:
         """处理普通消息"""
         try:
             await self._ensure_chat_service()
+            processing_message = None
             
-            # 发送"正在处理"消息，使用可爱的表情和语气
-            processing_message = await update.message.reply_text(
-                "✨ 哈喽哈喽~让 Crypto-chan 想想看呢... 💭"
-            )
-            
-            # 调用 ChatService 处理消息
-            response = await self._chat_service.process_message(
+            # 使用专门的 Telegram 消息处理方法
+            async for response in self._chat_service.process_telegram_message(
                 agent_id="crypto_001",
                 message=update.message.text
-            )
-            
-            # 如果响应包含问候语和工具调用
-            if isinstance(response, dict):
-                # 如果有工具调用前的问候语
-                if "pre_tool_message" in response:
-                    await processing_message.edit_text(response["pre_tool_message"])
-                    # 发送新的"正在分析"消息
-                    processing_message = await update.message.reply_text(
-                        "🔍 Crypto-chan 正在认真分析市场数据中...请稍等一下下哦！✨"
-                    )
+            ):
+                stage = response.get("stage")
                 
-                # 获取完整分析结果
-                final_response = await self._chat_service.process_tool_response(response)
-                await processing_message.edit_text(final_response)
-            else:
-                # 直接发送响应
-                await processing_message.edit_text(response)
-            
+                if stage == "think":
+                    # 思考阶段
+                    processing_message = await update.message.reply_text(
+                        f"💭 {response.get('pre_tool_message', '让 Crypto-chan 来分析一下！')}"
+                    )
+                    
+                elif stage == "fetch_data":
+                    # 获取数据阶段
+                    if not processing_message:
+                        processing_message = await update.message.reply_text(
+                            "🔍 正在获取最新市场数据...\n"
+                            "（获取K线、技术指标等数据）"
+                        )
+                    else:
+                        await processing_message.edit_text(
+                            "🔍 正在获取最新市场数据...\n"
+                            "（获取K线、技术指标等数据）"
+                        )
+                        
+                elif stage == "analysis":
+                    # 分析阶段
+                    await processing_message.edit_text(
+                        "📈 数据获取完成！正在进行技术分析...\n"
+                        "（计算指标、检测形态、分析背离等）"
+                    )
+                    
+                elif stage == "llm_analysis":
+                    # LLM分析阶段
+                    await processing_message.edit_text(
+                        "🧠 Crypto-chan 正在思考分析结果...\n"
+                        "（整合数据，形成分析结论）"
+                    )
+                    
+                elif stage == "complete":
+                    # 完成阶段
+                    if response.get("type") == "tool_call":
+                        await processing_message.edit_text(
+                            "✨ 分析完成啦！以下是详细分析报告 📝\n\n" + 
+                            response["final_response"]
+                        )
+                    else:
+                        await processing_message.edit_text(
+                            "💫 Crypto-chan 为您解答：\n\n" + 
+                            response["response"]
+                        )
+                        
+                elif stage == "error":
+                    # 错误处理
+                    await update.message.reply_text(
+                        "😢 呜呜...Crypto-chan 遇到了一点小问题呢...\n"
+                        f"错误信息: {response.get('error', '未知错误')}\n"
+                        "让我们稍后再试试看吧！💪"
+                    )
+                    
         except Exception as e:
             self.logger.error(f"消息处理失败: {str(e)}")
             await update.message.reply_text(

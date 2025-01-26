@@ -254,8 +254,8 @@ class CryptoAgent(BaseAgent):
         self._logger.debug(f"[CryptoAgent] 市场分析完成，结果: {results}")
         return results
 
-    async def generate_response(self, input_text: str, remark: str = "") -> str:
-        """生成市场分析回复"""
+    async def generate_response(self, input_text: str, remark: str = "") -> AsyncIterator[Dict[str, Any]]:
+        """生成市场分析回复，支持阶段性返回"""
         self._logger.debug(f"[CryptoAgent] 开始生成回复，输入: {input_text}")
         
         try:
@@ -266,78 +266,88 @@ class CryptoAgent(BaseAgent):
             think_result = await self.think(context)
             self._logger.debug(f"[CryptoAgent] 思考结果: {think_result}")
             
-            # 3. 如果有问候语，先发送问候
-            greeting = None
-            if isinstance(think_result, dict) and "greeting" in think_result:
-                greeting = think_result.pop("greeting")
-            
-            # 4. 如果是工具配置，则调用工具并进行分析
             if isinstance(think_result, dict):
-                # 获取市场数据
+                # 返回思考阶段结果
+                yield {
+                    "stage": "think",
+                    "type": "tool_call",
+                    "tools": think_result.get("tools", []),
+                    "pre_tool_message": think_result.get("pre_tool_message", "")
+                }
+                
+                # 3. 获取市场数据
+                yield {
+                    "stage": "fetch_data",
+                    "message": "正在获取市场数据..."
+                }
+                
                 market_data = await self._analyze_market(think_result)
+                
+                # 4. 分析数据
+                yield {
+                    "stage": "analysis",
+                    "message": "正在分析数据..."
+                }
+                
                 formatted_data = self._format_market_data(market_data)
                 
+                # 5. LLM 分析
+                yield {
+                    "stage": "llm_analysis",
+                    "message": "正在生成分析报告..."
+                }
+                
                 # 构建分析提示词
-                analysis_prompt = []
-                
-                # 如果有问候语，添加到开头
-                if greeting:
-                    analysis_prompt.append(greeting)
-                    analysis_prompt.append("")  # 添加空行
-                
-                analysis_prompt.extend([
+                analysis_prompt = [
                     "=== 工具调用结果开始 ===",
                     formatted_data,
                     "=== 工具调用结果结束 ===",
                     "",
-                    f"请基于以上数据，分析：{input_text}",
-                    ""
-                    "请记住：",
-                    "- 分析要基于实际数据，而不是主观臆测",
-                    "- 关注数据的时效性和相关性",
-                    "- 保持客观专业的分析态度",
-                    "- 如果发现异常或矛盾的数据，请指出"
-                ])
+                    f"请基于以上数据，分析：{input_text}"
+                ]
                 
-                # 将列表转换为字符串
                 analysis_prompt = "\n".join(analysis_prompt)
-                
-                # 使用系统提示词和新的用户输入调用 LLM
                 system_prompt = await self._load_prompt_template("crypto-analyst")
                 response = await self.llm.agenerate([[
-                    {
-                        "role": "system",
-                        "content": system_prompt
-                    },
-                    {
-                        "role": "user",
-                        "content": analysis_prompt
-                    }
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": analysis_prompt}
                 ]])
                 
-                result = response.generations[0][0].text
-                self._logger.debug(f"[CryptoAgent] 生成的分析结果: {result}")
-            else:
-                # 直接使用思考结果
-                result = think_result
-            
-            # 4. 保存交互记录
-            self._logger.debug("[CryptoAgent] 正在保存交互记录...")
-            try:
-                await self._save_interaction(input_text, result, {
+                final_analysis = response.generations[0][0].text
+                
+                # 6. 返回最终结果
+                yield {
+                    "stage": "complete",
+                    "type": "tool_call",
+                    "final_response": final_analysis
+                }
+                
+                # 保存交互记录
+                await self._save_interaction(input_text, final_analysis, {
                     **context,
-                    "result": result,
-                    "market_data": market_data if 'market_data' in locals() else None,
-                    "used_tools": isinstance(think_result, dict)
+                    "market_data": market_data,
+                    "used_tools": True
                 })
-            except Exception as e:
-                self._logger.error(f"[CryptoAgent] 保存交互记录失败: {str(e)}")
-            
-            return result
+                
+            else:
+                # 直接文本回答
+                yield {
+                    "stage": "complete",
+                    "type": "direct",
+                    "response": think_result
+                }
+                
+                await self._save_interaction(input_text, think_result, {
+                    **context,
+                    "used_tools": False
+                })
             
         except Exception as e:
             self._logger.error(f"[CryptoAgent] 生成回复失败: {str(e)}")
-            raise
+            yield {
+                "stage": "error",
+                "error": str(e)
+            }
 
     def _format_market_data(self, market_data: Dict[str, Any]) -> str:
         """格式化市场数据为易读格式"""

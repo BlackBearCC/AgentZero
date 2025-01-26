@@ -1,5 +1,5 @@
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from src.services.chat_service import ChatService
 from src.services.agent_service import get_agent_service
 from src.utils.logger import Logger
@@ -100,15 +100,26 @@ class TelegramBotService:
             processing_message = None
             last_update_time = 0
             
-            async def update_message(message_obj, new_text: str):
+            async def update_message(message_obj, new_text: str, min_display_time: int = 8, reply_markup=None):
+                """更新消息，确保最小显示时间
+                
+                Args:
+                    message_obj: Telegram消息对象
+                    new_text: 新消息文本
+                    min_display_time: 最小显示时间（秒）
+                    reply_markup: 可选的回复标记（用于按钮等）
+                """
                 nonlocal last_update_time
                 current_time = asyncio.get_event_loop().time()
                 time_since_last_update = current_time - last_update_time
                 
-                if time_since_last_update < 5:
-                    await asyncio.sleep(5 - time_since_last_update)
+                if time_since_last_update < min_display_time:
+                    await asyncio.sleep(min_display_time - time_since_last_update)
                 
-                await message_obj.edit_text(new_text)
+                await message_obj.edit_text(
+                    new_text,
+                    reply_markup=reply_markup
+                )
                 last_update_time = asyncio.get_event_loop().time()
             
             async for response in self._chat_service.process_telegram_message(
@@ -227,20 +238,24 @@ class TelegramBotService:
                     
                 elif stage == "complete":
                     if response.get("type") == "tool_call":
-                        market_data = response.get("market_data", {})
                         formatted_data = response.get("formatted_data", "")
                         
-                        # 构建完整报告
-                        full_report = [
-                            "✨ 分析完成啦！以下是详细分析报告 📝\n",
-                            response["final_response"],
-                            "\n📊 数据参考：",
-                            formatted_data
-                        ]
+                        # 创建带有查看数据按钮的消息
+                        keyboard = [[
+                            InlineKeyboardButton("📊 查看详细数据", callback_data=f"view_data_{update.message.message_id}")
+                        ]]
+                        reply_markup = InlineKeyboardMarkup(keyboard)
+                        
+                        # 保存数据到 context.bot_data 中，以便回调时使用
+                        if not context.bot_data.get('formatted_data'):
+                            context.bot_data['formatted_data'] = {}
+                        context.bot_data['formatted_data'][str(update.message.message_id)] = formatted_data
                         
                         await update_message(
                             processing_message,
-                            "\n".join(full_report)
+                            "✨ 分析完成啦！以下是详细分析报告 📝\n\n" + 
+                            response["final_response"],
+                            reply_markup=reply_markup
                         )
                     else:
                         await update_message(
@@ -274,6 +289,32 @@ class TelegramBotService:
                 "让我们稍后再试试看吧！💪"
             )
     
+    async def handle_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """处理按钮回调"""
+        query: CallbackQuery = update.callback_query
+        await query.answer()  # 确认回调查询
+        
+        try:
+            if query.data.startswith("view_data_"):
+                message_id = query.data.split("_")[2]
+                formatted_data = context.bot_data['formatted_data'].get(str(message_id))
+                
+                if formatted_data:
+                    await query.message.reply_text(
+                        "📊 详细数据参考：\n\n" + formatted_data,
+                        quote=True  # 引用原消息
+                    )
+                else:
+                    await query.message.reply_text(
+                        "😢 抱歉，数据已过期或不可用",
+                        quote=True
+                    )
+        except Exception as e:
+            await query.message.reply_text(
+                "😢 获取数据时出现错误，请重试",
+                quote=True
+            )
+    
     def run(self):
         """启动机器人"""
         try:
@@ -281,6 +322,8 @@ class TelegramBotService:
             self.application.add_handler(CommandHandler("start", self.start))
             self.application.add_handler(CommandHandler("analyze", self.analyze))
             self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
+            # 添加回调查询处理器
+            self.application.add_handler(CallbackQueryHandler(self.handle_callback))
             
             # 启动机器人
             self.application.run_polling()

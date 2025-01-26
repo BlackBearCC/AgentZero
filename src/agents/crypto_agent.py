@@ -377,11 +377,42 @@ class CryptoAgent(BaseAgent):
                         macd_data = tool_data['macd']
                         section.append(f"MACD: {macd_data['macd']:.2f} (Signal: {macd_data['signal']:.2f}, Hist: {macd_data['hist']:.2f})")
                         
+                        # 添加成交量分析
+                        volume_data = tool_data['volume']
+                        section.append("\n成交量分析:")
+                        section.append(f"当前成交量: {volume_data['current']:,.2f}")
+                        section.append(f"20日均量: {volume_data['sma20']:,.2f}")
+                        section.append(f"量价比: {volume_data['ratio']:.2f}")
+                        section.append(f"成交量趋势: {volume_data['trend']}")
+                        section.append(f"量价相关性: {volume_data['correlation']:.2f}")
+                        
+                        # 添加背离分析
+                        divergence_data = tool_data['divergence']
+                        section.append("\n背离分析:")
+                        section.append(f"RSI背离: {divergence_data['rsi']}")
+                        section.append(f"MACD背离: {divergence_data['macd']}")
+                        
+                        # 添加波动率
+                        section.append(f"\n波动率: {tool_data['volatility']*100:.2f}%")
+                        
                     elif tool_name == "pattern":
                         section.append("\n### 图形形态分析:")
                         section.append(f"时间周期: {tool_data['timeframe']}")
                         section.append(f"MA20/50: ${tool_data['ma20']:,.2f} / ${tool_data['ma50']:,.2f}")
                         section.append(f"RSI(14): {tool_data['rsi']:.2f}")
+                        
+                        # 添加成交量分析
+                        section.append("\n成交量分析:")
+                        section.append(f"当前成交量: {tool_data['volume']['current']:,.2f}")
+                        section.append(f"20日均量: {tool_data['volume']['sma20']:,.2f}")
+                        section.append(f"量价趋势: {tool_data['volume']['trend']}")
+                        section.append(f"量价相关性: {tool_data['volume']['correlation']:.2f}")
+                        
+                        # 添加背离分析
+                        section.append("\n背离分析:")
+                        section.append(f"RSI背离: {tool_data['divergence']['rsi']}")
+                        section.append(f"MACD背离: {tool_data['divergence']['macd']}")
+                        
                         section.append("\n形态分析结果:")
                         section.append(tool_data['pattern_analysis'])
                         

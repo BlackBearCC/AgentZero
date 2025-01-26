@@ -322,6 +322,7 @@ class TechnicalAnalysisTool(BaseCryptoTool):
     @property
     def description(self) -> str:
         return "进行技术指标分析"
+        
     @property
     def parameters(self) -> Dict[str, Any]:
         return {
@@ -341,14 +342,9 @@ class TechnicalAnalysisTool(BaseCryptoTool):
                 "description": "获取的数据点数量",
                 "default": 100,
                 "required": False
-            },
-            "indicators": {
-                "type": "array",
-                "description": "需要计算的指标列表，如 ['ma', 'rsi', 'macd']",
-                "default": ["ma", "rsi", "macd"],
-                "required": False
             }
-        }        
+        }
+        
     async def _fetch_ohlcv(self, symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
         """获取并处理K线数据"""
         try:
@@ -365,11 +361,7 @@ class TechnicalAnalysisTool(BaseCryptoTool):
             ohlcv = await self.exchange.fetch_ohlcv(
                 symbol,
                 timeframe,
-                limit=limit,
-                params={
-                    'limit': limit,
-                    'warnOnFetchOHLCVLimitArgument': False
-                }
+                limit=limit
             )
             
             if not ohlcv:
@@ -377,12 +369,26 @@ class TechnicalAnalysisTool(BaseCryptoTool):
                 
             # 转换为DataFrame
             df = pd.DataFrame(
-                ohlcv, 
+                ohlcv,
                 columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
             )
             
             # 转换时间戳
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            
+            # 计算基本指标
+            df.ta.rsi(length=14, append=True)
+            df.ta.macd(append=True)
+            df.ta.sma(length=7, append=True)
+            df.ta.sma(length=25, append=True)
+            df.ta.sma(length=99, append=True)
+            
+            # 计算成交量指标
+            df['volume_sma20'] = df['volume'].rolling(window=20).mean()
+            df['volume_ratio'] = df['volume'] / df['volume_sma20']
+            
+            # 计算波动率
+            df['volatility'] = df['close'].pct_change().rolling(window=20).std()
             
             # 更新缓存
             self.cache[cache_key] = (df, current_time)
@@ -391,6 +397,38 @@ class TechnicalAnalysisTool(BaseCryptoTool):
             
         except Exception as e:
             raise ValueError(f"获取K线数据失败: {str(e)}")
+            
+    def _check_divergence(self, df: pd.DataFrame, indicator: str, price: str, window: int = 14) -> str:
+        """检查技术指标背离"""
+        try:
+            recent_df = df.tail(window).copy()
+            price_highs = recent_df[recent_df[price] == recent_df[price].max()]
+            price_lows = recent_df[recent_df[price] == recent_df[price].min()]
+            indicator_highs = recent_df[recent_df[indicator] == recent_df[indicator].max()]
+            indicator_lows = recent_df[recent_df[indicator] == recent_df[indicator].min()]
+            
+            divergence_signals = []
+            
+            # 检查顶背离
+            if len(price_highs) > 0 and len(indicator_highs) > 0:
+                if price_highs.index[-1] > indicator_highs.index[-1] and \
+                   recent_df[price].iloc[-1] > recent_df[price].mean() and \
+                   recent_df[indicator].iloc[-1] < indicator_highs[indicator].iloc[-1]:
+                    divergence_signals.append("顶背离")
+                    
+            # 检查底背离
+            if len(price_lows) > 0 and len(indicator_lows) > 0:
+                if price_lows.index[-1] < indicator_lows.index[-1] and \
+                   recent_df[price].iloc[-1] < recent_df[price].mean() and \
+                   recent_df[indicator].iloc[-1] > indicator_lows[indicator].iloc[-1]:
+                    divergence_signals.append("底背离")
+                    
+            if divergence_signals:
+                return f"检测到{'、'.join(divergence_signals)}"
+            return "未检测到明显背离"
+            
+        except Exception as e:
+            return f"背离检测失败: {str(e)}"
             
     async def _run(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """进行技术分析"""
@@ -404,15 +442,15 @@ class TechnicalAnalysisTool(BaseCryptoTool):
         
         # 使用新的获取数据方法
         df = await self._fetch_ohlcv(symbol, timeframe, limit)
-        
-        # 计算指标
-        df.ta.rsi(length=14, append=True)
-        df.ta.macd(append=True)
-        df.ta.sma(length=7, append=True)
-        df.ta.sma(length=25, append=True)
-        df.ta.sma(length=99, append=True)
-        
         latest = df.iloc[-1]
+        
+        # 计算成交量分析
+        volume_trend = "放大" if latest['volume'] > latest['volume_sma20'] else "萎缩"
+        volume_price_correlation = df['volume'].corr(df['close'])
+        
+        # 计算背离
+        rsi_divergence = self._check_divergence(df, 'RSI_14', 'close')
+        macd_divergence = self._check_divergence(df, 'MACD_12_26_9', 'close')
         
         return {
             "ma": {
@@ -425,8 +463,20 @@ class TechnicalAnalysisTool(BaseCryptoTool):
                 "macd": float(latest['MACD_12_26_9']),
                 "signal": float(latest['MACDs_12_26_9']),
                 "hist": float(latest['MACDh_12_26_9'])
-            }
-        } 
+            },
+            "volume": {
+                "current": float(latest['volume']),
+                "sma20": float(latest['volume_sma20']),
+                "ratio": float(latest['volume_ratio']),
+                "trend": volume_trend,
+                "correlation": float(volume_price_correlation)
+            },
+            "divergence": {
+                "rsi": rsi_divergence,
+                "macd": macd_divergence
+            },
+            "volatility": float(latest['volatility'])
+        }
 
 class ChartPatternTool(BaseCryptoTool):
     """图形形态分析工具"""
@@ -514,7 +564,7 @@ class ChartPatternTool(BaseCryptoTool):
             raise ValueError(f"获取K线数据失败: {str(e)}")
             
     def _prepare_pattern_analysis(self, df: pd.DataFrame) -> str:
-        """准备图形分态分析数据"""
+        """准备图形形态分析数据"""
         latest = df.iloc[-1]
         
         # 计算关键价格水平
@@ -525,9 +575,21 @@ class ChartPatternTool(BaseCryptoTool):
         trend_20 = "上升" if latest['sma_20'] > df['sma_20'].iloc[-2] else "下降"
         trend_50 = "上升" if latest['sma_50'] > df['sma_50'].iloc[-2] else "下降"
         
+        # 计算成交量分析
+        volume_sma = df['volume'].rolling(window=20).mean()
+        recent_volume_trend = "放大" if latest['volume'] > volume_sma.iloc[-1] else "萎缩"
+        volume_price_correlation = df['volume'].corr(df['close'])
+        
+        # 计算RSI背离
+        rsi_divergence = self._check_divergence(df, 'rsi', 'close', window=14)
+        
+        # 计算MACD背离
+        df['macd'], df['macd_signal'], df['macd_hist'] = ta.macd(df['close'])
+        macd_divergence = self._check_divergence(df, 'macd', 'close', window=14)
+        
         # 构建分析文本
         analysis_text = f"""
-最近20根K线的价格数据分析：
+最近K线的价格数据分析：
 
 1. 价格区间：
 - 最高点：{recent_high:.2f}
@@ -538,17 +600,72 @@ class ChartPatternTool(BaseCryptoTool):
 - MA20：{latest['sma_20']:.2f}，趋势{trend_20}
 - MA50：{latest['sma_50']:.2f}，趋势{trend_50}
 
-3. 技术指标：
+3. 成交量分析：
+- 当前成交量：{latest['volume']:.2f}
+- 20日均量：{volume_sma.iloc[-1]:.2f}
+- 量价趋势：成交量{recent_volume_trend}
+- 量价相关性：{volume_price_correlation:.2f}
+
+4. 技术指标：
 - RSI(14)：{latest['rsi']:.2f}
+- RSI背离：{rsi_divergence}
+- MACD背离：{macd_divergence}
 - 20日波动率：{latest['volatility']*100:.2f}%
 
-4. 价格走势：
+5. 价格走势：
 {df['close'].tail(20).tolist()}
 
-5. 成交量趋势：
+6. 成交量走势：
 {df['volume'].tail(20).tolist()}
 """
         return analysis_text
+        
+    def _check_divergence(self, df: pd.DataFrame, indicator: str, price: str, window: int = 14) -> str:
+        """检查技术指标背离
+        
+        Args:
+            df: 数据框
+            indicator: 指标列名
+            price: 价格列名
+            window: 检查窗口
+            
+        Returns:
+            背离分析结果
+        """
+        try:
+            # 获取最近的数据
+            recent_df = df.tail(window).copy()
+            
+            # 获取价格高点和低点
+            price_highs = recent_df[recent_df[price] == recent_df[price].max()]
+            price_lows = recent_df[recent_df[price] == recent_df[price].min()]
+            
+            # 获取指标高点和低点
+            indicator_highs = recent_df[recent_df[indicator] == recent_df[indicator].max()]
+            indicator_lows = recent_df[recent_df[indicator] == recent_df[indicator].min()]
+            
+            divergence_signals = []
+            
+            # 检查顶背离
+            if len(price_highs) > 0 and len(indicator_highs) > 0:
+                if price_highs.index[-1] > indicator_highs.index[-1] and \
+                   recent_df[price].iloc[-1] > recent_df[price].mean() and \
+                   recent_df[indicator].iloc[-1] < indicator_highs[indicator].iloc[-1]:
+                    divergence_signals.append("顶背离")
+                    
+            # 检查底背离
+            if len(price_lows) > 0 and len(indicator_lows) > 0:
+                if price_lows.index[-1] < indicator_lows.index[-1] and \
+                   recent_df[price].iloc[-1] < recent_df[price].mean() and \
+                   recent_df[indicator].iloc[-1] > indicator_lows[indicator].iloc[-1]:
+                    divergence_signals.append("底背离")
+                    
+            if divergence_signals:
+                return f"检测到{'、'.join(divergence_signals)}"
+            return "未检测到明显背离"
+            
+        except Exception as e:
+            return f"背离检测失败: {str(e)}"
             
     async def _run(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """运行图形形态分析"""

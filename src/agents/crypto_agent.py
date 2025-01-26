@@ -393,14 +393,17 @@ class CryptoAgent(BaseAgent):
                         # 波动率
                         section.append(f"\n波动率: {tool_data['volatility']*100:.2f}%")
                         
-                        # 图形形态分析
-                        section.append("\n形态分析结果:")
-                        section.append(tool_data['pattern_analysis'])
+                        # 分析结果
+                        analysis = tool_data['analysis']
                         
-                        # 如果需要原始分析数据，可以添加
-                        if 'raw_analysis' in tool_data:
-                            section.append("\n详细分析数据:")
-                            section.append(tool_data['raw_analysis'])
+                        # 程序分析结果
+                        section.append("\n### 程序分析结果:")
+                        section.append(analysis['program_analysis'])
+                        
+                        # LLM独立分析和对比验证
+                        section.append("\n### LLM分析结果:")
+                        section.append(analysis['llm_analysis'])
+                        
                         
                     elif tool_name == "news":
                         section.append("\n### 加密货币新闻分析")

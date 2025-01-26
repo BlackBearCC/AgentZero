@@ -359,8 +359,10 @@ class TechnicalAnalysisTool(BaseCryptoTool):
             }
         }
         
-    async def _fetch_ohlcv(self, symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
-        """获取并处理K线数据"""
+    async def _fetch_ohlcv(self, symbol: str, timeframe: str, limit: int = 200) -> pd.DataFrame:
+        """获取并处理K线数据
+        默认获取200根K线，这样才足够进行形态分析
+        """
         try:
             cache_key = f"{symbol}_{timeframe}_{limit}"
             current_time = datetime.now().timestamp()
@@ -375,7 +377,7 @@ class TechnicalAnalysisTool(BaseCryptoTool):
             ohlcv = await self.exchange.fetch_ohlcv(
                 symbol,
                 timeframe,
-                limit=limit
+                limit=limit  # 获取更多数据用于形态分析
             )
             
             if not ohlcv:
@@ -516,62 +518,84 @@ class TechnicalAnalysisTool(BaseCryptoTool):
         except Exception as e:
             return f"图形形态分析失败: {str(e)}"
         
-    def _prepare_analysis(self, df: pd.DataFrame) -> str:
-        """准备技术分析数据"""
-        latest = df.iloc[-1]
-        
-        # 计算关键价格水平
-        recent_high = df['high'].tail(20).max()
-        recent_low = df['low'].tail(20).min()
-        
-        # 计算趋势信息
-        trend_ma7 = "上升" if latest['SMA_7'] > df['SMA_7'].iloc[-2] else "下降"
-        trend_ma25 = "上升" if latest['SMA_25'] > df['SMA_25'].iloc[-2] else "下降"
-        trend_ma99 = "上升" if latest['SMA_99'] > df['SMA_99'].iloc[-2] else "下降"
-        
-        # 计算成交量分析
-        volume_sma = df['volume'].rolling(window=20).mean()
-        recent_volume_trend = "放大" if latest['volume'] > volume_sma.iloc[-1] else "萎缩"
-        volume_price_correlation = df['volume'].corr(df['close'])
-        
-        # 构建分析文本
-        analysis_text = f"""
-最近K线的价格数据分析：
+    def _prepare_raw_data(self, df: pd.DataFrame) -> str:
+        """准备原始数据供LLM分析"""
+        return f"""
+价格数据（最近200根K线）:
+收盘价: {df['close'].tolist()}
+最高价: {df['high'].tolist()}
+最低价: {df['low'].tolist()}
+成交量: {df['volume'].tolist()}
 
-1. 价格区间：
-- 最高点：{recent_high:.2f}
-- 最低点：{recent_low:.2f}
-- 当前价：{latest['close']:.2f}
-
-2. 移动平均线：
-- MA7：{latest['SMA_7']:.2f}，趋势{trend_ma7}
-- MA25：{latest['SMA_25']:.2f}，趋势{trend_ma25}
-- MA99：{latest['SMA_99']:.2f}，趋势{trend_ma99}
-
-3. 成交量分析：
-- 当前成交量：{latest['volume']:.2f}
-- 20日均量：{volume_sma.iloc[-1]:.2f}
-- 量价趋势：成交量{recent_volume_trend}
-- 量价相关性：{volume_price_correlation:.2f}
-
-4. 技术指标：
-- RSI(14)：{latest['RSI_14']:.2f}
-- MACD：{latest['MACD_12_26_9']:.2f}
-- MACD信号线：{latest['MACDs_12_26_9']:.2f}
-- MACD柱状：{latest['MACDh_12_26_9']:.2f}
-- 20日波动率：{latest['volatility']*100:.2f}%
-
-5. 背离分析：
-- RSI背离：{self._check_divergence(df, 'RSI_14', 'close')}
-- MACD背离：{self._check_divergence(df, 'MACD_12_26_9', 'close')}
-
-6. 最近20根K线价格走势：
-{df['close'].tail(20).tolist()}
-
-7. 最近20根K线成交量走势：
-{df['volume'].tail(20).tolist()}
+时间周期: {len(df)}根K线
+当前价格: {df['close'].iloc[-1]:.2f}
 """
-        return analysis_text
+
+    def _prepare_program_analysis(self, df: pd.DataFrame) -> str:
+        """程序化技术分析结果"""
+        latest = df.iloc[-1]
+        return f"""
+程序分析结果:
+1. 技术指标:
+- RSI(14): {latest['RSI_14']:.2f}
+- MACD: {latest['MACD_12_26_9']:.2f}
+- 信号线: {latest['MACDs_12_26_9']:.2f}
+- 柱状值: {latest['MACDh_12_26_9']:.2f}
+
+2. 移动平均线:
+- MA7: {latest['SMA_7']:.2f}
+- MA25: {latest['SMA_25']:.2f}
+- MA99: {latest['SMA_99']:.2f}
+
+3. 背离检测:
+- RSI背离: {self._check_divergence(df, 'RSI_14', 'close')}
+- MACD背离: {self._check_divergence(df, 'MACD_12_26_9', 'close')}
+
+4. 波动率: {latest['volatility']*100:.2f}%
+"""
+
+    async def _analyze_with_llm(self, raw_data: str, program_analysis: str) -> str:
+        """使用LLM进行独立分析并与程序分析结果对比"""
+        prompt = f"""作为专业的技术分析师，请基于以下原始数据进行独立分析，并与程序分析结果进行对比验证。
+
+{raw_data}
+
+{program_analysis}
+
+请分析:
+1. 基于原始数据的独立分析
+- 趋势判断
+- 市场结构
+- 关键价格水平
+- 成交量特征
+- 可能的图形形态
+
+2. 与程序分析的对比
+- 验证或质疑程序分析结果
+- 补充程序可能忽略的形态
+- 解释不一致的地方
+
+3. 综合结论
+- 市场状态判断
+- 关键支撑阻力位
+- 潜在风险点
+
+注意:
+- 基于完整的200根K线数据进行分析
+- 明确指出形态的可靠性
+- 解释分析依据
+- 不对缺失数据进行推测"""
+
+        try:
+            response = await self.llm.agenerate([[
+                {"role": "system", "content": "你是一位专业的技术分析师，擅长基于原始数据进行独立分析并与程序化分析结果进行对比验证。"},
+                {"role": "user", "content": prompt}
+            ]])
+            
+            return response.generations[0][0].text
+            
+        except Exception as e:
+            return f"LLM分析失败: {str(e)}"
         
     async def _run(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """进行技术分析"""
@@ -587,11 +611,12 @@ class TechnicalAnalysisTool(BaseCryptoTool):
         df = await self._fetch_ohlcv(symbol, timeframe, limit)
         latest = df.iloc[-1]
         
-        # 准备分析数据
-        analysis_data = self._prepare_analysis(df)
+        # 准备两种分析数据
+        raw_data = self._prepare_raw_data(df)
+        program_analysis = self._prepare_program_analysis(df)
         
-        # 使用 LLM 分析图形形态
-        pattern_analysis = await self._analyze_patterns(analysis_data)
+        # LLM独立分析并对比验证
+        llm_analysis = await self._analyze_with_llm(raw_data, program_analysis)
         
         return {
             "timeframe": timeframe,
@@ -636,8 +661,16 @@ class TechnicalAnalysisTool(BaseCryptoTool):
                 "volume": df['volume'].tail(20).tolist()
             },
             # 详细分析文本
-            "raw_analysis": analysis_data,
+            "raw_analysis": raw_data,
             # LLM图形形态分析
-            "pattern_analysis": pattern_analysis
+            "pattern_analysis": await self._analyze_patterns(raw_data),
+            # 程序分析结果
+            "program_analysis": program_analysis,
+            # LLM分析结果
+            "analysis": {
+                "raw_data": raw_data,
+                "program_analysis": program_analysis,
+                "llm_analysis": llm_analysis
+            }
         }
 

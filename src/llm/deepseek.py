@@ -20,7 +20,7 @@ class DeepSeekLLM(LLM):
     api_base: str = "https://api.deepseek.com/v1"
     model_name: str = "deepseek-chat"
     temperature: float = 0.7
-    max_tokens: int = 4096
+    max_tokens: int = 8192
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

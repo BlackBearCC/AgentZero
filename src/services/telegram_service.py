@@ -98,67 +98,173 @@ class TelegramBotService:
         try:
             await self._ensure_chat_service()
             processing_message = None
+            last_update_time = 0
             
-            # 使用专门的 Telegram 消息处理方法
+            async def update_message(message_obj, new_text: str):
+                nonlocal last_update_time
+                current_time = asyncio.get_event_loop().time()
+                time_since_last_update = current_time - last_update_time
+                
+                if time_since_last_update < 5:
+                    await asyncio.sleep(5 - time_since_last_update)
+                
+                await message_obj.edit_text(new_text)
+                last_update_time = asyncio.get_event_loop().time()
+            
             async for response in self._chat_service.process_telegram_message(
                 agent_id="crypto_001",
                 message=update.message.text
             ):
                 stage = response.get("stage")
                 
-                if stage == "think":
-                    # 思考阶段
+                if stage == "think_start":
                     processing_message = await update.message.reply_text(
-                        f"💭 {response.get('pre_tool_message', '让 Crypto-chan 来分析一下！')}"
+                        "💭 让 Crypto-chan 想想看...\n"
+                        f"问题：{update.message.text}"
+                    )
+                    last_update_time = asyncio.get_event_loop().time()
+                
+                elif stage == "pre_tool_message":
+                    await update_message(
+                        processing_message,
+                        f"💭 {response['message']}"
                     )
                     
-                elif stage == "fetch_data":
-                    # 获取数据阶段
-                    if not processing_message:
-                        processing_message = await update.message.reply_text(
-                            "🔍 正在获取最新市场数据...\n"
-                            "（获取K线、技术指标等数据）"
-                        )
-                    else:
-                        await processing_message.edit_text(
-                            "🔍 正在获取最新市场数据...\n"
-                            "（获取K线、技术指标等数据）"
-                        )
+                elif stage == "think_complete":
+                    if response.get("type") == "tool_call":
+                        tools_info = response.get("tools_info", [])
+                        tools_text = "\n".join([
+                            f"- {tool['name']}: {tool['params'].get('symbol', '未知')}\n"
+                            f"  参数: {', '.join([f'{k}={v}' for k, v in tool['params'].items()])}"
+                            for tool in tools_info
+                        ])
                         
-                elif stage == "analysis":
-                    # 分析阶段
-                    await processing_message.edit_text(
-                        "📈 数据获取完成！正在进行技术分析...\n"
+                        await update_message(
+                            processing_message,
+                            f"💡 分析计划：\n{tools_text}"
+                        )
+                    
+                elif stage == "fetch_data":
+                    tool_name = response.get("tool")
+                    params = response.get("params", {})
+                    params_text = "\n".join([f"  - {k}: {v}" for k, v in params.items()])
+                    
+                    await update_message(
+                        processing_message,
+                        f"🔍 正在获取数据：{tool_name}\n"
+                        f"参数：\n{params_text}\n"
+                        "请稍等片刻~ 💫"
+                    )
+                    
+                elif stage == "analysis_start":
+                    market_data = response.get("market_data", {})
+                    data_summary = []
+                    
+                    for symbol, data in market_data.get("data", {}).items():
+                        data_summary.append(f"📊 {symbol} 数据获取完成：")
+                        for tool_name in data.keys():
+                            data_summary.append(f"  ✓ {tool_name}")
+                    
+                    await update_message(
+                        processing_message,
+                        "📈 数据获取完成！\n" + 
+                        "\n".join(data_summary) + "\n\n"
+                        "正在进行技术分析...\n"
                         "（计算指标、检测形态、分析背离等）"
                     )
                     
-                elif stage == "llm_analysis":
-                    # LLM分析阶段
-                    await processing_message.edit_text(
-                        "🧠 Crypto-chan 正在思考分析结果...\n"
-                        "（整合数据，形成分析结论）"
+                elif stage == "analysis_complete":
+                    formatted_data = response.get("formatted_data", "")
+                    
+                    # 确保数据是人类可读的格式
+                    if formatted_data:
+                        try:
+                            # 尝试美化数据展示
+                            data_lines = []
+                            for line in formatted_data.split('\n'):
+                                # 跳过原始数值
+                                if not line.replace('.', '').replace('-', '').isdigit():
+                                    # 添加适当的缩进和图标
+                                    if line.strip().startswith('价格'):
+                                        data_lines.append(f"💰 {line.strip()}")
+                                    elif line.strip().startswith('成交量'):
+                                        data_lines.append(f"📊 {line.strip()}")
+                                    elif line.strip().startswith('趋势'):
+                                        data_lines.append(f"📈 {line.strip()}")
+                                    else:
+                                        data_lines.append(f"  {line.strip()}")
+                            
+                            formatted_data = "\n".join(data_lines)
+                            
+                            # 如果数据太长，只显示摘要
+                            if len(formatted_data) > 500:
+                                formatted_data = formatted_data[:500] + "...\n(数据太长已省略)"
+                        except Exception:
+                            formatted_data = "数据已获取，正在分析中..."
+                    
+                    await update_message(
+                        processing_message,
+                        "📊 技术分析完成！关键数据：\n\n" +
+                        formatted_data + "\n\n" +
+                        "正在生成分析报告..."
+                    )
+                    
+                elif stage == "llm_analysis_start":
+                    await update_message(
+                        processing_message,
+                        "🧠 数据分析完成！\n"
+                        "Crypto-chan 正在整合以上数据，生成详细分析报告...\n"
+                        "（考虑技术面、市场情绪等多个维度）"
+                    )
+                    
+                elif stage == "llm_processing":
+                    await update_message(
+                        processing_message,
+                        "✍️ 正在撰写分析报告...\n"
+                        "整合各项指标数据，形成最终结论...\n"
+                        "马上就好！"
                     )
                     
                 elif stage == "complete":
-                    # 完成阶段
                     if response.get("type") == "tool_call":
-                        await processing_message.edit_text(
-                            "✨ 分析完成啦！以下是详细分析报告 📝\n\n" + 
-                            response["final_response"]
+                        market_data = response.get("market_data", {})
+                        formatted_data = response.get("formatted_data", "")
+                        
+                        # 构建完整报告
+                        full_report = [
+                            "✨ 分析完成啦！以下是详细分析报告 📝\n",
+                            response["final_response"],
+                            "\n📊 数据参考：",
+                            formatted_data
+                        ]
+                        
+                        await update_message(
+                            processing_message,
+                            "\n".join(full_report)
                         )
                     else:
-                        await processing_message.edit_text(
-                            "💫 Crypto-chan 为您解答：\n\n" + 
+                        await update_message(
+                            processing_message,
                             response["response"]
                         )
                         
                 elif stage == "error":
-                    # 错误处理
-                    await update.message.reply_text(
-                        "😢 呜呜...Crypto-chan 遇到了一点小问题呢...\n"
-                        f"错误信息: {response.get('error', '未知错误')}\n"
-                        "让我们稍后再试试看吧！💪"
-                    )
+                    error_msg = response.get("error", "未知错误")
+                    error_details = response.get("details", {})
+                    
+                    error_text = [
+                        "😢 呜呜...Crypto-chan 遇到了一点小问题呢...",
+                        f"错误信息: {error_msg}"
+                    ]
+                    
+                    if error_details:
+                        error_text.append("\n详细信息：")
+                        for k, v in error_details.items():
+                            error_text.append(f"- {k}: {v}")
+                    
+                    error_text.append("\n让我们稍后再试试看吧！💪")
+                    
+                    await update.message.reply_text("\n".join(error_text))
                     
         except Exception as e:
             self.logger.error(f"消息处理失败: {str(e)}")

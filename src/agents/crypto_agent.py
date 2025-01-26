@@ -113,29 +113,38 @@ class CryptoAgent(BaseAgent):
                 
                 # 4. 尝试解析为 JSON
                 try:
+                    # 提取非 JSON 部分（如果有）
+                    pre_tool_message = ""
+                    json_text = text
+                    
                     # 如果包含 JSON 格式的工具调用
-                    if text.startswith("{") or "```json" in text:
-                        # 提取并清理 JSON
-                        if "```json" in text:
-                            text = text.split("```json")[1].split("```")[0].strip()
-                        text = text[text.find("{"):text.rfind("}") + 1]
-                                            # 如果文本中包含 JSON
-                    if "{" in text and "}" in text:
-                        # 提取 JSON 部分
+                    if "```json" in text:
+                        parts = text.split("```json")
+                        pre_tool_message = parts[0].strip()
+                        json_text = parts[1].split("```")[0].strip()
+                    elif text.find("{") > 0:  # JSON 前有文本
                         json_start = text.find("{")
-                        json_end = text.rfind("}") + 1
-                        json_text = text[json_start:json_end]
-                        
-                        # 提取非 JSON 部分（如果有）
                         pre_tool_message = text[:json_start].strip()
+                        json_text = text[json_start:]
+                    
+                    # 如果文本中包含 JSON
+                    if "{" in json_text and "}" in json_text:
+                        # 提取 JSON 部分
+                        json_start = json_text.find("{")
+                        json_end = json_text.rfind("}") + 1
+                        json_text = json_text[json_start:json_end]
                         
                         # 解析 JSON
                         tools_config = json.loads(json_text)
                         validated_config = self._validate_tools_config(tools_config)
                         
-                        # 如果有工具调用前的消息，将其添加到配置中
+                        # 添加工具调用前的消息
                         if pre_tool_message:
                             validated_config["pre_tool_message"] = pre_tool_message
+                        else:
+                            # 如果没有前置消息，生成一个默认的
+                            symbol = context.get("symbol", "加密货币")
+                            validated_config["pre_tool_message"] = f"让我来帮您分析 {symbol} 的市场情况~"
                             
                         return validated_config
                     else:
@@ -255,7 +264,7 @@ class CryptoAgent(BaseAgent):
         return results
 
     async def generate_response(self, input_text: str, remark: str = "") -> AsyncIterator[Dict[str, Any]]:
-        """生成市场分析回复，支持阶段性返回"""
+        """生成市场分析回复，支持详细的阶段性返回"""
         self._logger.debug(f"[CryptoAgent] 开始生成回复，输入: {input_text}")
         
         try:
@@ -263,38 +272,70 @@ class CryptoAgent(BaseAgent):
             context = await self._build_context(input_text, remark)
             
             # 2. 分析用户意图，确定需要使用的工具
+            yield {
+                "stage": "think_start",
+                "message": "正在思考如何分析您的问题..."
+            }
+            
             think_result = await self.think(context)
             self._logger.debug(f"[CryptoAgent] 思考结果: {think_result}")
             
             if isinstance(think_result, dict):
-                # 返回思考阶段结果
+                # 返回思考阶段结果，包含前置消息
+                pre_tool_message = think_result.get("pre_tool_message", "")
+                tools_info = [
+                    {
+                        "name": tool["name"],
+                        "params": tool["params"]
+                    }
+                    for tool in think_result.get("tools", [])
+                ]
+                
+                # 先返回 AI 的前置消息
+                if pre_tool_message:
+                    yield {
+                        "stage": "pre_tool_message",
+                        "message": pre_tool_message
+                    }
+                
+                # 然后返回工具使用计划
                 yield {
-                    "stage": "think",
+                    "stage": "think_complete",
                     "type": "tool_call",
                     "tools": think_result.get("tools", []),
-                    "pre_tool_message": think_result.get("pre_tool_message", "")
+                    "tools_info": tools_info
                 }
                 
                 # 3. 获取市场数据
-                yield {
-                    "stage": "fetch_data",
-                    "message": "正在获取市场数据..."
-                }
+                for tool in think_result.get("tools", []):
+                    yield {
+                        "stage": "fetch_data",
+                        "tool": tool["name"],
+                        "params": tool["params"],
+                        "message": f"正在获取 {tool['params'].get('symbol', '未知')} 的{tool['name']}数据..."
+                    }
                 
                 market_data = await self._analyze_market(think_result)
                 
                 # 4. 分析数据
                 yield {
-                    "stage": "analysis",
-                    "message": "正在分析数据..."
+                    "stage": "analysis_start",
+                    "message": "数据获取完成，开始技术分析...",
+                    "market_data": market_data
                 }
                 
                 formatted_data = self._format_market_data(market_data)
                 
+                yield {
+                    "stage": "analysis_complete",
+                    "message": "技术分析完成，正在整理分析结果...",
+                    "formatted_data": formatted_data
+                }
+                
                 # 5. LLM 分析
                 yield {
-                    "stage": "llm_analysis",
-                    "message": "正在生成分析报告..."
+                    "stage": "llm_analysis_start",
+                    "message": "正在生成详细分析报告..."
                 }
                 
                 # 构建分析提示词
@@ -303,11 +344,22 @@ class CryptoAgent(BaseAgent):
                     formatted_data,
                     "=== 工具调用结果结束 ===",
                     "",
-                    f"请基于以上数据，分析：{input_text}"
+                    f"请基于以上数据，分析：{input_text}",
+                    "",
+                    "请注意：",
+                    "1. 分析要基于实际数据",
+                    "2. 关注数据的时效性",
+                    "3. 保持客观专业的态度"
                 ]
                 
                 analysis_prompt = "\n".join(analysis_prompt)
                 system_prompt = await self._load_prompt_template("crypto-analyst")
+                
+                yield {
+                    "stage": "llm_processing",
+                    "message": "AI 正在思考分析结果..."
+                }
+                
                 response = await self.llm.agenerate([[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": analysis_prompt}
@@ -319,7 +371,9 @@ class CryptoAgent(BaseAgent):
                 yield {
                     "stage": "complete",
                     "type": "tool_call",
-                    "final_response": final_analysis
+                    "final_response": final_analysis,
+                    "market_data": market_data,
+                    "formatted_data": formatted_data
                 }
                 
                 # 保存交互记录
@@ -331,6 +385,12 @@ class CryptoAgent(BaseAgent):
                 
             else:
                 # 直接文本回答
+                yield {
+                    "stage": "think_complete",
+                    "type": "direct",
+                    "message": "这个问题我可以直接回答..."
+                }
+                
                 yield {
                     "stage": "complete",
                     "type": "direct",
@@ -346,7 +406,8 @@ class CryptoAgent(BaseAgent):
             self._logger.error(f"[CryptoAgent] 生成回复失败: {str(e)}")
             yield {
                 "stage": "error",
-                "error": str(e)
+                "error": str(e),
+                "message": "处理过程中出现错误"
             }
 
     def _format_market_data(self, market_data: Dict[str, Any]) -> str:

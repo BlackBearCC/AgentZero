@@ -495,6 +495,7 @@ class TechnicalAnalysisTool(BaseCryptoTool):
 5. 需要注意的风险点
 
 注意：
+- 一步一步思考，仔细分析
 - 分析必须基于提供的数据
 - 保持客观专业的分析态度
 - 明确指出数据不足之处

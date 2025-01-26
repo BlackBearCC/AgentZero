@@ -173,7 +173,6 @@ class AgentService:
                 if role["role_id"].startswith("crypto"):
                     from src.agents.crypto_agent import CryptoAgent
                     from src.tools.crypto_tools import (
-                        ChartPatternTool,
                         NewsAggregatorTool,
                         TechnicalAnalysisTool
                     )
@@ -182,7 +181,6 @@ class AgentService:
                     tools = [
                         NewsAggregatorTool(),
                         TechnicalAnalysisTool(),
-                        ChartPatternTool()
                     ]
                     
                     agent = CryptoAgent(

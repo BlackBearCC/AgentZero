@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from src.services.chat_service import ChatService
 from src.services.agent_service import get_agent_service
@@ -29,16 +29,45 @@ class TelegramBotService:
     
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """处理 /start 命令"""
+        # 创建固定在输入框旁边的键盘
+        keyboard = [
+            ["BTC", "ETH"],
+            ["加密货币新闻"]
+        ]
+        reply_markup = ReplyKeyboardMarkup(
+            keyboard,
+            resize_keyboard=True,  # 自适应大小
+            one_time_keyboard=False  # 保持键盘显示
+        )
+        
         welcome_text = """
-欢迎使用加密货币分析机器人！
+✨ 欢迎来到 Crypto-chan 的加密市场分析室！
 
-可用命令：
-/analyze <symbol> - 分析指定加密货币
+我是您的加密市场分析助手 Crypto-chan~ 🌟
+让我来帮您分析市场、追踪行情！
+
+🎮 您可以这样和我互动：
+
+📝 直接问我问题：
+- "比特币现在是牛市吗？"
+- "以太坊最近的趋势如何？"
+- "现在适合投资吗？"
+
+🎯 使用命令：
+/analyze <币种> - 获取详细分析报告
 例如：/analyze ETH
 
-直接发送消息询问任何加密货币相关问题。
+⚡️ 快捷按钮：
+BTC - 比特币市场分析
+ETH - 以太坊市场分析
+加密货币新闻 - 最新市场动态
+
+让我们一起探索加密货币的世界吧！💫
 """
-        await update.message.reply_text(welcome_text)
+        await update.message.reply_text(
+            welcome_text,
+            reply_markup=reply_markup  # 使用 ReplyKeyboardMarkup
+        )
     
     async def analyze(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """处理 /analyze 命令"""
@@ -100,15 +129,17 @@ class TelegramBotService:
             processing_message = None
             last_update_time = 0
             
-            async def update_message(message_obj, new_text: str, min_display_time: int = 8, reply_markup=None):
-                """更新消息，确保最小显示时间
-                
-                Args:
-                    message_obj: Telegram消息对象
-                    new_text: 新消息文本
-                    min_display_time: 最小显示时间（秒）
-                    reply_markup: 可选的回复标记（用于按钮等）
-                """
+            # 处理快捷指令
+            message_text = update.message.text
+            if message_text == "BTC":
+                message_text = "使用技术分析和新闻工具分析BTC市场情况"
+            elif message_text == "ETH":
+                message_text = "使用技术分析和新闻工具分析ETH市场情况"
+            elif message_text == "加密货币新闻":
+                message_text = "获取最新的加密货币市场新闻"
+            
+            async def update_message(message_obj, new_text: str, min_display_time: int = 5, reply_markup=None):
+                """更新消息，确保最小显示时间"""
                 nonlocal last_update_time
                 current_time = asyncio.get_event_loop().time()
                 time_since_last_update = current_time - last_update_time
@@ -124,14 +155,14 @@ class TelegramBotService:
             
             async for response in self._chat_service.process_telegram_message(
                 agent_id="crypto_001",
-                message=update.message.text
+                message=message_text
             ):
                 stage = response.get("stage")
                 
                 if stage == "think_start":
                     processing_message = await update.message.reply_text(
                         "💭 让 Crypto-chan 想想看...\n"
-                        f"问题：{update.message.text}"
+                        f"问题：{message_text}"
                     )
                     last_update_time = asyncio.get_event_loop().time()
                 

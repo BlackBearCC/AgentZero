@@ -7,19 +7,20 @@ class AutoGridStrategy(BaseStrategy):
     """自适应网格交易策略"""
     
     params = (
-        ('risk_per_trade', 0.03),    # 单次交易风险比例
+        ('risk_per_trade', 0.05),     # 提高到5%
         ('atr_period', 14),          # 波动率计算周期
-        ('grid_expansion', 1.5),     # 网格区间扩展系数
-        ('max_grids', 50),           # 最大网格层级数
+        ('grid_expansion', 2.0),      # 扩大网格间距到2%
+        ('max_grids', 8),            # 减少网格数量，提高每格仓位
         ('rebalance_days', 5),       # 网格再平衡周期
         ('max_drawdown', 15),        # 最大回撤止损线(%)
+        ('min_profit_pct', 0.3),     # 最小利润率要求
     )
 
     def _init_indicators(self):
         """初始化技术指标"""
         # 核心指标
         self.atr = bt.indicators.ATR(self.data, period=self.p.atr_period)
-        self.volatility = bt.indicators.StdDev(self.data.close, period=20)
+        self.volatility = bt.indicators.EMA(self.data.close, period=20) / bt.indicators.EMA(self.data.close, period=50)
         self.sma = bt.indicators.SMA(self.data.close, period=20)
         
         # 动态网格参数
@@ -64,43 +65,37 @@ class AutoGridStrategy(BaseStrategy):
     def adaptive_grid_adjustment(self):
         """自适应网格生成算法"""
         try:
-            # 计算波动率调整系数
-            vol_ratio = self.volatility[0] / self.data.close[0]
+            # 动态调整公式优化（带均值回归因子）
             atr_ratio = self.atr[0] / self.data.close[0]
+            grid_step = np.clip(
+                0.8 * self.volatility[0] + 1.2 * atr_ratio - 
+                0.2 * (self.data.close[0]/self.sma[0]-1),
+                0.002,  # 最小间距0.2%
+                0.015   # 最大间距1.5%
+            )
             
-            # 动态网格间隔 (基于波动率)
-            grid_step = np.clip(vol_ratio * 2 + atr_ratio * 1.5, 0.005, 0.05)
+            # 趋势自适应扩展系数
+            trend_strength = abs(self.data.close[0] - self.sma[0]) / self.atr[0]
+            expansion = np.clip(1.3 + 0.3 * trend_strength, 1.2, 2.0)
             
             # 计算网格边界
-            upper = self.data.close[0] * (1 + self.p.grid_expansion * grid_step)
-            lower = self.data.close[0] * (1 - self.p.grid_expansion * grid_step)
+            upper = self.data.close[0] * (1 + expansion * grid_step)
+            lower = self.data.close[0] * (1 - expansion * grid_step)
             
-            # 生成等比网格
+            # 生成斐波那契网格
             self.grid_levels = []
-            current = self.data.close[0]
+            fib_levels = [0.236, 0.382, 0.5, 0.618, 0.786]
             
-            for i in range(self.p.max_grids):
-                buy_price = current * (1 - grid_step)
-                sell_price = current * (1 + grid_step)
+            for level in fib_levels:
+                price = lower + (upper - lower) * level
+                weight = 1 + 0.5 * (1 - abs(0.5 - level))  # 中间层级权重更高
                 
-                if buy_price >= lower:
-                    self.grid_levels.append({
-                        'price': buy_price, 
-                        'side': 'buy',
-                        'size': self._calculate_position_size(buy_price)
-                    })
-                if sell_price <= upper:
-                    self.grid_levels.append({
-                        'price': sell_price, 
-                        'side': 'sell',
-                        'size': self._calculate_position_size(sell_price)
-                    })
+                self.grid_levels.append({
+                    'price': price,
+                    'side': 'buy' if price < self.data.close[0] else 'sell',
+                    'size': self._calculate_position_size(price) * weight
+                })
                     
-                current = current * (1 + grid_step) if i % 2 == 0 else current * (1 - grid_step)
-                
-                if len(self.grid_levels) >= self.p.max_grids:
-                    break
-
             self.grid_levels.sort(key=lambda x: x['price'])
             self.logger.info(f"更新网格层数: {len(self.grid_levels)}, "
                            f"网格步长: {grid_step:.4f}")
@@ -152,12 +147,23 @@ class AutoGridStrategy(BaseStrategy):
     def _check_risk_control(self):
         """风险控制检查"""
         try:
-            # 检查回撤
+            # 动态止损阈值
+            dynamic_stop = max(
+                self.p.max_drawdown,
+                0.5 * self.volatility[0] * 100  # 波动越大止损越宽松
+            )
+            
+            # 分阶段止损
             current_drawdown = self.drawdown.get_analysis()['drawdown']
-            if current_drawdown > self.p.max_drawdown:
+            if current_drawdown > dynamic_stop:
+                # 先平仓50%
+                position = self.getposition()
+                if position.size > 0:
+                    self.close(size=position.size * 0.5)
+                    self.logger.warning(f"第一阶段止损: 平仓50%, 当前回撤: {current_drawdown:.2f}%")
+            elif current_drawdown > 1.2 * dynamic_stop:
                 self.close_all_positions()
-                self.logger.warning(f"触发止损: 当前回撤 {current_drawdown:.2f}% "
-                                  f"超过阈值 {self.p.max_drawdown}%")
+                self.logger.warning(f"第二阶段止损: 全部平仓, 当前回撤: {current_drawdown:.2f}%")
                 
             # 检查趋势（可选）
             if self.data.close[0] < self.sma[0] * 0.95:  # 价格显著低于均线

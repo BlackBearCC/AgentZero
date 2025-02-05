@@ -32,18 +32,18 @@ async def main():
     
     # 回测参数配置
     params = {
-        'symbol': 'BTC/USDT',
+        'symbol': 'DOGE/USDT',
         'timeframe': '15m',
         'start': start_date,
         'end': end_date,
-        'initial_cash': 100000,
+        'initial_cash': 10000,
         'commission': 0.001,
         'strategy_params': {
-            'risk_per_trade': 0.02,      # 单次交易风险
-            'grid_expansion': 1.5,        # 网格扩展系数
+            'risk_per_trade': 0.05,      # 单次交易风险
+            'grid_expansion': 2,        # 网格扩展系数
             'max_grids': 50,             # 最大网格数
             'rebalance_days': 5,         # 再平衡周期
-            'max_drawdown': 15           # 最大回撤限制
+            'max_drawdown': 20      # 最大回撤限制
         }
     }
 

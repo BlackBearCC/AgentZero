@@ -72,6 +72,8 @@ agentZero/
 │   ├── agents/                 # Agent 角色定义
 │   │   ├── base_agent.py      # Agent 基类
 │   │   ├── role_config.py     # 角色配置
+│   │   ├── crypto_agent.py    # 加密货币分析 Agent
+│   │   ├── zero_agent.py      # Zero Agent
 │   │   └── templates/         # 预设角色模板
 │   │
 │   ├── core/                  # 核心功能模块
@@ -81,6 +83,7 @@ agentZero/
 │   │   │   ├── vector_store/ # 向量存储
 │   │   │   └── cache/        # 缓存层
 │   │   └── tools/            # 工具集成
+│   │       ├── crypto_tools.py # 加密货币工具
 │   │
 │   ├── api/                   # API 接口层
 │   │   ├── routes/           # 路由定义
@@ -90,7 +93,8 @@ agentZero/
 │   ├── services/             # 业务服务层
 │   │   ├── chat_service.py   # 对话服务
 │   │   ├── memory_service.py # 记忆服务
-│   │   └── tool_service.py   # 工具服务
+│   │   ├── tool_service.py   # 工具服务
+│   │   └── telegram_service.py # Telegram 服务
 │   │
 │   └── utils/                # 工具函数
 │       ├── logger.py         # 日志
@@ -117,6 +121,7 @@ agentZero/
 
 ## 使用场景
 - 角色扮演
+- 加密货币市场分析
 
 ## 开发计划
 
@@ -125,6 +130,7 @@ agentZero/
 - [x] 记忆系统实现
 - [ ] 工具集成接口
 - [ ] 单聊/群聊
+- [x] Telegram 服务集成
 
 
 

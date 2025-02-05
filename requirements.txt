@@ -22,3 +22,4 @@ numpy>=1.24.0
 pandas-ta>=0.3.14b
 aiohttp>=3.9.0
 python-telegram-bot>=20.0
+backtrader

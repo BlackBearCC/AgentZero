@@ -85,6 +85,15 @@ agentZero/
 │   │   └── tools/            # 工具集成
 │   │       ├── crypto_tools.py # 加密货币工具
 │   │
+│   ├── trading/              # 量化交易模块
+│   │   ├── strategies/      # 交易策略
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py     # 基础策略类
+│   │   │   └── grid.py     # 网格策略
+│   │   ├── analyzers/      # 分析器
+│   │   ├── feeds/          # 数据源
+│   │   └── utils/          # 交易工具
+│   │
 │   ├── api/                   # API 接口层
 │   │   ├── routes/           # 路由定义
 │   │   ├── middlewares/      # 中间件
@@ -94,6 +103,7 @@ agentZero/
 │   │   ├── chat_service.py   # 对话服务
 │   │   ├── memory_service.py # 记忆服务
 │   │   ├── tool_service.py   # 工具服务
+│   │   ├── trading_service.py # 交易服务
 │   │   └── telegram_service.py # Telegram 服务
 │   │
 │   └── utils/                # 工具函数

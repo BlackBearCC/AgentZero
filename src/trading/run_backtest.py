@@ -39,11 +39,15 @@ async def main():
         'initial_cash': 10000,
         'commission': 0.001,
         'strategy_params': {
-            'risk_per_trade': 0.05,      # 单次交易风险
-            'grid_expansion': 2,        # 网格扩展系数
-            'max_grids': 50,             # 最大网格数
-            'rebalance_days': 5,         # 再平衡周期
-            'max_drawdown': 20      # 最大回撤限制
+            'base_spacing': 0.03,      # 基础网格间距3%
+            'dynamic_ratio': 1.5,      # 动态扩展系数
+            'leverage': 20,            # 杠杆倍数
+            'max_grids': 5,           # 网格数量
+            'rebalance_bars': 3,      # 3根K线重新平衡
+            'max_drawdown': 20,       # 最大回撤限制
+            'atr_period': 14,         # ATR周期
+            'ema_fast': 20,           # 快速EMA
+            'ema_slow': 50            # 慢速EMA
         }
     }
 

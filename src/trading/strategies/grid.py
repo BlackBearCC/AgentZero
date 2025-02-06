@@ -6,36 +6,44 @@ from .base import BaseStrategy
 class AutoGridStrategy(BaseStrategy):
     """自适应网格交易策略"""
     
+    # 优化后的参数配置
     params = (
-        ('risk_per_trade', 0.05),     # 提高到5%
-        ('atr_period', 14),          # 波动率计算周期
-        ('grid_expansion', 2.0),      # 扩大网格间距到2%
-        ('max_grids', 8),            # 减少网格数量，提高每格仓位
-        ('rebalance_days', 5),       # 网格再平衡周期
-        ('max_drawdown', 15),        # 最大回撤止损线(%)
-        ('min_profit_pct', 0.3),     # 最小利润率要求
+        ('base_spacing', 0.03),      # 基础网格间距3%
+        ('dynamic_ratio', 1.5),      # 动态扩展系数
+        ('leverage', 20),            # 杠杆倍数
+        ('max_grids', 5),           # 网格数量
+        ('rebalance_bars', 3),      # 3根K线重新平衡
+        ('max_drawdown', 20),       # 最大回撤限制
+        ('atr_period', 14),         # ATR周期
+        ('ema_fast', 20),           # 快速EMA
+        ('ema_slow', 50),           # 慢速EMA
     )
 
+    def __init__(self):
+        super().__init__()
+        # 添加订单跟踪字典
+        self.order_info = {}  # 用于存储订单创建时间
+    
     def _init_indicators(self):
         """初始化技术指标"""
         # 核心指标
         self.atr = bt.indicators.ATR(self.data, period=self.p.atr_period)
-        self.volatility = bt.indicators.EMA(self.data.close, period=20) / bt.indicators.EMA(self.data.close, period=50)
-        self.sma = bt.indicators.SMA(self.data.close, period=20)
+        self.ema_fast = bt.indicators.EMA(self.data.close, period=self.p.ema_fast)
+        self.ema_slow = bt.indicators.EMA(self.data.close, period=self.p.ema_slow)
         
-        # 动态网格参数
+        # 动态参数
         self.price_center = None
-        self.grid_levels: List[Dict] = []
-        self.last_rebalance = 0
+        self.grid_levels = []
+        self.active_orders = []
+        self.last_update_bar = 0
+        self.spacing = self.p.base_spacing
         
         # 风险控制
-        self.trade_count = 0
         self.drawdown = bt.analyzers.DrawDown()
         
-        # 日志初始化
-        self.logger.info(f"策略初始化完成 - ATR周期: {self.p.atr_period}, "
-                        f"网格扩展: {self.p.grid_expansion}, "
-                        f"最大网格数: {self.p.max_grids}")
+        self.logger.info(f"策略初始化 - 基础间距: {self.p.base_spacing}, "
+                        f"杠杆倍数: {self.p.leverage}, "
+                        f"网格数量: {self.p.max_grids}")
 
     def next(self):
         """策略主逻辑"""
@@ -48,9 +56,9 @@ class AutoGridStrategy(BaseStrategy):
                 return
 
             # 定期网格再平衡
-            if len(self.data) - self.last_rebalance >= self.p.rebalance_days:
+            if len(self.data) - self.last_update_bar >= self.p.rebalance_bars:
                 self.adaptive_grid_adjustment()
-                self.last_rebalance = len(self.data)
+                self.last_update_bar = len(self.data)
                 self.logger.debug("执行网格再平衡")
 
             # 执行网格交易
@@ -63,127 +71,157 @@ class AutoGridStrategy(BaseStrategy):
             self.logger.error(f"策略执行错误: {str(e)}")
 
     def adaptive_grid_adjustment(self):
-        """自适应网格生成算法"""
+        """增强版自适应网格算法"""
         try:
-            # 动态调整公式优化（带均值回归因子）
+            # 基于波动率的动态调整
             atr_ratio = self.atr[0] / self.data.close[0]
-            grid_step = np.clip(
-                0.8 * self.volatility[0] + 1.2 * atr_ratio - 
-                0.2 * (self.data.close[0]/self.sma[0]-1),
-                0.002,  # 最小间距0.2%
-                0.015   # 最大间距1.5%
+            ema_ratio = self.ema_fast[0] / self.ema_slow[0]
+            
+            # 动态间距计算
+            self.spacing = np.clip(
+                (atr_ratio * 3 + ema_ratio * 0.5) * 100,
+                0.8,   # 最小0.8%
+                5.0    # 最大5%
             )
             
-            # 趋势自适应扩展系数
-            trend_strength = abs(self.data.close[0] - self.sma[0]) / self.atr[0]
-            expansion = np.clip(1.3 + 0.3 * trend_strength, 1.2, 2.0)
+            # 趋势自适应扩展
+            trend_factor = 1 + abs(self.data.close[0] - self.ema_fast[0]) / self.ema_fast[0]
+            current_price = self.data.close[0]
+            upper = current_price * (1 + self.spacing/100 * trend_factor)
+            lower = current_price * (1 - self.spacing/100 * trend_factor)
             
-            # 计算网格边界
-            upper = self.data.close[0] * (1 + expansion * grid_step)
-            lower = self.data.close[0] * (1 - expansion * grid_step)
-            
-            # 生成斐波那契网格
+            # 生成带权重的斐波那契网格
             self.grid_levels = []
-            fib_levels = [0.236, 0.382, 0.5, 0.618, 0.786]
+            fib_levels = {
+                0.236: 1.0,
+                0.382: 1.5,
+                0.500: 2.0,
+                0.618: 1.5,
+                0.786: 1.0
+            }
             
-            for level in fib_levels:
+            for level, weight in fib_levels.items():
                 price = lower + (upper - lower) * level
-                weight = 1 + 0.5 * (1 - abs(0.5 - level))  # 中间层级权重更高
+                size = self._calculate_position_size(price) * weight
                 
                 self.grid_levels.append({
                     'price': price,
-                    'side': 'buy' if price < self.data.close[0] else 'sell',
-                    'size': self._calculate_position_size(price) * weight
+                    'side': 'buy' if price < current_price else 'sell',
+                    'size': size,
+                    'weight': weight
                 })
-                    
-            self.grid_levels.sort(key=lambda x: x['price'])
-            self.logger.info(f"更新网格层数: {len(self.grid_levels)}, "
-                           f"网格步长: {grid_step:.4f}")
+            
+            self.logger.info(f"网格更新 - 间距: {self.spacing:.2f}%, "
+                           f"趋势系数: {trend_factor:.2f}")
             
         except Exception as e:
             self.logger.error(f"网格调整错误: {str(e)}")
 
     def execute_grid_orders(self):
-        """执行网格交易逻辑"""
+        """高频订单管理系统"""
         try:
+            current_bar = len(self.data)
             current_price = self.data.close[0]
-            position = self.getposition()
             
+            # 检查当前持仓
+            position = self.getposition()
+            total_position = abs(position.size) if position else 0
+            
+            # 添加持仓限制
+            max_total_position = self.broker.getvalue()  # 最大总持仓
+            
+            # 如果总持仓超过限制，不再开新仓
+            if total_position * current_price >= max_total_position:
+                self.logger.warning(f"总持仓达到限制: {total_position:.2f}")
+                return
+            
+            # 清理过期订单
+            active_orders = self.active_orders.copy()  # 创建副本避免修改迭代对象
+            for order in active_orders:
+                if order.status == bt.Order.Submitted:  # 只处理未完成的订单
+                    created_bar = self.order_info.get(order.ref, 0)
+                    if current_bar - created_bar > self.p.rebalance_bars:
+                        self.cancel(order)
+                        self.active_orders.remove(order)
+                        self.logger.debug(f"取消过期订单: {order.ref}")
+            
+            # 动态调整订单
             for grid in self.grid_levels:
-                price = grid['price']
+                if grid['side'] == 'buy':
+                    # 买单主动靠近当前价格
+                    order_price = current_price * (1 - 0.1 * self.spacing/100)
+                else:
+                    # 卖单主动靠近当前价格
+                    order_price = current_price * (1 + 0.1 * self.spacing/100)
                 
-                # 买入条件：价格触及买入网格且无持仓
-                if (grid['side'] == 'buy' and 
-                    not position.size and 
-                    current_price <= price):
-                    
-                    size = grid['size']
-                    self.buy(price=price, 
-                            size=size, 
-                            exectype=bt.Order.Limit)
-                    
-                    self.logger.info(f"创建买入订单 - 价格: {price:.2f}, "
-                                   f"数量: {size:.4f}")
-                        
-                # 卖出条件：价格触及卖出网格且有持仓
-                elif (grid['side'] == 'sell' and 
-                      position.size > 0 and 
-                      current_price >= price):
-                    
-                    self.sell(price=price, 
-                            size=position.size, 
-                            exectype=bt.Order.Limit)
-                    
-                    self.logger.info(f"创建卖出订单 - 价格: {price:.2f}, "
-                                   f"数量: {position.size:.4f}")
-                    
+                # 创建新订单
+                order = self.buy if grid['side'] == 'buy' else self.sell
+                new_order = order(
+                    price=order_price,
+                    size=grid['size'],
+                    exectype=bt.Order.Limit,
+                    valid=None  # 不设置过期时间，由我们自己管理
+                )
+                
+                # 记录订单创建时间
+                self.order_info[new_order.ref] = current_bar
+                self.active_orders.append(new_order)
+                
+            self.logger.debug(f"订单更新 - 活跃订单数: {len(self.active_orders)}")
+            
         except Exception as e:
             self.logger.error(f"订单执行错误: {str(e)}")
 
     def _calculate_position_size(self, price: float) -> float:
-        """计算仓位大小"""
-        return (self.broker.cash * self.p.risk_per_trade) / price
+        """计算杠杆后的仓位大小"""
+        try:
+            portfolio_value = self.broker.getvalue()
+            # 降低单个网格使用的资金比例
+            position_value = portfolio_value * 0.02  # 从10%改为2%
+            
+            # 添加最小和最大仓位限制
+            min_position = 100  # 最小100USDT
+            max_position = portfolio_value * 0.1  # 最大10%资金
+            
+            # 计算基础仓位
+            position = (position_value * self.p.leverage) / price
+            
+            # 限制仓位范围
+            position = max(min_position/price, min(position, max_position/price))
+            
+            return position
+            
+        except Exception as e:
+            self.logger.error(f"仓位计算错误: {str(e)}")
+            return 0.0
 
     def _check_risk_control(self):
-        """风险控制检查"""
+        """风险控制"""
         try:
-            # 动态止损阈值
-            dynamic_stop = max(
-                self.p.max_drawdown,
-                0.5 * self.volatility[0] * 100  # 波动越大止损越宽松
-            )
+            # 获取当前回撤
+            dd_analysis = self.drawdown.get_analysis()
+            current_dd = dd_analysis.get('drawdown', 0)
             
             # 分阶段止损
-            current_drawdown = self.drawdown.get_analysis()['drawdown']
-            if current_drawdown > dynamic_stop:
-                # 先平仓50%
+            if current_dd > self.p.max_drawdown * 0.7:  # 达到警戒线
+                # 减仓20%
                 position = self.getposition()
                 if position.size > 0:
-                    self.close(size=position.size * 0.5)
-                    self.logger.warning(f"第一阶段止损: 平仓50%, 当前回撤: {current_drawdown:.2f}%")
-            elif current_drawdown > 1.2 * dynamic_stop:
-                self.close_all_positions()
-                self.logger.warning(f"第二阶段止损: 全部平仓, 当前回撤: {current_drawdown:.2f}%")
-                
-            # 检查趋势（可选）
-            if self.data.close[0] < self.sma[0] * 0.95:  # 价格显著低于均线
-                self.logger.warning("价格显著低于均线，考虑调整策略参数")
+                    self.close(size=position.size * 0.2)
+                    self.logger.warning(f"触发风险控制 - 减仓20%, 当前回撤: {current_dd:.2f}%")
+            elif current_dd > self.p.max_drawdown:  # 达到止损线
+                self.close()  # 全部平仓
+                self.logger.warning(f"触发风险控制 - 全部平仓, 当前回撤: {current_dd:.2f}%")
                 
         except Exception as e:
-            self.logger.error(f"风险控制检查错误: {str(e)}")
-
-    def close_all_positions(self):
-        """强制平仓"""
-        if self.getposition().size > 0:
-            self.close()
-            self.logger.info("执行全部平仓操作")
+            self.logger.error(f"风险控制错误: {str(e)}")
 
     def get_analysis(self) -> Dict:
         """获取策略分析结果"""
         analysis = super().get_analysis()
         analysis.update({
             'grid_count': len(self.grid_levels),
-            'last_rebalance': self.last_rebalance,
+            'last_update_bar': self.last_update_bar,
             'price_center': self.price_center,
             'drawdown': self.drawdown.get_analysis()
         })
@@ -195,4 +233,12 @@ class AutoGridStrategy(BaseStrategy):
             self.logger.info(
                 f"交易结束 - 毛利润: {trade.pnl:.2f}, "
                 f"净利润: {trade.pnlcomm:.2f}"
-            ) 
+            )
+
+    def notify_order(self, order):
+        """订单状态更新通知"""
+        if order.status in [bt.Order.Completed, bt.Order.Canceled, bt.Order.Rejected]:
+            # 订单完成或取消，从跟踪字典中移除
+            self.order_info.pop(order.ref, None)
+            if order in self.active_orders:
+                self.active_orders.remove(order) 

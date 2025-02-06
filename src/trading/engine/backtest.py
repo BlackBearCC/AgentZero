@@ -1,7 +1,7 @@
 import backtrader as bt
 from datetime import datetime
 from typing import Dict, Any
-import logging
+from src.utils.logger import Logger
 from ..feeds.crypto_feed import DataManager
 from ..strategies.grid import AutoGridStrategy
 
@@ -9,7 +9,7 @@ class BacktestRunner:
     """简单的回测运行器"""
     
     def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = Logger("backtest")
         self.data_manager = DataManager()
 
     async def run(self,
@@ -22,12 +22,13 @@ class BacktestRunner:
                  strategy_params: Dict[str, Any] = None):
         """运行回测"""
         try:
-            # 创建回测引擎
+            self.logger.info(f"初始化回测引擎 - {symbol}, {timeframe}")
             cerebro = bt.Cerebro()
             
             # 设置资金和手续费
             cerebro.broker.setcash(initial_cash)
             cerebro.broker.setcommission(commission=commission)
+            self.logger.info(f"设置初始资金: ${initial_cash:.2f}, 手续费率: {commission:.4f}")
             
             # 添加分析器
             cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
@@ -36,6 +37,7 @@ class BacktestRunner:
             cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
             
             # 获取数据并添加到回测引擎
+            self.logger.info("开始加载历史数据...")
             data = self.data_manager.get_feed(
                 symbol=symbol,
                 timeframe=timeframe,
@@ -45,6 +47,7 @@ class BacktestRunner:
             cerebro.adddata(data)
             
             # 添加策略
+            self.logger.info("添加交易策略...")
             if strategy_params:
                 cerebro.addstrategy(AutoGridStrategy, **strategy_params)
             else:

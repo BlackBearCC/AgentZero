@@ -6,12 +6,15 @@ import numpy as np
 from typing import Dict, Optional, Union
 import logging
 import time
+from pathlib import Path
+from src.utils.logger import Logger
 
 class CCXTFeed:
     """CCXT数据源"""
     
     def __init__(self, **kwargs):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        # 使用统一的日志管理
+        self.logger = Logger()
         
         # 打印调试信息
         self.logger.info(f"CCXTFeed初始化参数: {kwargs}")
@@ -145,39 +148,8 @@ class DataManager:
     """数据管理器"""
     
     def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = Logger()
         self._feeds = {}
-
-    def fetch_data(self, 
-                  symbol: str, 
-                  timeframe: str, 
-                  start: datetime, 
-                  end: datetime) -> pd.DataFrame:
-        """获取历史数据"""
-        try:
-            # 创建CCXT数据源
-            feed = CCXTFeed(
-                symbol=symbol,
-                timeframe=timeframe,
-                start=start,
-                end=end
-            )
-            
-            # 获取DataFrame数据
-            df = feed.df
-            
-            if df.empty:
-                raise ValueError(f"获取到的数据为空: {symbol}")
-            
-            self.logger.info(f"成功获取数据 - 交易对: {symbol}, "
-                           f"时间范围: {start} 到 {end}, "
-                           f"数据条数: {len(df)}")
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"数据获取失败: {str(e)}")
-            raise
 
     def get_feed(self,
                 symbol: str,
@@ -202,8 +174,19 @@ class DataManager:
                            f"开始: {start}, "
                            f"结束: {end}")
             
-            # 获取数据
-            df = self.fetch_data(symbol, timeframe, start, end)
+            # 创建CCXT数据源
+            feed = CCXTFeed(
+                symbol=symbol,
+                timeframe=timeframe,
+                start=start,
+                end=end
+            )
+            
+            # 获取DataFrame数据
+            df = feed.df
+            
+            if df.empty:
+                raise ValueError(f"获取到的数据为空: {symbol}")
             
             # 创建 backtrader 数据源
             data = bt.feeds.PandasData(

@@ -2,26 +2,25 @@ import asyncio
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-import logging
 import argparse
 
-# 配置日志
-logging.basicConfig(level=logging.INFO, 
-                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 # 添加项目根目录到 Python 路径
 project_root = str(Path(__file__).parent.parent.parent)
+from src.utils.logger import Logger
+
+# 创建回测专用logger
+logger = Logger("backtest")
 if project_root not in sys.path:
     sys.path.append(project_root)
-    print(f"Added {project_root} to Python path")
+    logger.info(f"添加 {project_root} 到 Python 路径")
 
 try:
     from src.trading.engine.backtest import BacktestRunner
     from src.trading.strategies.grid import AutoGridStrategy
 except ImportError as e:
-    print(f"导入错误: {str(e)}")
-    print(f"当前 Python 路径: {sys.path}")
+    logger.error(f"导入错误: {str(e)}")
+    logger.error(f"当前 Python 路径: {sys.path}")
     raise
 
 def parse_date(date_str):
@@ -67,12 +66,12 @@ async def main():
         'initial_cash': args.cash,
         'commission': 0.001,
         'strategy_params': {
-            'grid_number': 20,         # 网格数量
-            'position_size': 0.1,      # 每格仓位
+            'grid_number': 50,         # 网格数量
+            'position_size': 0.02,      # 每格仓位
             'atr_period': 14,          # ATR周期
             'vol_period': 20,          # 波动率周期
-            'grid_min_spread': 0.005,  # 最小网格间距
-            'grid_max_spread': 0.05,   # 最大网格间距
+            'grid_min_spread': 0.002,  # 最小网格间距
+            'grid_max_spread': 0.06,   # 最大网格间距
             'grid_expansion': 2.0      # 网格区间扩展系数
         }
     }
@@ -88,7 +87,6 @@ async def main():
         # 打印回测结果
         logger.info("\n=== 回测结果 ===")
         logger.info(f"初始资金: ${args.cash:.2f}")
-        logger.info(f"最终资金: ${result['final_value']:.2f}")
         logger.info(f"总收益率: {((result['final_value']/args.cash - 1) * 100):.2f}%")
         logger.info(f"交易次数: {result.get('trade_count', 0)}")
         logger.info(f"回测周期: {args.start.date()} 到 {args.end.date()}")

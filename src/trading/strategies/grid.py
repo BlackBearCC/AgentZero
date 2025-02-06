@@ -2,7 +2,7 @@ import backtrader as bt
 import numpy as np
 from typing import List, Dict
 from .base import BaseStrategy
-import logging
+from src.utils.logger import Logger
 
 class AutoGridStrategy(BaseStrategy):
     """自适应网格交易策略
@@ -27,6 +27,9 @@ class AutoGridStrategy(BaseStrategy):
     def __init__(self):
         """初始化策略变量和技术指标"""
         super().__init__()
+        # 使用策略专用logger
+        self.logger = Logger("strategy")
+        
         # 核心数据结构
         self.grids = {}              # 存储网格信息
         self.initial_price = None    # 初始价格
@@ -44,8 +47,6 @@ class AutoGridStrategy(BaseStrategy):
             period=self.p.vol_period
         )
         
-        self.logger = logging.getLogger(self.__class__.__name__)
-        
         # 添加时间检查
         self.start_time = None
         self.end_time = None
@@ -54,7 +55,7 @@ class AutoGridStrategy(BaseStrategy):
         """策略启动时调用"""
         self.start_time = self.data.datetime.datetime(0)
         self.end_time = self.data.datetime.datetime(-1)
-        # self.logger.info(f"策略启动 - 回测区间: {self.start_time} 到 {self.end_time}")
+        self.logger.info(f"策略启动 - 回测区间: {self.start_time} 到 {self.end_time}")
 
     def adaptive_grid_adjustment(self):
         """自适应网格调整
@@ -85,11 +86,11 @@ class AutoGridStrategy(BaseStrategy):
             upper_price = current_price * (1 + expansion * grid_spacing)
             lower_price = current_price * (1 - expansion * grid_spacing)
             
-            # self.logger.info(f"网格调整 - 时间: {current_time}, "
-            #                f"波动率: {vol_ratio:.4f}, "
-            #                f"ATR比率: {atr_ratio:.4f}, "
-            #                f"间距: {grid_spacing:.4f}, "
-            #                f"区间: [{lower_price:.4f}, {upper_price:.4f}]")
+            self.logger.info(f"网格调整 - 时间: {current_time}, "
+                           f"波动率: {vol_ratio:.4f}, "
+                           f"ATR比率: {atr_ratio:.4f}, "
+                           f"间距: {grid_spacing:.4f}, "
+                           f"区间: [{lower_price:.4f}, {upper_price:.4f}]")
             
             return grid_spacing, upper_price, lower_price
             
@@ -123,9 +124,9 @@ class AutoGridStrategy(BaseStrategy):
             # 在初始价格买入
             self.buy_at_grid(self.initial_price)
             
-            # self.logger.info(f"初始化网格 - 中心价格: {self.initial_price:.4f}, "
-            #                f"网格数量: {len(self.grids)}, "
-            #                f"间距: {grid_spacing:.4f}")
+            self.logger.info(f"初始化网格 - 中心价格: {self.initial_price:.4f}, "
+                           f"网格数量: {len(self.grids)}, "
+                           f"间距: {grid_spacing:.4f}")
             
         except Exception as e:
             self.logger.error(f"网格初始化错误: {str(e)}")
@@ -220,9 +221,9 @@ class AutoGridStrategy(BaseStrategy):
             self.buy(size=position_size, price=price, exectype=bt.Order.Limit)
             self.grids[price]['has_position'] = True
             
-            # self.logger.info(f"网格买入 - 时间: {current_time}, "
-            #                f"价格: {price:.4f}, "
-            #                f"数量: {position_size:.4f}")
+            self.logger.info(f"网格买入 - 时间: {current_time}, "
+                           f"价格: {price:.4f}, "
+                           f"数量: {position_size:.4f}")
             
         except Exception as e:
             self.logger.error(f"网格买入错误: {str(e)}")
@@ -241,9 +242,9 @@ class AutoGridStrategy(BaseStrategy):
             self.sell(size=position_size, price=price, exectype=bt.Order.Limit)
             self.grids[price]['has_position'] = False
             
-            # self.logger.info(f"网格卖出 - 时间: {current_time}, "
-            #                f"价格: {price:.4f}, "
-            #                f"数量: {position_size:.4f}")
+            self.logger.info(f"网格卖出 - 时间: {current_time}, "
+                           f"价格: {price:.4f}, "
+                           f"数量: {position_size:.4f}")
             
         except Exception as e:
             self.logger.error(f"网格卖出错误: {str(e)}")
@@ -254,14 +255,14 @@ class AutoGridStrategy(BaseStrategy):
             # 获取订单完成时间
             current_time = self.data.datetime.datetime(0)
             
-            # self.logger.info(
-            #     f"订单完成 - 时间: {current_time}, "
-            #     f"方向: {'买入' if order.isbuy() else '卖出'}, "
-            #     f"价格: {order.executed.price:.4f}, "
-            #     f"数量: {order.executed.size:.4f}, "
-            #     f"价值: {order.executed.value:.2f}, "
-            #     f"手续费: {order.executed.comm:.2f}"
-            # )
+            self.logger.info(
+                f"订单完成 - 时间: {current_time}, "
+                f"方向: {'买入' if order.isbuy() else '卖出'}, "
+                f"价格: {order.executed.price:.4f}, "
+                f"数量: {order.executed.size:.4f}, "
+                f"价值: {order.executed.value:.2f}, "
+                f"手续费: {order.executed.comm:.2f}"
+            )
 
     def notify_trade(self, trade):
         """交易通知"""

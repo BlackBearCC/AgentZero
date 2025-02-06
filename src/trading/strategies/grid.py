@@ -8,11 +8,11 @@ class AutoGridStrategy(BaseStrategy):
     
     # 优化后的参数配置
     params = (
-        ('base_spacing', 0.03),      # 基础网格间距3%
+        ('base_spacing', 0.02),      # 基础网格间距3%
         ('dynamic_ratio', 1.5),      # 动态扩展系数
         ('leverage', 20),            # 杠杆倍数
-        ('max_grids', 5),           # 网格数量
-        ('rebalance_bars', 3),      # 3根K线重新平衡
+        ('max_grids', 50),           # 网格数量
+        ('rebalance_bars', 96),      # 96根K线重新平衡
         ('max_drawdown', 20),       # 最大回撤限制
         ('atr_period', 14),         # ATR周期
         ('ema_fast', 20),           # 快速EMA
@@ -73,46 +73,67 @@ class AutoGridStrategy(BaseStrategy):
     def adaptive_grid_adjustment(self):
         """增强版自适应网格算法"""
         try:
-            # 基于波动率的动态调整
-            atr_ratio = self.atr[0] / self.data.close[0]
-            ema_ratio = self.ema_fast[0] / self.ema_slow[0]
+            current_price = self.data.close[0]
             
-            # 动态间距计算
+            # 计算趋势方向
+            trend = (self.ema_fast[0] - self.ema_slow[0]) / self.ema_slow[0]
+            
+            # 基于波动率的动态调整
+            atr_ratio = self.atr[0] / current_price
+            
+            # 更保守的间距计算
             self.spacing = np.clip(
-                (atr_ratio * 3 + ema_ratio * 0.5) * 100,
-                0.8,   # 最小0.8%
-                5.0    # 最大5%
+                (atr_ratio * 2) * 100,  # 降低间距
+                0.5,   # 最小0.5%
+                2.0    # 最大2.0%
             )
             
-            # 趋势自适应扩展
-            trend_factor = 1 + abs(self.data.close[0] - self.ema_fast[0]) / self.ema_fast[0]
-            current_price = self.data.close[0]
-            upper = current_price * (1 + self.spacing/100 * trend_factor)
-            lower = current_price * (1 - self.spacing/100 * trend_factor)
+            # 根据趋势调整网格范围
+            if abs(trend) > 0.01:  # 明显趋势
+                # 顺势设置网格
+                expansion = 1.2
+                upper = current_price * (1 + self.spacing/100 * expansion)
+                lower = current_price * (1 - self.spacing/100 * expansion)
+            else:
+                # 震荡市场，缩小网格范围
+                expansion = 0.8
+                upper = current_price * (1 + self.spacing/100 * expansion)
+                lower = current_price * (1 - self.spacing/100 * expansion)
             
-            # 生成带权重的斐波那契网格
+            # 重置网格
             self.grid_levels = []
-            fib_levels = {
-                0.236: 1.0,
-                0.382: 1.5,
-                0.500: 2.0,
-                0.618: 1.5,
-                0.786: 1.0
-            }
             
-            for level, weight in fib_levels.items():
+            # 获取当前持仓
+            position = self.getposition()
+            current_size = position.size if position else 0
+            
+            # 根据持仓设置网格
+            for level in [0.2, 0.4, 0.6, 0.8]:
                 price = lower + (upper - lower) * level
-                size = self._calculate_position_size(price) * weight
+                
+                # 计算基础仓位
+                base_size = self._calculate_position_size(price)
+                
+                # 根据当前持仓调整方向和大小
+                if current_size > 0:
+                    # 持多仓时，更多卖单
+                    size = base_size * (2.0 if price > current_price else 0.5)
+                elif current_size < 0:
+                    # 持空仓时，更多买单
+                    size = base_size * (2.0 if price < current_price else 0.5)
+                else:
+                    # 无持仓时，均衡配置
+                    size = base_size
                 
                 self.grid_levels.append({
                     'price': price,
                     'side': 'buy' if price < current_price else 'sell',
-                    'size': size,
-                    'weight': weight
+                    'size': size
                 })
             
             self.logger.info(f"网格更新 - 间距: {self.spacing:.2f}%, "
-                           f"趋势系数: {trend_factor:.2f}")
+                           f"趋势: {trend:.2f}, "
+                           f"当前持仓: {current_size}")
             
         except Exception as e:
             self.logger.error(f"网格调整错误: {str(e)}")
@@ -127,13 +148,13 @@ class AutoGridStrategy(BaseStrategy):
             position = self.getposition()
             total_position = abs(position.size) if position else 0
             
-            # 添加持仓限制
-            max_total_position = self.broker.getvalue()  # 最大总持仓
+            # # 添加持仓限制
+            # max_total_position = self.broker.getvalue()*20  # 最大总持仓
             
-            # 如果总持仓超过限制，不再开新仓
-            if total_position * current_price >= max_total_position:
-                self.logger.warning(f"总持仓达到限制: {total_position:.2f}")
-                return
+            # # 如果总持仓超过限制，不再开新仓
+            # if total_position * current_price >= max_total_position:
+            #     self.logger.warning(f"总持仓达到限制: {total_position:.2f}")
+            #     return
             
             # 清理过期订单
             active_orders = self.active_orders.copy()  # 创建副本避免修改迭代对象

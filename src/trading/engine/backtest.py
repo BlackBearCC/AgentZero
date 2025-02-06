@@ -33,6 +33,7 @@ class BacktestRunner:
             cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
             cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
             cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trades')
+            cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
             
             # 获取数据并添加到回测引擎
             data = self.data_manager.get_feed(
@@ -56,31 +57,45 @@ class BacktestRunner:
             
             # 获取分析结果
             final_value = cerebro.broker.getvalue()
-            returns = (final_value / initial_cash - 1) * 100
             
-            # 安全获取分析器结果
-            analysis = strat.analyzers.sharpe.get_analysis()
-            sharpe = analysis.get('sharperatio', 0.0) if analysis else 0.0
+            # 计算杠杆收益率
+            leverage = strategy_params.get('leverage', 1)
+            initial_margin = initial_cash / leverage
+            returns = ((final_value - initial_cash) / initial_margin) * 100
             
-            dd_analysis = strat.analyzers.drawdown.get_analysis()
-            max_dd = dd_analysis.get('max', {}).get('drawdown', 0.0) if dd_analysis else 0.0
-            
+            # 获取更详细的交易统计
             trade_analysis = strat.analyzers.trades.get_analysis()
-            total_trades = trade_analysis.get('total', {}).get('total', 0) if trade_analysis else 0
+            
+            # 计算胜率和盈亏比
+            total_trades = trade_analysis.get('total', {}).get('total', 0)
+            won_trades = trade_analysis.get('won', {}).get('total', 0)
+            lost_trades = trade_analysis.get('lost', {}).get('total', 0)
+            win_rate = (won_trades / total_trades * 100) if total_trades > 0 else 0
+            
+            # 计算平均盈亏
+            avg_won = trade_analysis.get('won', {}).get('pnl', {}).get('average', 0)
+            avg_lost = trade_analysis.get('lost', {}).get('pnl', {}).get('average', 0)
+            profit_factor = abs(avg_won / avg_lost) if avg_lost != 0 else 0
             
             # 打印回测结果
             print(f'''
 === 回测结果 ===
-起始资金: ${initial_cash:.2f}
+初始资金: ${initial_cash:.2f}
+初始保证金: ${initial_margin:.2f}
 最终资金: ${final_value:.2f}
-总收益率: {returns:.2f}%
-夏普比率: {sharpe if sharpe is not None else 0.0:.2f}
-最大回撤: {max_dd if max_dd is not None else 0.0:.2f}%
+杠杆倍数: {leverage}x
+总收益率(基于保证金): {returns:.2f}%
 总交易次数: {total_trades}
+胜率: {win_rate:.2f}%
+盈亏比: {profit_factor:.2f}
+平均盈利: ${avg_won:.2f}
+平均亏损: ${abs(avg_lost):.2f}
+最大回撤: {strat.analyzers.drawdown.get_analysis().get('max', {}).get('drawdown', 0):.2f}%
+
 ''')
             
             # 绘制图表
-            # cerebro.plot(style='candlestick', volume=False)
+            cerebro.plot(style='candlestick', volume=False)
             
             return results
             

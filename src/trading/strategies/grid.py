@@ -45,6 +45,16 @@ class AutoGridStrategy(BaseStrategy):
         )
         
         self.logger = logging.getLogger(self.__class__.__name__)
+        
+        # 添加时间检查
+        self.start_time = None
+        self.end_time = None
+
+    def start(self):
+        """策略启动时调用"""
+        self.start_time = self.data.datetime.datetime(0)
+        self.end_time = self.data.datetime.datetime(-1)
+        # self.logger.info(f"策略启动 - 回测区间: {self.start_time} 到 {self.end_time}")
 
     def adaptive_grid_adjustment(self):
         """自适应网格调整
@@ -55,6 +65,7 @@ class AutoGridStrategy(BaseStrategy):
             tuple: (grid_spacing, upper_price, lower_price)
         """
         try:
+            current_time = self.data.datetime.datetime(0)
             current_price = self.data.close[0]
             
             # 计算波动率比率
@@ -64,9 +75,9 @@ class AutoGridStrategy(BaseStrategy):
             
             # 动态计算网格间距
             grid_spacing = np.clip(
-                vol_ratio * 1.5 + atr_ratio * 1.5,  # 综合波动指标
-                self.p.grid_min_spread,           # 最小间距
-                self.p.grid_max_spread            # 最大间距
+                vol_ratio * 2 + atr_ratio * 1.5,
+                self.p.grid_min_spread,
+                self.p.grid_max_spread
             )
             
             # 计算网格区间范围
@@ -74,10 +85,11 @@ class AutoGridStrategy(BaseStrategy):
             upper_price = current_price * (1 + expansion * grid_spacing)
             lower_price = current_price * (1 - expansion * grid_spacing)
             
-            self.logger.info(f"网格调整 - 波动率: {vol_ratio:.4f}, "
-                           f"ATR比率: {atr_ratio:.4f}, "
-                           f"间距: {grid_spacing:.4f}, "
-                           f"区间: [{lower_price:.4f}, {upper_price:.4f}]")
+            # self.logger.info(f"网格调整 - 时间: {current_time}, "
+            #                f"波动率: {vol_ratio:.4f}, "
+            #                f"ATR比率: {atr_ratio:.4f}, "
+            #                f"间距: {grid_spacing:.4f}, "
+            #                f"区间: [{lower_price:.4f}, {upper_price:.4f}]")
             
             return grid_spacing, upper_price, lower_price
             
@@ -111,9 +123,9 @@ class AutoGridStrategy(BaseStrategy):
             # 在初始价格买入
             self.buy_at_grid(self.initial_price)
             
-            self.logger.info(f"初始化网格 - 中心价格: {self.initial_price:.4f}, "
-                           f"网格数量: {len(self.grids)}, "
-                           f"间距: {grid_spacing:.4f}")
+            # self.logger.info(f"初始化网格 - 中心价格: {self.initial_price:.4f}, "
+            #                f"网格数量: {len(self.grids)}, "
+            #                f"间距: {grid_spacing:.4f}")
             
         except Exception as e:
             self.logger.error(f"网格初始化错误: {str(e)}")
@@ -144,7 +156,10 @@ class AutoGridStrategy(BaseStrategy):
     def next(self):
         """策略主逻辑"""
         try:
+            current_time = self.data.datetime.datetime(0)
             current_price = self.data.close[0]
+            
+            self.logger.debug(f"当前时间: {current_time}, 价格: {current_price:.4f}")
             
             # 首次运行时初始化网格
             if self.initial_price is None:
@@ -155,7 +170,7 @@ class AutoGridStrategy(BaseStrategy):
             
             # 检查是否需要重新调整网格
             if self.should_adjust_grids(current_price):
-                self.logger.info("重新调整网格...")
+                # self.logger.info("重新调整网格...")
                 self.initial_price = current_price
                 self.initialize_grids()
                 return
@@ -194,6 +209,9 @@ class AutoGridStrategy(BaseStrategy):
     def buy_at_grid(self, price):
         """在网格价格买入"""
         try:
+            # 获取当前时间
+            current_time = self.data.datetime.datetime(0)
+            
             # 计算买入数量
             position_value = self.broker.getvalue() * self.p.position_size
             position_size = position_value / price
@@ -202,7 +220,9 @@ class AutoGridStrategy(BaseStrategy):
             self.buy(size=position_size, price=price, exectype=bt.Order.Limit)
             self.grids[price]['has_position'] = True
             
-            self.logger.info(f"网格买入 - 价格: {price:.4f}, 数量: {position_size:.4f}")
+            # self.logger.info(f"网格买入 - 时间: {current_time}, "
+            #                f"价格: {price:.4f}, "
+            #                f"数量: {position_size:.4f}")
             
         except Exception as e:
             self.logger.error(f"网格买入错误: {str(e)}")
@@ -210,6 +230,9 @@ class AutoGridStrategy(BaseStrategy):
     def sell_at_grid(self, price):
         """在网格价格卖出"""
         try:
+            # 获取当前时间
+            current_time = self.data.datetime.datetime(0)
+            
             # 计算卖出数量
             position_value = self.broker.getvalue() * self.p.position_size
             position_size = position_value / price
@@ -218,7 +241,9 @@ class AutoGridStrategy(BaseStrategy):
             self.sell(size=position_size, price=price, exectype=bt.Order.Limit)
             self.grids[price]['has_position'] = False
             
-            self.logger.info(f"网格卖出 - 价格: {price:.4f}, 数量: {position_size:.4f}")
+            # self.logger.info(f"网格卖出 - 时间: {current_time}, "
+            #                f"价格: {price:.4f}, "
+            #                f"数量: {position_size:.4f}")
             
         except Exception as e:
             self.logger.error(f"网格卖出错误: {str(e)}")
@@ -226,18 +251,26 @@ class AutoGridStrategy(BaseStrategy):
     def notify_order(self, order):
         """订单状态更新通知"""
         if order.status in [bt.Order.Completed]:
-            self.logger.info(
-                f"订单完成 - 方向: {'买入' if order.isbuy() else '卖出'}, "
-                f"价格: {order.executed.price:.4f}, "
-                f"数量: {order.executed.size:.4f}, "
-                f"价值: {order.executed.value:.2f}, "
-                f"手续费: {order.executed.comm:.2f}"
-            )
+            # 获取订单完成时间
+            current_time = self.data.datetime.datetime(0)
+            
+            # self.logger.info(
+            #     f"订单完成 - 时间: {current_time}, "
+            #     f"方向: {'买入' if order.isbuy() else '卖出'}, "
+            #     f"价格: {order.executed.price:.4f}, "
+            #     f"数量: {order.executed.size:.4f}, "
+            #     f"价值: {order.executed.value:.2f}, "
+            #     f"手续费: {order.executed.comm:.2f}"
+            # )
 
     def notify_trade(self, trade):
         """交易通知"""
         if trade.isclosed:
+            # 获取交易结束时间
+            current_time = self.data.datetime.datetime(0)
+            
             self.logger.info(
-                f"交易结束 - 毛利润: {trade.pnl:.2f}, "
+                f"交易结束 - 时间: {current_time}, "
+                f"毛利润: {trade.pnl:.2f}, "
                 f"净利润: {trade.pnlcomm:.2f}"
             )

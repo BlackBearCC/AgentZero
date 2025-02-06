@@ -28,7 +28,7 @@ async def main():
     
     # 设置回测时间范围（使用历史数据）
     end_date = datetime.now()- timedelta(days=2)
-    start_date = end_date - timedelta(days=60)  # 最近30天数据
+    start_date = end_date - timedelta(days=90)  # 最近30天数据
     
     # 回测参数配置
     params = {
@@ -38,17 +38,17 @@ async def main():
         'end': end_date,
         'initial_cash': 10000,
         'commission': 0.001,
-        'strategy_params': {
-            'base_spacing': 0.02,      # 基础网格间距3%
-            'dynamic_ratio': 1.5,      # 动态扩展系数
-            'leverage': 20,            # 杠杆倍数
-            'max_grids': 100,           # 网格数量
-            'rebalance_bars': 1000,      # 3根K线重新平衡
-            'max_drawdown': 20,       # 最大回撤限制
-            'atr_period': 14,         # ATR周期
-            'ema_fast': 20,           # 快速EMA
-            'ema_slow': 50            # 慢速EMA
-        }
+        # 'strategy_params': {
+        #     'base_spacing': 0.02,      # 基础网格间距3%
+        #     'dynamic_ratio': 1.5,      # 动态扩展系数
+        #     'leverage': 20,            # 杠杆倍数
+        #     'max_grids': 100,           # 网格数量
+        #     'rebalance_bars': 1000,      # 3根K线重新平衡
+        #     'max_drawdown': 20,       # 最大回撤限制
+        #     'atr_period': 14,         # ATR周期
+        #     'ema_fast': 20,           # 快速EMA
+        #     'ema_slow': 50            # 慢速EMA
+        # }
     }
 
     logger.info(f"回测参数: {params}")

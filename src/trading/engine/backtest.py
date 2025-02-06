@@ -13,11 +13,11 @@ class BacktestRunner:
         self.data_manager = DataManager()
 
     async def run(self,
-                 symbol: str = 'BTC/USDT',
+                 symbol: str = 'DOGE/USDT',
                  timeframe: str = '15m',
                  start: datetime = None,
                  end: datetime = None,
-                 initial_cash: float = 100000,
+                 initial_cash: float = 10000,
                  commission: float = 0.001,
                  strategy_params: Dict[str, Any] = None):
         """运行回测"""
@@ -59,9 +59,9 @@ class BacktestRunner:
             final_value = cerebro.broker.getvalue()
             
             # 计算杠杆收益率
-            leverage = strategy_params.get('leverage', 1)
-            initial_margin = initial_cash / leverage
-            returns = ((final_value - initial_cash) / initial_margin) * 100
+            # leverage = strategy_params.get('leverage', 1)
+            # initial_margin = initial_cash / leverage
+            # returns = ((final_value - initial_cash) / initial_margin) * 100
             
             # 获取更详细的交易统计
             trade_analysis = strat.analyzers.trades.get_analysis()
@@ -81,10 +81,10 @@ class BacktestRunner:
             print(f'''
 === 回测结果 ===
 初始资金: ${initial_cash:.2f}
-初始保证金: ${initial_margin:.2f}
+
 最终资金: ${final_value:.2f}
-杠杆倍数: {leverage}x
-总收益率(基于保证金): {returns:.2f}%
+
+
 总交易次数: {total_trades}
 胜率: {win_rate:.2f}%
 盈亏比: {profit_factor:.2f}

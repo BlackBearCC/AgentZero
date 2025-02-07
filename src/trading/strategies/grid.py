@@ -100,6 +100,52 @@ class AutoGridStrategy(BaseStrategy):
             'trend_duration': 0,        # 趋势总时长
         }
 
+        # 扩展统计指标
+        self.grid_stats.update({
+            # 收益指标
+            'returns': [],              # 每笔交易收益率
+            'cumulative_returns': 0,    # 累计收益率
+            'annual_return': 0,         # 年化收益率
+            'sharpe_ratio': 0,         # 夏普比率
+            'max_drawdown': 0,         # 最大回撤
+            'drawdown_duration': 0,    # 最长回撤持续时间
+            
+            # 交易指标
+            'trade_durations': [],     # 每笔交易持续时间
+            'avg_trade_duration': 0,   # 平均持仓时间
+            'position_sizes': [],      # 每笔交易规模
+            'avg_position_size': 0,    # 平均仓位大小
+            'turnover_ratio': 0,       # 换手率
+            
+            # 网格特征指标
+            'grid_utilization': [],    # 网格利用率（触发的网格/总网格数）
+            'grid_profit_ratio': [],   # 网格盈利比例
+            'grid_distances': [],      # 网格间距历史
+            'grid_adjustments_time': [],  # 网格调整时间间隔
+            
+            # 市场特征指标
+            'volatility_changes': [],  # 波动率变化
+            'trend_strength': [],      # 趋势强度
+            'market_conditions': [],   # 市场状态记录
+            
+            # 风险指标
+            'var_95': 0,              # 95% VaR
+            'cvar_95': 0,             # 95% CVaR
+            'win_loss_ratio': 0,      # 盈亏比
+            'profit_factor': 0,       # 获利因子
+        })
+        
+        # 添加实时跟踪变量
+        self.tracking = {
+            'equity_curve': [],        # 权益曲线
+            'drawdown_series': [],     # 回撤序列
+            'high_water_mark': 0,      # 历史最高点
+            'current_drawdown': 0,     # 当前回撤
+            'drawdown_start': None,    # 回撤开始时间
+            'max_drawdown_start': None,# 最大回撤开始时间
+            'max_drawdown_end': None,  # 最大回撤结束时间
+        }
+
     def start(self):
         """策略启动时调用"""
         self.start_time = self.data.datetime.datetime(0)
@@ -341,6 +387,9 @@ class AutoGridStrategy(BaseStrategy):
             self.check_grid_triggers(current_price)
             self.last_price = current_price
             
+            # 更新实时统计
+            self._update_tracking_stats()
+            
         except Exception as e:
             self.logger.error(f"策略执行错误: {str(e)}")
 
@@ -524,5 +573,129 @@ class AutoGridStrategy(BaseStrategy):
                 self.logger.info(f"横盘总时长: {self.period_stats['ranging_duration']/3600:.1f}小时")
                 self.logger.info(f"趋势总时长: {self.period_stats['trend_duration']/3600:.1f}小时")
                 
+            # 计算高级统计指标
+            self._calculate_advanced_stats()
+            
+            # 输出高级统计报告
+            self._print_advanced_report()
+            
         except Exception as e:
             self.logger.error(f"统计报告生成错误: {str(e)}")
+
+    def _calculate_advanced_stats(self):
+        """计算高级统计指标"""
+        try:
+            # 计算年化收益率
+            total_days = (self.data.datetime.datetime(0) - self.start_time).days
+            if total_days > 0:
+                self.grid_stats['annual_return'] = (
+                    (self.broker.getvalue() / self.initial_cash) ** (365/total_days) - 1
+                )
+            
+            # 计算夏普比率
+            if len(self.grid_stats['returns']) > 1:
+                returns_array = np.array(self.grid_stats['returns'])
+                avg_return = np.mean(returns_array)
+                std_return = np.std(returns_array)
+                if std_return > 0:
+                    self.grid_stats['sharpe_ratio'] = avg_return / std_return * np.sqrt(252)
+            
+            # 计算其他风险指标
+            if self.grid_stats['total_trades'] > 0:
+                self.grid_stats['win_loss_ratio'] = (
+                    self.grid_stats['winning_trades'] / max(1, self.grid_stats['losing_trades'])
+                )
+                self.grid_stats['profit_factor'] = (
+                    self.grid_stats['total_profit'] / max(1, self.grid_stats['total_loss'])
+                )
+                
+            # 计算VaR和CVaR
+            if len(self.grid_stats['returns']) > 0:
+                returns_array = np.array(self.grid_stats['returns'])
+                self.grid_stats['var_95'] = np.percentile(returns_array, 5)
+                self.grid_stats['cvar_95'] = np.mean(returns_array[returns_array <= self.grid_stats['var_95']])
+                
+        except Exception as e:
+            self.logger.error(f"高级统计计算错误: {str(e)}")
+
+    def _print_advanced_report(self):
+        """输出高级统计报告"""
+        self.logger.info("\n=== 高级统计报告 ===")
+        
+        # 收益指标
+        self.logger.info("\n-- 收益指标 --")
+        self.logger.info(f"年化收益率: {self.grid_stats['annual_return']*100:.2f}%")
+        self.logger.info(f"夏普比率: {self.grid_stats['sharpe_ratio']:.2f}")
+        self.logger.info(f"最大回撤: {self.grid_stats['max_drawdown']*100:.2f}%")
+        self.logger.info(f"最长回撤持续时间: {self.grid_stats['drawdown_duration']/86400:.1f}天")
+        
+        # 交易指标
+        self.logger.info("\n-- 交易指标 --")
+        if len(self.grid_stats['trade_durations']) > 0:
+            avg_duration = np.mean(self.grid_stats['trade_durations'])
+            self.logger.info(f"平均持仓时间: {avg_duration/3600:.1f}小时")
+        if len(self.grid_stats['position_sizes']) > 0:
+            self.logger.info(f"平均仓位大小: {np.mean(self.grid_stats['position_sizes']):.2f}")
+        
+        # 网格指标
+        self.logger.info("\n-- 网格指标 --")
+        if len(self.grid_stats['grid_utilization']) > 0:
+            self.logger.info(f"平均网格利用率: {np.mean(self.grid_stats['grid_utilization'])*100:.2f}%")
+        if len(self.grid_stats['grid_adjustments_time']) > 0:
+            avg_adjust_interval = np.mean(self.grid_stats['grid_adjustments_time'])
+            self.logger.info(f"平均网格调整间隔: {avg_adjust_interval/3600:.1f}小时")
+        
+        # 风险指标
+        self.logger.info("\n-- 风险指标 --")
+        self.logger.info(f"95% VaR: {self.grid_stats['var_95']*100:.2f}%")
+        self.logger.info(f"95% CVaR: {self.grid_stats['cvar_95']*100:.2f}%")
+        self.logger.info(f"盈亏比: {self.grid_stats['win_loss_ratio']:.2f}")
+        self.logger.info(f"获利因子: {self.grid_stats['profit_factor']:.2f}")
+
+    def _update_tracking_stats(self):
+        """更新实时统计数据"""
+        try:
+            current_time = self.data.datetime.datetime(0)
+            current_value = self.broker.getvalue()
+            
+            # 更新权益曲线
+            self.tracking['equity_curve'].append(current_value)
+            
+            # 更新高水位线
+            if current_value > self.tracking['high_water_mark']:
+                self.tracking['high_water_mark'] = current_value
+            
+            # 计算当前回撤
+            if self.tracking['high_water_mark'] > 0:
+                drawdown = (self.tracking['high_water_mark'] - current_value) / self.tracking['high_water_mark']
+            self.tracking['drawdown_series'].append(drawdown)
+            
+            # 更新最大回撤
+            if drawdown > self.grid_stats['max_drawdown']:
+                self.grid_stats['max_drawdown'] = drawdown
+                self.tracking['max_drawdown_start'] = self.tracking['drawdown_start']
+                self.tracking['max_drawdown_end'] = current_time
+            
+            # 跟踪回撤持续时间
+            if drawdown > 0:
+                if self.tracking['drawdown_start'] is None:
+                    self.tracking['drawdown_start'] = current_time
+                duration = (current_time - self.tracking['drawdown_start']).total_seconds()
+                self.grid_stats['drawdown_duration'] = max(
+                    self.grid_stats['drawdown_duration'], 
+                    duration
+                )
+            else:
+                self.tracking['drawdown_start'] = None
+                
+            # 更新网格利用率
+            active_grids = len([g for g in self.grids.values() if g['has_position']])
+            self.grid_stats['grid_utilization'].append(active_grids / len(self.grids))
+            
+            # 更新波动率变化
+            if len(self.data) > 1:
+                vol_change = self.volatility[0] / self.volatility[-1] - 1
+                self.grid_stats['volatility_changes'].append(vol_change)
+                
+        except Exception as e:
+            self.logger.error(f"统计更新错误: {str(e)}")

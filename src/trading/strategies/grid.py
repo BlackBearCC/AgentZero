@@ -327,83 +327,12 @@ class AutoGridStrategy(BaseStrategy):
 
     def should_adjust_grids(self, current_price):
         """判断是否需要调整网格"""
-        try:
-            if self.current_spacing is None:
-                return True
-                
-            current_time = self.data.datetime.datetime(0)
-            
-            # 检查冷却时间
-            if hasattr(self, 'last_adjustment_time'):
-                time_since_last_adjustment = (current_time - self.last_adjustment_time).total_seconds()
-                if time_since_last_adjustment < self.p.adjustment_cooldown:
-                    return False
-            
-            # 计算价格偏离
-            grid_prices = sorted(self.grids.keys())
-            active_grids = [p for p in grid_prices 
-                          if abs(p - current_price) / current_price < self.p.active_grid_range]
-            if not active_grids:
-                return True
-                
-            grid_center_price = sum(active_grids) / len(active_grids)
-            price_deviation = abs(current_price - grid_center_price) / grid_center_price
-            
-            # 状态判断
-            if not self.is_ranging:
-                if price_deviation < self.p.ranging_deviation:
-                    if self.range_start_time is None:
-                        self.range_start_time = current_time
-                    elif (current_time - self.range_start_time).total_seconds() > self.p.state_change_time:
-                        if not self.is_ranging:
-                            self.is_ranging = True
-                            self.grid_stats['ranging_periods'] += 1
-                            if self.period_stats['last_state_change']:
-                                self.period_stats['trend_duration'] += (
-                                    current_time - self.period_stats['last_state_change']
-                                ).total_seconds()
-                            self.period_stats['last_state_change'] = current_time
-                else:
-                    self.range_start_time = None
-            else:
-                if price_deviation > self.p.ranging_exit:
-                    if self.is_ranging:
-                        self.is_ranging = False
-                        self.grid_stats['trend_periods'] += 1
-                        if self.period_stats['last_state_change']:
-                            self.period_stats['ranging_duration'] += (
-                                current_time - self.period_stats['last_state_change']
-                            ).total_seconds()
-                        self.period_stats['last_state_change'] = current_time
-            
-            # 网格调整判断
-            if ((self.is_ranging and price_deviation > self.p.ranging_adjust) or
-                (not self.is_ranging and price_deviation > self.p.trend_adjust)):
-                
-                new_spacing, _, _ = self.adaptive_grid_adjustment()
-                spacing_change = abs(new_spacing - self.current_spacing) / self.current_spacing
-                
-                if self.is_ranging:
-                    should_adjust = spacing_change > self.p.ranging_spacing_change
-                else:
-                    should_adjust = spacing_change > self.p.trend_spacing_change
-                    
-                if should_adjust:
-                    self.last_adjustment_time = current_time
-                    self.grid_stats['grid_adjustments_time'].append(time_since_last_adjustment)
-                    self.logger.info(
-                        f"触发网格调整 - "
-                        f"价格偏离: {price_deviation:.4f}, "
-                        f"间距变化: {spacing_change:.4f}, "
-                        f"状态: {'横盘' if self.is_ranging else '趋势'}"
-                    )
-                    return True
-                    
-            return False
-                
-        except Exception as e:
-            self.logger.error(f"网格调整检查错误: {str(e)}")
-            return False
+        if self.is_ranging:
+            # 横盘期：使用较密集网格
+            return self.current_spacing > self.p.grid_min_spread * 2
+        else:
+            # 趋势期：使用较宽松网格
+            return self.current_spacing < self.p.grid_max_spread * 0.5
 
     def next(self):
         """策略主逻辑"""

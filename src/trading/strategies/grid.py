@@ -288,6 +288,34 @@ class AutoGridStrategy(BaseStrategy):
                         f"平均间距: {current_spacing:.4f}, "
                         f"网格数量: {len(self.grids)}"
                     )
+                    
+                    # 记录状态变化
+                    if not self.is_ranging:
+                        if price_deviation < 0.02:  # 进入横盘
+                            if self.range_start_time is None:
+                                self.range_start_time = current_time
+                            elif (current_time - self.range_start_time).total_seconds() > 3600:
+                                if not self.is_ranging:  # 状态发生改变
+                                    self.is_ranging = True
+                                    self.grid_stats['ranging_periods'] += 1
+                                    if self.period_stats['last_state_change']:
+                                        self.period_stats['trend_duration'] += (
+                                            current_time - self.period_stats['last_state_change']
+                                        ).total_seconds()
+                                    self.period_stats['last_state_change'] = current_time
+                        else:
+                            self.range_start_time = None
+                    else:
+                        if price_deviation > 0.05:  # 退出横盘
+                            if self.is_ranging:  # 状态发生改变
+                                self.is_ranging = False
+                                self.grid_stats['trend_periods'] += 1
+                                if self.period_stats['last_state_change']:
+                                    self.period_stats['ranging_duration'] += (
+                                        current_time - self.period_stats['last_state_change']
+                                    ).total_seconds()
+                                self.period_stats['last_state_change'] = current_time
+                    
                     return True
                 
             return False

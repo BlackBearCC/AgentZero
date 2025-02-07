@@ -552,6 +552,10 @@ class AutoGridStrategy(BaseStrategy):
             self.grid_stats['total_trades'] += 1
             profit = trade.pnlcomm
             
+            # 计算收益率
+            return_rate = profit / trade.price
+            self.grid_stats['returns'].append(return_rate)
+            
             if profit > 0:
                 self.grid_stats['winning_trades'] += 1
                 self.grid_stats['total_profit'] += profit
@@ -560,6 +564,23 @@ class AutoGridStrategy(BaseStrategy):
                 self.grid_stats['losing_trades'] += 1
                 self.grid_stats['total_loss'] += abs(profit)
                 self.grid_stats['max_loss'] = min(self.grid_stats['max_loss'], profit)
+            
+            # 安全地计算交易持续时间
+            try:
+                if isinstance(trade.dtclose, (int, float)) and isinstance(trade.dtopen, (int, float)):
+                    # 如果是时间戳，直接计算差值
+                    trade_duration = trade.dtclose - trade.dtopen
+                else:
+                    # 如果是datetime对象，使用total_seconds()
+                    trade_duration = (trade.dtclose - trade.dtopen).total_seconds()
+                
+                self.grid_stats['trade_durations'].append(trade_duration)
+            except Exception as e:
+                self.logger.warning(f"计算交易持续时间失败: {str(e)}")
+                self.grid_stats['trade_durations'].append(0)
+            
+            # 记录仓位大小
+            self.grid_stats['position_sizes'].append(trade.size)
             
             current_time = self.data.datetime.datetime(0)
             self.logger.info(
@@ -609,17 +630,30 @@ class AutoGridStrategy(BaseStrategy):
             # 计算年化收益率
             total_days = (self.data.datetime.datetime(0) - self.start_time).days
             if total_days > 0:
+                total_return = (self.broker.getvalue() / self.initial_cash) - 1
                 self.grid_stats['annual_return'] = (
-                    (self.broker.getvalue() / self.initial_cash) ** (365/total_days) - 1
+                    (1 + total_return) ** (365/total_days) - 1
                 )
             
             # 计算夏普比率
             if len(self.grid_stats['returns']) > 1:
                 returns_array = np.array(self.grid_stats['returns'])
-                avg_return = np.mean(returns_array)
+                risk_free_rate = 0.02  # 假设无风险利率为2%
+                excess_returns = returns_array - (risk_free_rate / 252)  # 转换为日收益率
+                avg_excess_return = np.mean(excess_returns)
                 std_return = np.std(returns_array)
                 if std_return > 0:
-                    self.grid_stats['sharpe_ratio'] = avg_return / std_return * np.sqrt(252)
+                    self.grid_stats['sharpe_ratio'] = (
+                        avg_excess_return / std_return * np.sqrt(252)
+                    )
+            
+            # 计算VaR和CVaR
+            if len(self.grid_stats['returns']) > 0:
+                returns_array = np.array(self.grid_stats['returns'])
+                self.grid_stats['var_95'] = np.percentile(returns_array, 5)
+                cvar_mask = returns_array <= self.grid_stats['var_95']
+                if np.any(cvar_mask):
+                    self.grid_stats['cvar_95'] = np.mean(returns_array[cvar_mask])
             
             # 计算其他风险指标
             if self.grid_stats['total_trades'] > 0:
@@ -627,15 +661,17 @@ class AutoGridStrategy(BaseStrategy):
                     self.grid_stats['winning_trades'] / max(1, self.grid_stats['losing_trades'])
                 )
                 self.grid_stats['profit_factor'] = (
-                    self.grid_stats['total_profit'] / max(1, self.grid_stats['total_loss'])
+                    self.grid_stats['total_profit'] / max(1, abs(self.grid_stats['total_loss']))
                 )
-                
-            # 计算VaR和CVaR
-            if len(self.grid_stats['returns']) > 0:
-                returns_array = np.array(self.grid_stats['returns'])
-                self.grid_stats['var_95'] = np.percentile(returns_array, 5)
-                self.grid_stats['cvar_95'] = np.mean(returns_array[returns_array <= self.grid_stats['var_95']])
-                
+            
+            # 计算换手率
+            if total_days > 0:
+                total_volume = sum(self.grid_stats['position_sizes'])
+                self.grid_stats['turnover_ratio'] = (
+                    total_volume * self.data.close[0] / 
+                    (self.broker.getvalue() * total_days/365)
+                )
+            
         except Exception as e:
             self.logger.error(f"高级统计计算错误: {str(e)}")
 
@@ -657,6 +693,7 @@ class AutoGridStrategy(BaseStrategy):
             self.logger.info(f"平均持仓时间: {avg_duration/3600:.1f}小时")
         if len(self.grid_stats['position_sizes']) > 0:
             self.logger.info(f"平均仓位大小: {np.mean(self.grid_stats['position_sizes']):.2f}")
+        self.logger.info(f"年化换手率: {self.grid_stats['turnover_ratio']*100:.2f}%")
         
         # 网格指标
         self.logger.info("\n-- 网格指标 --")
@@ -668,8 +705,8 @@ class AutoGridStrategy(BaseStrategy):
         
         # 风险指标
         self.logger.info("\n-- 风险指标 --")
-        self.logger.info(f"95% VaR: {self.grid_stats['var_95']*100:.2f}%")
-        self.logger.info(f"95% CVaR: {self.grid_stats['cvar_95']*100:.2f}%")
+        self.logger.info(f"95% VaR: {abs(self.grid_stats['var_95'])*100:.2f}%")
+        self.logger.info(f"95% CVaR: {abs(self.grid_stats['cvar_95'])*100:.2f}%")
         self.logger.info(f"盈亏比: {self.grid_stats['win_loss_ratio']:.2f}")
         self.logger.info(f"获利因子: {self.grid_stats['profit_factor']:.2f}")
 

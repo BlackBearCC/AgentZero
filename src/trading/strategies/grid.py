@@ -62,13 +62,19 @@ class AutoGridStrategy(BaseStrategy):
             raise ValueError(f"grid_min_spread 必须大于 0，当前值: {self.p.grid_min_spread}")
 
         self.initial_cash = self.broker.startingcash
-        self.min_cash_required = self.initial_cash * self.p.position_size * (1 + 0.001)  # 每格所需最小资金
+        self.min_cash_required = self.initial_cash * self.p.position_size * (1 + 0.001)
+        
+        # 添加大小网格的状态
+        self.outer_grids = {}  # 外层大网格
+        self.inner_grids = {}  # 内层小网格
+        self.is_ranging = False  # 是否处于横盘状态
+        self.range_start_time = None  # 横盘开始时间
+        self.last_trend_change = None  # 上次趋势改变时间
         
         self.logger.info(
             f"策略初始化 - "
             f"初始资金: ${self.initial_cash:.2f}, "
-            f"每格资金: ${self.min_cash_required:.2f}, "
-            f"网格数量: {self.p.grid_number}"
+            f"每格资金: ${self.min_cash_required:.2f}"
         )
 
     def start(self):
@@ -119,54 +125,50 @@ class AutoGridStrategy(BaseStrategy):
             return self.p.grid_min_spread, current_price * 1.05, current_price * 0.95
 
     def initialize_grids(self):
-        """初始化网格系统"""
+        """初始化网格"""
         try:
-            # 清空现有网格
             self.grids = {}
+            spacing, lower_price, upper_price = self.adaptive_grid_adjustment()
             
-            # 获取动态网格参数
-            grid_spacing, upper_price, lower_price = self.adaptive_grid_adjustment()
-            self.current_spacing = grid_spacing
-            
-            # 确保价格范围合理
-            if upper_price <= lower_price:
-                self.logger.error(f"网格价格范围无效: [{lower_price}, {upper_price}]")
+            if spacing <= 0:
+                self.logger.error(f"间距无效: {spacing}")
                 return
             
-            # 计算每个网格的价格
-            price_range = upper_price - lower_price
-            if price_range <= 0:
-                self.logger.error(f"价格范围无效: {price_range}")
-                return
+            # 根据状态设置不同的网格参数
+            if self.is_ranging:
+                grid_number = 10  # 横盘时使用较少的网格
+                price_range = 0.02  # 2%的价格范围
+            else:
+                grid_number = self.p.grid_number
+                price_range = 0.1  # 10%的价格范围
             
-            price_step = price_range / (self.p.grid_number - 1)
-            if price_step <= 0:
-                self.logger.error(f"价格步长无效: {price_step}")
-                return
+            # 计算网格价格点
+            price_step = self.initial_price * price_range / grid_number
+            lower_price = self.initial_price * (1 - price_range/2)
+            upper_price = self.initial_price * (1 + price_range/2)
             
-            # 生成网格价格点
-            for i in range(self.p.grid_number):
+            for i in range(grid_number):
                 grid_price = lower_price + i * price_step
-                grid_price = round(grid_price, 4)  # 保留4位小数
+                grid_price = round(grid_price, 4)
                 
                 if grid_price <= 0:
-                    self.logger.error(f"生成的网格价格无效: {grid_price}")
+                    self.logger.error(f"网格价格无效: {grid_price}")
                     continue
                 
                 self.grids[grid_price] = {
-                    'has_position': False
+                    'has_position': False,
+                    'is_outer': not self.is_ranging  # 标记是否为外层网格
                 }
             
-            # 在初始价格买入
-            if self.initial_price > 0:
-                self.buy_at_grid(self.initial_price)
-            else:
-                self.logger.error(f"初始价格无效: {self.initial_price}")
-            
-            self.logger.info(f"初始化网格 - "
-                           f"中心价格: {self.initial_price:.4f}, "
-                           f"网格数量: {len(self.grids)}, "
-                           f"间距: {grid_spacing:.4f}")
+            self.current_spacing = spacing
+            self.logger.info(
+                f"初始化网格 - "
+                f"状态: {'横盘' if self.is_ranging else '趋势'}, "
+                f"中心价格: {self.initial_price:.4f}, "
+                f"网格数量: {len(self.grids)}, "
+                f"间距: {spacing:.4f}, "
+                f"范围: [{lower_price:.4f}, {upper_price:.4f}]"
+            )
             
         except Exception as e:
             self.logger.error(f"网格初始化错误: {str(e)}")
@@ -176,19 +178,41 @@ class AutoGridStrategy(BaseStrategy):
         try:
             if self.current_spacing is None:
                 return True
-                
+            
             # 获取新的网格参数
             new_spacing, _, _ = self.adaptive_grid_adjustment()
             
-            # 计算价格偏离度
+            # 检查是否进入横盘状态
+            current_time = self.data.datetime.datetime(0)
             price_deviation = abs(current_price - self.initial_price) / self.initial_price
+            
+            if not self.is_ranging:
+                # 判断是否进入横盘
+                if price_deviation < 0.02:  # 价格波动小于2%
+                    if self.range_start_time is None:
+                        self.range_start_time = current_time
+                    elif (current_time - self.range_start_time).total_seconds() > 3600:  # 1小时
+                        self.is_ranging = True
+                        self.logger.info(f"进入横盘状态 - 中心价格: {current_price:.4f}")
+                        return True
+                else:
+                    self.range_start_time = None
+            else:
+                # 判断是否退出横盘
+                if price_deviation > 0.05:  # 价格波动超过5%
+                    self.is_ranging = False
+                    self.logger.info(f"退出横盘状态 - 当前价格: {current_price:.4f}")
+                    return True
             
             # 计算间距变化
             spacing_change = abs(new_spacing - self.current_spacing) / self.current_spacing
             
-            # 判断是否需要调整
-            return (price_deviation > 2 * self.current_spacing or  # 价格偏离过大
-                    spacing_change > 0.2)                          # 间距变化显著
+            # 根据状态使用不同的调整阈值
+            if self.is_ranging:
+                return spacing_change > 0.5  # 横盘时更敏感
+            else:
+                return (price_deviation > 0.05 or  # 价格偏离超过5%
+                        spacing_change > 0.3)      # 间距变化超过30%
             
         except Exception as e:
             self.logger.error(f"网格调整检查错误: {str(e)}")

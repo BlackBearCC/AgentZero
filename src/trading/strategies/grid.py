@@ -154,6 +154,29 @@ class AutoGridStrategy(BaseStrategy):
             'cvar_95': 0,             # 95% CVaR
             'win_loss_ratio': 0,      # 盈亏比
             'profit_factor': 0,       # 获利因子
+            
+            # 网格触发统计
+            'grid_hits': {},           # 每个网格的触发次数
+            'grid_profits': {},        # 每个网格的盈利情况
+            'grid_efficiency': [],     # 每个网格的成功率
+            
+            # 价格区间统计
+            'price_distribution': [],  # 价格分布情况
+            'price_movement': [],      # 价格移动幅度
+            'zone_transitions': {      # 区域转换统计
+                'up': 0,              # 向上穿越
+                'down': 0,            # 向下穿越
+            },
+            
+            # 网格间距统计
+            'spacing_history': [],     # 网格间距历史
+            'spacing_changes': [],     # 间距变化记录
+            'grid_density': [],        # 网格密度变化
+            
+            # 持仓统计
+            'position_duration': [],   # 持仓时间分布
+            'position_distribution': [],# 持仓分布
+            'concurrent_positions': [], # 同时持仓数量
         })
         
         # 添加实时跟踪变量
@@ -411,6 +434,9 @@ class AutoGridStrategy(BaseStrategy):
             # 更新实时统计
             self._update_tracking_stats()
             
+            # 在每个bar更新网格统计
+            self._update_grid_stats()
+            
         except Exception as e:
             self.logger.error(f"策略执行错误: {str(e)}")
 
@@ -621,6 +647,9 @@ class AutoGridStrategy(BaseStrategy):
             # 输出高级统计报告
             self._print_advanced_report()
             
+            # 打印网格分析报告
+            self._print_grid_analysis()
+            
         except Exception as e:
             self.logger.error(f"统计报告生成错误: {str(e)}")
 
@@ -757,3 +786,75 @@ class AutoGridStrategy(BaseStrategy):
                 
         except Exception as e:
             self.logger.error(f"统计更新错误: {str(e)}")
+
+    def _update_grid_stats(self):
+        """更新网格统计信息"""
+        try:
+            current_price = self.data.close[0]
+            
+            # 更新价格移动统计
+            if len(self.data) > 1:
+                price_move = (current_price - self.data.close[-1]) / self.data.close[-1]
+                self.grid_stats['price_movement'].append(price_move)
+                if price_move > 0:
+                    self.grid_stats['zone_transitions']['up'] += 1
+                elif price_move < 0:
+                    self.grid_stats['zone_transitions']['down'] += 1
+            
+            # 更新网格触发统计
+            for price in self.grids:
+                if price not in self.grid_stats['grid_hits']:
+                    self.grid_stats['grid_hits'][price] = 0
+                if abs(current_price - price) / price < 0.001:  # 价格接近网格线
+                    self.grid_stats['grid_hits'][price] += 1
+            
+            # 更新网格间距
+            if hasattr(self, 'current_spacing'):
+                self.grid_stats['spacing_history'].append(self.current_spacing)
+            
+            # 统计当前持仓
+            active_grids = len([g for g in self.grids.values() if g['has_position']])
+            self.grid_stats['concurrent_positions'].append(active_grids)
+            
+        except Exception as e:
+            self.logger.error(f"网格统计更新错误: {str(e)}")
+
+    def _print_grid_analysis(self):
+        """输出网格分析报告"""
+        self.logger.info("\n=== 网格系统分析 ===")
+        
+        # 网格触发分析
+        self.logger.info("\n-- 网格触发分析 --")
+        if self.grid_stats['grid_hits']:
+            avg_hits = np.mean(list(self.grid_stats['grid_hits'].values()))
+            max_hits = max(self.grid_stats['grid_hits'].values())
+            min_hits = min(self.grid_stats['grid_hits'].values())
+            self.logger.info(f"平均网格触发次数: {avg_hits:.2f}")
+            self.logger.info(f"最高网格触发次数: {max_hits}")
+            self.logger.info(f"最低网格触发次数: {min_hits}")
+        
+        # 价格移动分析
+        self.logger.info("\n-- 价格移动分析 --")
+        if self.grid_stats['price_movement']:
+            moves = np.array(self.grid_stats['price_movement'])
+            self.logger.info(f"平均价格移动幅度: {np.mean(np.abs(moves))*100:.2f}%")
+            self.logger.info(f"最大上涨幅度: {np.max(moves)*100:.2f}%")
+            self.logger.info(f"最大下跌幅度: {np.min(moves)*100:.2f}%")
+            self.logger.info(f"向上移动次数: {self.grid_stats['zone_transitions']['up']}")
+            self.logger.info(f"向下移动次数: {self.grid_stats['zone_transitions']['down']}")
+        
+        # 网格间距分析
+        self.logger.info("\n-- 网格间距分析 --")
+        if self.grid_stats['spacing_history']:
+            spacings = np.array(self.grid_stats['spacing_history'])
+            self.logger.info(f"平均网格间距: {np.mean(spacings)*100:.2f}%")
+            self.logger.info(f"最大网格间距: {np.max(spacings)*100:.2f}%")
+            self.logger.info(f"最小网格间距: {np.min(spacings)*100:.2f}%")
+        
+        # 持仓分析
+        self.logger.info("\n-- 持仓分析 --")
+        if self.grid_stats['concurrent_positions']:
+            positions = np.array(self.grid_stats['concurrent_positions'])
+            self.logger.info(f"平均同时持仓数: {np.mean(positions):.2f}")
+            self.logger.info(f"最大同时持仓数: {np.max(positions)}")
+            self.logger.info(f"最小同时持仓数: {np.min(positions)}")

@@ -109,7 +109,7 @@ class BacktestRunner:
             self.logger.info(f"最大回撤: {max_drawdown:.2f}%")
             
             # 绘制图表
-            cerebro.plot(style='candlestick', volume=False)
+            # cerebro.plot(style='candlestick', volume=False)
             
             return {
                 'final_value': final_value,
@@ -148,7 +148,7 @@ async def main():
     # 策略参数配置
     strategy_params = {
         'grid_number': 50,         # 网格数量
-        'position_size': 0.01,     # 每格仓位
+        'position_size': 0.02,     # 每格仓位
         'atr_period': 14,          # ATR周期
         'vol_period': 20,          # 波动率周期
         'grid_min_spread': 0.002,  # 最小网格间距

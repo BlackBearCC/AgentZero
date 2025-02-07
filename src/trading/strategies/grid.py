@@ -14,16 +14,15 @@ class AutoGridStrategy(BaseStrategy):
     4. 维护网格状态，记录每个网格点的持仓情况
     """
     
-    params = (
-        ('grid_number', 20),         # 网格数量
-        ('position_size', 0.1),      # 每格仓位（占总资金的比例）
-        ('atr_period', 14),          # ATR周期
-        ('vol_period', 20),          # 波动率计算周期
-        ('grid_min_spread', 0.005),  # 最小网格间距 0.5%
-        ('grid_max_spread', 0.05),   # 最大网格间距 5%
-        ('grid_expansion', 2.0),     # 网格区间扩展系数
-    )
-
+    params = {
+        'grid_number': 59,         # 网格数量
+        'position_size': 0.02,     # 每格仓位
+        'atr_period': 14,          # ATR周期
+        'vol_period': 20,          # 波动率周期
+        'grid_min_spread': 0.002,  # 最小网格间距
+        'grid_max_spread': 0.06,   # 最大网格间距
+        'grid_expansion': 2.0      # 网格区间扩展系数
+    }
     def __init__(self):
         """初始化策略变量和技术指标"""
         super().__init__()
@@ -221,13 +220,20 @@ class AutoGridStrategy(BaseStrategy):
             # 获取新的网格参数
             new_spacing, _, _ = self.adaptive_grid_adjustment()
             
-            # 检查是否进入横盘状态
+            # 修正：使用当前网格的实际中心价格，而不是所有网格的平均值
+            grid_prices = sorted(self.grids.keys())
+            active_grids = [p for p in grid_prices if abs(p - current_price) / current_price < 0.1]
+            if not active_grids:
+                return True
+            
+            grid_center_price = sum(active_grids) / len(active_grids)
+            price_deviation = abs(current_price - grid_center_price) / grid_center_price
+            
             current_time = self.data.datetime.datetime(0)
-            price_deviation = abs(current_price - self.initial_price) / self.initial_price
             
             if not self.is_ranging:
                 # 判断是否进入横盘
-                if price_deviation < 0.06:  # 价格波动小于2%
+                if price_deviation < 0.02:  # 价格波动小于2%
                     if self.range_start_time is None:
                         self.range_start_time = current_time
                     elif (current_time - self.range_start_time).total_seconds() > 3600:  # 1小时
@@ -238,7 +244,7 @@ class AutoGridStrategy(BaseStrategy):
                     self.range_start_time = None
             else:
                 # 判断是否退出横盘
-                if price_deviation > 0.06:  # 价格波动超过5%
+                if price_deviation > 0.05:  # 提高退出横盘的阈值到5%
                     self.is_ranging = False
                     self.logger.info(f"退出横盘状态 - 当前价格: {current_price:.4f}")
                     return True
@@ -246,12 +252,32 @@ class AutoGridStrategy(BaseStrategy):
             # 计算间距变化
             spacing_change = abs(new_spacing - self.current_spacing) / self.current_spacing
             
+            # 强化时间冷却
+            if hasattr(self, 'last_adjustment_time'):
+                time_since_last_adjustment = (current_time - self.last_adjustment_time).total_seconds()
+                if time_since_last_adjustment < 3600:  # 1小时冷却时间
+                    return False
+            
             # 根据状态使用不同的调整阈值
             if self.is_ranging:
-                return spacing_change > 0.5  # 横盘时更敏感
+                # 横盘状态下，大幅提高调整门槛
+                should_adjust = (price_deviation > 0.03 or  # 价格偏离超过3%
+                               spacing_change > 0.5)        # 间距变化超过50%
             else:
-                return (price_deviation > 0.05 or  # 价格偏离超过5%
-                        spacing_change > 0.3)      # 间距变化超过30%
+                # 趋势状态下的调整条件
+                should_adjust = (price_deviation > 0.05 or  # 价格偏离超过5%
+                               spacing_change > 0.3)        # 间距变化超过30%
+            
+            if should_adjust:
+                self.last_adjustment_time = current_time
+                self.logger.info(
+                    f"触发网格调整 - "
+                    f"价格偏离: {price_deviation:.4f}, "
+                    f"间距变化: {spacing_change:.4f}, "
+                    f"状态: {'横盘' if self.is_ranging else '趋势'}"
+                )
+            
+            return should_adjust
             
         except Exception as e:
             self.logger.error(f"网格调整检查错误: {str(e)}")

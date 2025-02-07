@@ -23,6 +23,10 @@ class CCXTFeed:
         self.timeframe = kwargs.get('timeframe', '1h')
         self.exchange_id = kwargs.get('exchange', 'binance')
         
+        # 添加数据缓存路径
+        self.cache_dir = Path("data/cache")
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
         # 初始化交易所
         exchange_class = getattr(ccxt, self.exchange_id)
         self.exchange = exchange_class({
@@ -31,7 +35,7 @@ class CCXTFeed:
         })
         
         # 获取数据
-        self.df = self._fetch_data(
+        self.df = self._get_data(
             symbol=self.symbol,
             timeframe=self.timeframe,
             start=kwargs.get('start'),
@@ -129,6 +133,82 @@ class CCXTFeed:
             
         except Exception as e:
             self.logger.error(f"获取数据失败: {str(e)}")
+            raise
+
+    def _get_data(self, symbol: str, timeframe: str, 
+                  start: Optional[datetime] = None,
+                  end: Optional[datetime] = None) -> pd.DataFrame:
+        """获取数据，优先使用缓存"""
+        try:
+            # 生成缓存文件名
+            cache_file = self.cache_dir / f"{symbol.replace('/', '_')}_{timeframe}.parquet"
+            
+            # 确保时间范围有效
+            now = datetime.now()
+            end = min(end or now, now)
+            start = start or (end - timedelta(days=30))
+            
+            # 检查是否存在缓存文件
+            if cache_file.exists():
+                self.logger.info(f"发现缓存文件: {cache_file}")
+                cached_df = pd.read_parquet(cache_file)
+                cached_df.index = pd.to_datetime(cached_df.index)
+                
+                # 检查缓存数据是否覆盖所需时间范围
+                if not cached_df.empty:
+                    cache_start = cached_df.index.min()
+                    cache_end = cached_df.index.max()
+                    
+                    # 如果缓存完全覆盖所需范围，直接使用缓存
+                    if cache_start <= start and cache_end >= end:
+                        self.logger.info(f"使用缓存数据 - 范围: {cache_start} 到 {cache_end}")
+                        return cached_df[(cached_df.index >= start) & (cached_df.index <= end)]
+                    
+                    # 如果需要补充数据
+                    df_list = []
+                    
+                    # 获取开始日期之前的数据
+                    if start < cache_start:
+                        self.logger.info(f"获取早期数据: {start} 到 {cache_start}")
+                        early_df = self._fetch_data(symbol, timeframe, start, cache_start)
+                        if not early_df.empty:
+                            df_list.append(early_df)
+                    
+                    # 添加缓存数据
+                    cache_data = cached_df[(cached_df.index >= start) & (cached_df.index <= end)]
+                    if not cache_data.empty:
+                        df_list.append(cache_data)
+                    
+                    # 获取结束日期之后的数据
+                    if end > cache_end:
+                        self.logger.info(f"获取最新数据: {cache_end} 到 {end}")
+                        late_df = self._fetch_data(symbol, timeframe, cache_end, end)
+                        if not late_df.empty:
+                            df_list.append(late_df)
+                    
+                    if df_list:
+                        final_df = pd.concat(df_list, axis=0).sort_index()
+                        final_df = final_df[~final_df.index.duplicated(keep='first')]
+                        
+                        # 更新缓存
+                        final_df.to_parquet(cache_file)
+                        self.logger.info(f"更新缓存文件: {cache_file}")
+                        
+                        return final_df
+            
+            # 如果没有缓存或缓存无效，获取新数据
+            self.logger.info("获取新数据并创建缓存")
+            df = self._fetch_data(symbol, timeframe, start, end)
+            
+            # 保存到缓存
+            if not df.empty:
+                df.to_parquet(cache_file)
+                self.logger.info(f"创建缓存文件: {cache_file}")
+            
+            return df
+            
+        except Exception as e:
+            self.logger.error(f"获取数据错误: {str(e)}")
             raise
 
     def get_data(self) -> bt.feeds.PandasData:

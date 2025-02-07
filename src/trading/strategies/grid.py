@@ -102,7 +102,7 @@ class AutoGridStrategy(BaseStrategy):
             
             # 动态计算网格间距
             grid_spacing = np.clip(
-                vol_ratio * 2 + atr_ratio * 1.5,
+                vol_ratio * 1.5 + atr_ratio * 1.5,
                 self.p.grid_min_spread,
                 self.p.grid_max_spread
             )
@@ -125,49 +125,88 @@ class AutoGridStrategy(BaseStrategy):
             return self.p.grid_min_spread, current_price * 1.05, current_price * 0.95
 
     def initialize_grids(self):
-        """初始化网格"""
+        """初始化或调整网格"""
         try:
-            self.grids = {}
-            spacing, lower_price, upper_price = self.adaptive_grid_adjustment()
+            spacing, upper_limit, lower_limit = self.adaptive_grid_adjustment()
+            current_price = self.data.close[0]
             
             if spacing <= 0:
                 self.logger.error(f"间距无效: {spacing}")
                 return
             
-            # 根据状态设置不同的网格参数
-            if self.is_ranging:
-                grid_number = 10  # 横盘时使用较少的网格
-                price_range = 0.02  # 2%的价格范围
+            # 如果是首次初始化
+            if not self.grids:
+                self.initial_price = current_price
+                grid_number = 10 if self.is_ranging else self.p.grid_number
+                price_range = 0.02 if self.is_ranging else 0.1
+                
+                # 计算初始网格
+                price_step = self.initial_price * price_range / grid_number
+                lower_price = self.initial_price * (1 - price_range/2)
+                upper_price = self.initial_price * (1 + price_range/2)
+                
+                for i in range(grid_number):
+                    grid_price = lower_price + i * price_step
+                    grid_price = round(grid_price, 4)
+                    
+                    if grid_price <= 0:
+                        continue
+                        
+                    self.grids[grid_price] = {
+                        'has_position': False,
+                        'is_outer': not self.is_ranging
+                    }
             else:
-                grid_number = self.p.grid_number
-                price_range = 0.1  # 10%的价格范围
-            
-            # 计算网格价格点
-            price_step = self.initial_price * price_range / grid_number
-            lower_price = self.initial_price * (1 - price_range/2)
-            upper_price = self.initial_price * (1 + price_range/2)
-            
-            for i in range(grid_number):
-                grid_price = lower_price + i * price_step
-                grid_price = round(grid_price, 4)
+                # 调整现有网格：保持现有网格，根据需要向上或向下延伸
+                existing_prices = sorted(self.grids.keys())
+                current_min_price = min(existing_prices)
+                current_max_price = max(existing_prices)
+                grid_step = spacing * current_price  # 使用新的间距
                 
-                if grid_price <= 0:
-                    self.logger.error(f"网格价格无效: {grid_price}")
-                    continue
+                # 向下延伸网格
+                if current_price < current_min_price * 1.02:  # 接近或低于最低网格
+                    new_price = current_min_price
+                    while new_price > lower_limit:
+                        new_price -= grid_step
+                        new_price = round(new_price, 4)
+                        if new_price not in self.grids:
+                            self.grids[new_price] = {
+                                'has_position': False,
+                                'is_outer': not self.is_ranging
+                            }
+                            self.logger.info(f"向下添加新网格: {new_price:.4f}")
                 
-                self.grids[grid_price] = {
-                    'has_position': False,
-                    'is_outer': not self.is_ranging  # 标记是否为外层网格
-                }
-            
+                # 向上延伸网格
+                if current_price > current_max_price * 0.98:  # 接近或高于最高网格
+                    new_price = current_max_price
+                    while new_price < upper_limit:
+                        new_price += grid_step
+                        new_price = round(new_price, 4)
+                        if new_price not in self.grids:
+                            self.grids[new_price] = {
+                                'has_position': False,
+                                'is_outer': not self.is_ranging
+                            }
+                            self.logger.info(f"向上添加新网格: {new_price:.4f}")
+                
+                # 清理过远的网格（可选）
+                prices_to_remove = []
+                for price in self.grids:
+                    if price < lower_limit * 0.5 or price > upper_limit * 1.5:
+                        if not self.grids[price]['has_position']:  # 只清理没有持仓的网格
+                            prices_to_remove.append(price)
+                
+                for price in prices_to_remove:
+                    del self.grids[price]
+                    self.logger.info(f"删除远端网格: {price:.4f}")
+
             self.current_spacing = spacing
             self.logger.info(
-                f"初始化网格 - "
+                f"网格调整完成 - "
                 f"状态: {'横盘' if self.is_ranging else '趋势'}, "
-                f"中心价格: {self.initial_price:.4f}, "
+                f"当前价格: {current_price:.4f}, "
                 f"网格数量: {len(self.grids)}, "
-                f"间距: {spacing:.4f}, "
-                f"范围: [{lower_price:.4f}, {upper_price:.4f}]"
+                f"间距: {spacing:.4f}"
             )
             
         except Exception as e:
@@ -188,7 +227,7 @@ class AutoGridStrategy(BaseStrategy):
             
             if not self.is_ranging:
                 # 判断是否进入横盘
-                if price_deviation < 0.02:  # 价格波动小于2%
+                if price_deviation < 0.06:  # 价格波动小于2%
                     if self.range_start_time is None:
                         self.range_start_time = current_time
                     elif (current_time - self.range_start_time).total_seconds() > 3600:  # 1小时
@@ -199,7 +238,7 @@ class AutoGridStrategy(BaseStrategy):
                     self.range_start_time = None
             else:
                 # 判断是否退出横盘
-                if price_deviation > 0.05:  # 价格波动超过5%
+                if price_deviation > 0.06:  # 价格波动超过5%
                     self.is_ranging = False
                     self.logger.info(f"退出横盘状态 - 当前价格: {current_price:.4f}")
                     return True

@@ -16,7 +16,7 @@ class AutoGridStrategy(BaseStrategy):
     
     params = {
         # 基础参数
-        'grid_number': 59,         # 网格数量
+        'grid_number': 50,         # 网格数量
         'position_size': 0.02,     # 每格仓位
         'atr_period': 14,          # ATR周期
         'vol_period': 20,          # 波动率周期

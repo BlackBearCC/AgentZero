@@ -76,6 +76,30 @@ class AutoGridStrategy(BaseStrategy):
             f"每格资金: ${self.min_cash_required:.2f}"
         )
 
+        # 修改变量名，避免与 backtrader 的 stats 冲突
+        self.grid_stats = {
+            'total_trades': 0,          # 总交易次数
+            'winning_trades': 0,        # 盈利交易次数
+            'losing_trades': 0,         # 亏损交易次数
+            'total_profit': 0,          # 总盈利
+            'total_loss': 0,            # 总亏损
+            'max_profit': 0,            # 单笔最大盈利
+            'max_loss': 0,              # 单笔最大亏损
+            'grid_adjustments': 0,      # 网格调整次数
+            'grid_triggers': 0,         # 网格触发次数
+            'ranging_periods': 0,       # 横盘期数量
+            'trend_periods': 0,         # 趋势期数量
+            'avg_grid_spacing': [],     # 平均网格间距
+            'price_deviations': [],     # 价格偏离记录
+        }
+        
+        # 添加时间统计
+        self.period_stats = {
+            'last_state_change': None,  # 上次状态改变时间
+            'ranging_duration': 0,      # 横盘总时长
+            'trend_duration': 0,        # 趋势总时长
+        }
+
     def start(self):
         """策略启动时调用"""
         self.start_time = self.data.datetime.datetime(0)
@@ -217,10 +241,15 @@ class AutoGridStrategy(BaseStrategy):
             if self.current_spacing is None:
                 return True
             
-            # 获取新的网格参数
-            new_spacing, _, _ = self.adaptive_grid_adjustment()
+            current_time = self.data.datetime.datetime(0)
             
-            # 修正：使用当前网格的实际中心价格，而不是所有网格的平均值
+            # 先检查冷却时间
+            if hasattr(self, 'last_adjustment_time'):
+                time_since_last_adjustment = (current_time - self.last_adjustment_time).total_seconds()
+                if time_since_last_adjustment < 3600:  # 1小时冷却时间
+                    return False
+            
+            # 计算价格偏离
             grid_prices = sorted(self.grids.keys())
             active_grids = [p for p in grid_prices if abs(p - current_price) / current_price < 0.1]
             if not active_grids:
@@ -229,55 +258,39 @@ class AutoGridStrategy(BaseStrategy):
             grid_center_price = sum(active_grids) / len(active_grids)
             price_deviation = abs(current_price - grid_center_price) / grid_center_price
             
-            current_time = self.data.datetime.datetime(0)
-            
-            if not self.is_ranging:
-                # 判断是否进入横盘
-                if price_deviation < 0.02:  # 价格波动小于2%
-                    if self.range_start_time is None:
-                        self.range_start_time = current_time
-                    elif (current_time - self.range_start_time).total_seconds() > 3600:  # 1小时
-                        self.is_ranging = True
-                        self.logger.info(f"进入横盘状态 - 中心价格: {current_price:.4f}")
-                        return True
+            # 只有在满足初步条件时才计算新的网格参数
+            if ((self.is_ranging and price_deviation > 0.03) or  # 横盘状态下偏离超过3%
+                (not self.is_ranging and price_deviation > 0.05)):  # 趋势状态下偏离超过5%
+                
+                # 获取新的网格参数
+                new_spacing, _, _ = self.adaptive_grid_adjustment()
+                spacing_change = abs(new_spacing - self.current_spacing) / self.current_spacing
+                
+                # 根据状态使用不同的调整阈值
+                if self.is_ranging:
+                    should_adjust = spacing_change > 0.5  # 间距变化超过50%
                 else:
-                    self.range_start_time = None
-            else:
-                # 判断是否退出横盘
-                if price_deviation > 0.05:  # 提高退出横盘的阈值到5%
-                    self.is_ranging = False
-                    self.logger.info(f"退出横盘状态 - 当前价格: {current_price:.4f}")
+                    should_adjust = spacing_change > 0.3  # 间距变化超过30%
+                    
+                if should_adjust:
+                    self.last_adjustment_time = current_time
+                    self.logger.info(
+                        f"触发网格调整 - "
+                        f"价格偏离: {price_deviation:.4f}, "
+                        f"间距变化: {spacing_change:.4f}, "
+                        f"状态: {'横盘' if self.is_ranging else '趋势'}"
+                    )
+                    self.grid_stats['grid_adjustments'] += 1
+                    current_spacing = sum(self.grid_stats['avg_grid_spacing']) / max(1, len(self.grid_stats['avg_grid_spacing']))
+                    self.logger.info(
+                        f"网格统计 - "
+                        f"调整次数: {self.grid_stats['grid_adjustments']}, "
+                        f"平均间距: {current_spacing:.4f}, "
+                        f"网格数量: {len(self.grids)}"
+                    )
                     return True
-            
-            # 计算间距变化
-            spacing_change = abs(new_spacing - self.current_spacing) / self.current_spacing
-            
-            # 强化时间冷却
-            if hasattr(self, 'last_adjustment_time'):
-                time_since_last_adjustment = (current_time - self.last_adjustment_time).total_seconds()
-                if time_since_last_adjustment < 3600:  # 1小时冷却时间
-                    return False
-            
-            # 根据状态使用不同的调整阈值
-            if self.is_ranging:
-                # 横盘状态下，大幅提高调整门槛
-                should_adjust = (price_deviation > 0.03 or  # 价格偏离超过3%
-                               spacing_change > 0.5)        # 间距变化超过50%
-            else:
-                # 趋势状态下的调整条件
-                should_adjust = (price_deviation > 0.05 or  # 价格偏离超过5%
-                               spacing_change > 0.3)        # 间距变化超过30%
-            
-            if should_adjust:
-                self.last_adjustment_time = current_time
-                self.logger.info(
-                    f"触发网格调整 - "
-                    f"价格偏离: {price_deviation:.4f}, "
-                    f"间距变化: {spacing_change:.4f}, "
-                    f"状态: {'横盘' if self.is_ranging else '趋势'}"
-                )
-            
-            return should_adjust
+                
+            return False
             
         except Exception as e:
             self.logger.error(f"网格调整检查错误: {str(e)}")
@@ -341,6 +354,9 @@ class AutoGridStrategy(BaseStrategy):
                     if not self.grids[lower_price]['has_position']:
                         self.buy_at_grid(lower_price)
                         
+            if self.last_price <= lower_price < current_price or current_price < lower_price <= self.last_price:
+                self.grid_stats['grid_triggers'] += 1
+            
         except Exception as e:
             self.logger.error(f"网格触发检查错误: {str(e)}")
 
@@ -444,13 +460,50 @@ class AutoGridStrategy(BaseStrategy):
     def notify_trade(self, trade):
         """交易通知"""
         if trade.isclosed:
-            # 获取交易结束时间
-            current_time = self.data.datetime.datetime(0)
+            self.grid_stats['total_trades'] += 1
+            profit = trade.pnlcomm
             
+            if profit > 0:
+                self.grid_stats['winning_trades'] += 1
+                self.grid_stats['total_profit'] += profit
+                self.grid_stats['max_profit'] = max(self.grid_stats['max_profit'], profit)
+            else:
+                self.grid_stats['losing_trades'] += 1
+                self.grid_stats['total_loss'] += abs(profit)
+                self.grid_stats['max_loss'] = min(self.grid_stats['max_loss'], profit)
+            
+            current_time = self.data.datetime.datetime(0)
             self.logger.info(
-                f"交易结束 - 时间: {current_time}, "
-                f"毛利润: {trade.pnl:.2f}, "
-                f"净利润: {trade.pnlcomm:.2f}, "
-                f"剩余现金: {self.broker.getcash():.2f}, "
-                f"总资产: {self.broker.getvalue():.2f}"
+                f"交易统计 - 时间: {current_time}, "
+                f"胜率: {(self.grid_stats['winning_trades']/self.grid_stats['total_trades']*100):.2f}%, "
+                f"平均盈利: ${(self.grid_stats['total_profit']/max(1,self.grid_stats['winning_trades'])):.2f}, "
+                f"平均亏损: ${(self.grid_stats['total_loss']/max(1,self.grid_stats['losing_trades'])):.2f}"
             )
+
+    def stop(self):
+        """策略结束时输出统计信息"""
+        try:
+            total_trades = self.grid_stats['total_trades']
+            if total_trades > 0:
+                win_rate = (self.grid_stats['winning_trades'] / total_trades) * 100
+                profit_factor = abs(self.grid_stats['total_profit'] / self.grid_stats['total_loss']) if self.grid_stats['total_loss'] > 0 else float('inf')
+                avg_profit = self.grid_stats['total_profit'] / max(1, self.grid_stats['winning_trades'])
+                avg_loss = self.grid_stats['total_loss'] / max(1, self.grid_stats['losing_trades'])
+                
+                self.logger.info("\n=== 策略统计报告 ===")
+                self.logger.info(f"总交易次数: {total_trades}")
+                self.logger.info(f"胜率: {win_rate:.2f}%")
+                self.logger.info(f"盈亏比: {profit_factor:.2f}")
+                self.logger.info(f"平均盈利: ${avg_profit:.2f}")
+                self.logger.info(f"平均亏损: ${avg_loss:.2f}")
+                self.logger.info(f"最大单笔盈利: ${self.grid_stats['max_profit']:.2f}")
+                self.logger.info(f"最大单笔亏损: ${self.grid_stats['max_loss']:.2f}")
+                self.logger.info(f"网格调整次数: {self.grid_stats['grid_adjustments']}")
+                self.logger.info(f"网格触发次数: {self.grid_stats['grid_triggers']}")
+                self.logger.info(f"横盘期数量: {self.grid_stats['ranging_periods']}")
+                self.logger.info(f"趋势期数量: {self.grid_stats['trend_periods']}")
+                self.logger.info(f"横盘总时长: {self.period_stats['ranging_duration']/3600:.1f}小时")
+                self.logger.info(f"趋势总时长: {self.period_stats['trend_duration']/3600:.1f}小时")
+                
+        except Exception as e:
+            self.logger.error(f"统计报告生成错误: {str(e)}")

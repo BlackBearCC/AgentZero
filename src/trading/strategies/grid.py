@@ -51,6 +51,26 @@ class AutoGridStrategy(BaseStrategy):
         self.start_time = None
         self.end_time = None
 
+        # 验证策略参数
+        if not 0 < self.p.position_size <= 1:
+            raise ValueError(f"position_size 必须在 0-1 之间，当前值: {self.p.position_size}")
+        
+        if self.p.grid_number < 2:
+            raise ValueError(f"grid_number 必须大于 1，当前值: {self.p.grid_number}")
+        
+        if self.p.grid_min_spread <= 0:
+            raise ValueError(f"grid_min_spread 必须大于 0，当前值: {self.p.grid_min_spread}")
+
+        self.initial_cash = self.broker.startingcash
+        self.min_cash_required = self.initial_cash * self.p.position_size * (1 + 0.001)  # 每格所需最小资金
+        
+        self.logger.info(
+            f"策略初始化 - "
+            f"初始资金: ${self.initial_cash:.2f}, "
+            f"每格资金: ${self.min_cash_required:.2f}, "
+            f"网格数量: {self.p.grid_number}"
+        )
+
     def start(self):
         """策略启动时调用"""
         self.start_time = self.data.datetime.datetime(0)
@@ -108,23 +128,43 @@ class AutoGridStrategy(BaseStrategy):
             grid_spacing, upper_price, lower_price = self.adaptive_grid_adjustment()
             self.current_spacing = grid_spacing
             
+            # 确保价格范围合理
+            if upper_price <= lower_price:
+                self.logger.error(f"网格价格范围无效: [{lower_price}, {upper_price}]")
+                return
+            
             # 计算每个网格的价格
             price_range = upper_price - lower_price
+            if price_range <= 0:
+                self.logger.error(f"价格范围无效: {price_range}")
+                return
+            
             price_step = price_range / (self.p.grid_number - 1)
+            if price_step <= 0:
+                self.logger.error(f"价格步长无效: {price_step}")
+                return
             
             # 生成网格价格点
             for i in range(self.p.grid_number):
                 grid_price = lower_price + i * price_step
-                grid_price = round(grid_price, 4)
+                grid_price = round(grid_price, 4)  # 保留4位小数
+                
+                if grid_price <= 0:
+                    self.logger.error(f"生成的网格价格无效: {grid_price}")
+                    continue
                 
                 self.grids[grid_price] = {
                     'has_position': False
                 }
             
             # 在初始价格买入
-            self.buy_at_grid(self.initial_price)
+            if self.initial_price > 0:
+                self.buy_at_grid(self.initial_price)
+            else:
+                self.logger.error(f"初始价格无效: {self.initial_price}")
             
-            self.logger.info(f"初始化网格 - 中心价格: {self.initial_price:.4f}, "
+            self.logger.info(f"初始化网格 - "
+                           f"中心价格: {self.initial_price:.4f}, "
                            f"网格数量: {len(self.grids)}, "
                            f"间距: {grid_spacing:.4f}")
             
@@ -189,6 +229,14 @@ class AutoGridStrategy(BaseStrategy):
             # 获取排序后的网格价格
             grid_prices = sorted(self.grids.keys())
             
+            # 记录当前状态
+            self.logger.debug(
+                f"检查网格触发 - "
+                f"当前价格: {current_price:.4f}, "
+                f"上次价格: {self.last_price:.4f}, "
+                f"现金: {self.broker.getcash():.2f}"
+            )
+            
             # 找到当前价格所在的网格区间
             for i in range(len(grid_prices) - 1):
                 lower_price = grid_prices[i]
@@ -210,20 +258,56 @@ class AutoGridStrategy(BaseStrategy):
     def buy_at_grid(self, price):
         """在网格价格买入"""
         try:
-            # 获取当前时间
             current_time = self.data.datetime.datetime(0)
+            current_cash = self.broker.getcash()
             
-            # 计算买入数量
-            position_value = self.broker.getvalue() * self.p.position_size
+            # 资金预检
+            if current_cash < self.min_cash_required:
+                self.logger.warning(
+                    f"资金预检失败 - "
+                    f"当前现金: ${current_cash:.2f}, "
+                    f"最小要求: ${self.min_cash_required:.2f}, "
+                    f"总资产: ${self.broker.getvalue():.2f}"
+                )
+                return
+            
+            # 使用初始资金计算仓位
+            initial_cash = self.broker.startingcash
+            position_value = initial_cash * self.p.position_size
             position_size = position_value / price
+            
+            # 详细记录买入前的状态
+            self.logger.info(f"尝试网格买入 - 时间: {current_time}")
+            self.logger.info(f"当前现金: ${current_cash:.2f}")
+            self.logger.info(f"初始资金: ${initial_cash:.2f}")
+            self.logger.info(f"目标价格: ${price:.4f}")
+            
+            # 检查是否有足够的资金
+            commission_rate = 0.001
+            required_cash = position_value * (1 + commission_rate)
+            if required_cash > current_cash:
+                self.logger.warning(
+                    f"资金不足 - 需要: ${required_cash:.2f}, "
+                    f"现有: ${current_cash:.2f}, "
+                    f"目标仓位: ${position_value:.2f}"
+                )
+                return
+            
+            # 检查数量是否合理
+            if position_size <= 0:
+                self.logger.warning(f"计算的仓位大小无效: {position_size}")
+                return
             
             # 创建买入订单
             self.buy(size=position_size, price=price, exectype=bt.Order.Limit)
             self.grids[price]['has_position'] = True
             
-            self.logger.info(f"网格买入 - 时间: {current_time}, "
-                           f"价格: {price:.4f}, "
-                           f"数量: {position_size:.4f}")
+            self.logger.info(
+                f"网格买入订单创建成功 - "
+                f"价格: ${price:.4f}, "
+                f"数量: {position_size:.4f}, "
+                f"金额: ${position_value:.2f}"
+            )
             
         except Exception as e:
             self.logger.error(f"网格买入错误: {str(e)}")
@@ -231,20 +315,23 @@ class AutoGridStrategy(BaseStrategy):
     def sell_at_grid(self, price):
         """在网格价格卖出"""
         try:
-            # 获取当前时间
             current_time = self.data.datetime.datetime(0)
+            initial_cash = self.broker.startingcash
             
             # 计算卖出数量
-            position_value = self.broker.getvalue() * self.p.position_size
+            position_value = initial_cash * self.p.position_size
             position_size = position_value / price
             
             # 创建卖出订单
             self.sell(size=position_size, price=price, exectype=bt.Order.Limit)
             self.grids[price]['has_position'] = False
             
-            self.logger.info(f"网格卖出 - 时间: {current_time}, "
-                           f"价格: {price:.4f}, "
-                           f"数量: {position_size:.4f}")
+            self.logger.info(
+                f"网格卖出 - 时间: {current_time}, "
+                f"价格: ${price:.4f}, "
+                f"数量: {position_size:.4f}, "
+                f"金额: ${position_value:.2f}"
+            )
             
         except Exception as e:
             self.logger.error(f"网格卖出错误: {str(e)}")
@@ -261,7 +348,8 @@ class AutoGridStrategy(BaseStrategy):
                 f"价格: {order.executed.price:.4f}, "
                 f"数量: {order.executed.size:.4f}, "
                 f"价值: {order.executed.value:.2f}, "
-                f"手续费: {order.executed.comm:.2f}"
+                f"手续费: {order.executed.comm:.2f}, "
+                f"剩余现金: {self.broker.getcash():.2f}"
             )
 
     def notify_trade(self, trade):
@@ -273,5 +361,7 @@ class AutoGridStrategy(BaseStrategy):
             self.logger.info(
                 f"交易结束 - 时间: {current_time}, "
                 f"毛利润: {trade.pnl:.2f}, "
-                f"净利润: {trade.pnlcomm:.2f}"
+                f"净利润: {trade.pnlcomm:.2f}, "
+                f"剩余现金: {self.broker.getcash():.2f}, "
+                f"总资产: {self.broker.getvalue():.2f}"
             )

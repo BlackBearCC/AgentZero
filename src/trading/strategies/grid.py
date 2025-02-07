@@ -258,6 +258,33 @@ class AutoGridStrategy(BaseStrategy):
             grid_center_price = sum(active_grids) / len(active_grids)
             price_deviation = abs(current_price - grid_center_price) / grid_center_price
             
+            # 记录状态变化
+            if not self.is_ranging:
+                if price_deviation < 0.02:  # 进入横盘
+                    if self.range_start_time is None:
+                        self.range_start_time = current_time
+                    elif (current_time - self.range_start_time).total_seconds() > 3600:
+                        if not self.is_ranging:  # 状态发生改变
+                            self.is_ranging = True
+                            self.grid_stats['ranging_periods'] += 1
+                            if self.period_stats['last_state_change']:
+                                self.period_stats['trend_duration'] += (
+                                    current_time - self.period_stats['last_state_change']
+                                ).total_seconds()
+                            self.period_stats['last_state_change'] = current_time
+                else:
+                    self.range_start_time = None
+            else:
+                if price_deviation > 0.05:  # 退出横盘
+                    if self.is_ranging:  # 状态发生改变
+                        self.is_ranging = False
+                        self.grid_stats['trend_periods'] += 1
+                        if self.period_stats['last_state_change']:
+                            self.period_stats['ranging_duration'] += (
+                                current_time - self.period_stats['last_state_change']
+                            ).total_seconds()
+                        self.period_stats['last_state_change'] = current_time
+            
             # 只有在满足初步条件时才计算新的网格参数
             if ((self.is_ranging and price_deviation > 0.03) or  # 横盘状态下偏离超过3%
                 (not self.is_ranging and price_deviation > 0.05)):  # 趋势状态下偏离超过5%
@@ -280,42 +307,6 @@ class AutoGridStrategy(BaseStrategy):
                         f"间距变化: {spacing_change:.4f}, "
                         f"状态: {'横盘' if self.is_ranging else '趋势'}"
                     )
-                    self.grid_stats['grid_adjustments'] += 1
-                    current_spacing = sum(self.grid_stats['avg_grid_spacing']) / max(1, len(self.grid_stats['avg_grid_spacing']))
-                    self.logger.info(
-                        f"网格统计 - "
-                        f"调整次数: {self.grid_stats['grid_adjustments']}, "
-                        f"平均间距: {current_spacing:.4f}, "
-                        f"网格数量: {len(self.grids)}"
-                    )
-                    
-                    # 记录状态变化
-                    if not self.is_ranging:
-                        if price_deviation < 0.02:  # 进入横盘
-                            if self.range_start_time is None:
-                                self.range_start_time = current_time
-                            elif (current_time - self.range_start_time).total_seconds() > 3600:
-                                if not self.is_ranging:  # 状态发生改变
-                                    self.is_ranging = True
-                                    self.grid_stats['ranging_periods'] += 1
-                                    if self.period_stats['last_state_change']:
-                                        self.period_stats['trend_duration'] += (
-                                            current_time - self.period_stats['last_state_change']
-                                        ).total_seconds()
-                                    self.period_stats['last_state_change'] = current_time
-                        else:
-                            self.range_start_time = None
-                    else:
-                        if price_deviation > 0.05:  # 退出横盘
-                            if self.is_ranging:  # 状态发生改变
-                                self.is_ranging = False
-                                self.grid_stats['trend_periods'] += 1
-                                if self.period_stats['last_state_change']:
-                                    self.period_stats['ranging_duration'] += (
-                                        current_time - self.period_stats['last_state_change']
-                                    ).total_seconds()
-                                self.period_stats['last_state_change'] = current_time
-                    
                     return True
                 
             return False

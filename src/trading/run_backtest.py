@@ -145,16 +145,7 @@ async def main():
         logger.error("结束日期必须晚于开始日期")
         return
     
-    # 策略参数配置
-    strategy_params = {
-        'grid_number': 50,         # 网格数量
-        'position_size': 0.02,     # 每格仓位
-        'atr_period': 14,          # ATR周期
-        'vol_period': 20,          # 波动率周期
-        'grid_min_spread': 0.002,  # 最小网格间距
-        'grid_max_spread': 0.06,   # 最大网格间距
-        'grid_expansion': 2.0      # 网格区间扩展系数
-    }
+
     
     # 运行回测
     runner = BacktestRunner()
@@ -164,7 +155,6 @@ async def main():
         start=args.start,
         end=args.end,
         initial_cash=args.cash,
-        strategy_params=strategy_params
     )
 
 if __name__ == '__main__':

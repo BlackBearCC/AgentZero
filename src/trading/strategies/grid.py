@@ -15,13 +15,34 @@ class AutoGridStrategy(BaseStrategy):
     """
     
     params = {
+        # 基础参数
         'grid_number': 59,         # 网格数量
         'position_size': 0.02,     # 每格仓位
         'atr_period': 14,          # ATR周期
         'vol_period': 20,          # 波动率周期
+        
+        # 网格参数
         'grid_min_spread': 0.002,  # 最小网格间距
         'grid_max_spread': 0.06,   # 最大网格间距
-        'grid_expansion': 2.0      # 网格区间扩展系数
+        'grid_expansion': 2.0,     # 网格区间扩展系数
+        
+        # 时间参数
+        'adjustment_cooldown': 1800,  # 网格调整冷却时间(秒)
+        'state_change_time': 1800,    # 状态改变确认时间(秒)
+        
+        # 横盘参数
+        'ranging_deviation': 0.015,    # 横盘价格偏离阈值
+        'ranging_exit': 0.03,         # 退出横盘阈值
+        'ranging_adjust': 0.02,       # 横盘调整触发阈值
+        'ranging_spacing_change': 0.3, # 横盘间距变化阈值
+        
+        # 趋势参数
+        'trend_deviation': 0.03,      # 趋势价格偏离阈值
+        'trend_adjust': 0.03,         # 趋势调整触发阈值
+        'trend_spacing_change': 0.2,  # 趋势间距变化阈值
+        
+        # 网格活跃度参数
+        'active_grid_range': 0.1,     # 活跃网格范围
     }
     def __init__(self):
         """初始化策略变量和技术指标"""
@@ -286,31 +307,32 @@ class AutoGridStrategy(BaseStrategy):
         try:
             if self.current_spacing is None:
                 return True
-            
+                
             current_time = self.data.datetime.datetime(0)
             
-            # 先检查冷却时间
+            # 检查冷却时间
             if hasattr(self, 'last_adjustment_time'):
                 time_since_last_adjustment = (current_time - self.last_adjustment_time).total_seconds()
-                if time_since_last_adjustment < 3600:  # 1小时冷却时间
+                if time_since_last_adjustment < self.p.adjustment_cooldown:
                     return False
             
             # 计算价格偏离
             grid_prices = sorted(self.grids.keys())
-            active_grids = [p for p in grid_prices if abs(p - current_price) / current_price < 0.1]
+            active_grids = [p for p in grid_prices 
+                          if abs(p - current_price) / current_price < self.p.active_grid_range]
             if not active_grids:
                 return True
-            
+                
             grid_center_price = sum(active_grids) / len(active_grids)
             price_deviation = abs(current_price - grid_center_price) / grid_center_price
             
-            # 记录状态变化
+            # 状态判断
             if not self.is_ranging:
-                if price_deviation < 0.02:  # 进入横盘
+                if price_deviation < self.p.ranging_deviation:
                     if self.range_start_time is None:
                         self.range_start_time = current_time
-                    elif (current_time - self.range_start_time).total_seconds() > 3600:
-                        if not self.is_ranging:  # 状态发生改变
+                    elif (current_time - self.range_start_time).total_seconds() > self.p.state_change_time:
+                        if not self.is_ranging:
                             self.is_ranging = True
                             self.grid_stats['ranging_periods'] += 1
                             if self.period_stats['last_state_change']:
@@ -321,8 +343,8 @@ class AutoGridStrategy(BaseStrategy):
                 else:
                     self.range_start_time = None
             else:
-                if price_deviation > 0.05:  # 退出横盘
-                    if self.is_ranging:  # 状态发生改变
+                if price_deviation > self.p.ranging_exit:
+                    if self.is_ranging:
                         self.is_ranging = False
                         self.grid_stats['trend_periods'] += 1
                         if self.period_stats['last_state_change']:
@@ -331,22 +353,21 @@ class AutoGridStrategy(BaseStrategy):
                             ).total_seconds()
                         self.period_stats['last_state_change'] = current_time
             
-            # 只有在满足初步条件时才计算新的网格参数
-            if ((self.is_ranging and price_deviation > 0.03) or  # 横盘状态下偏离超过3%
-                (not self.is_ranging and price_deviation > 0.05)):  # 趋势状态下偏离超过5%
+            # 网格调整判断
+            if ((self.is_ranging and price_deviation > self.p.ranging_adjust) or
+                (not self.is_ranging and price_deviation > self.p.trend_adjust)):
                 
-                # 获取新的网格参数
                 new_spacing, _, _ = self.adaptive_grid_adjustment()
                 spacing_change = abs(new_spacing - self.current_spacing) / self.current_spacing
                 
-                # 根据状态使用不同的调整阈值
                 if self.is_ranging:
-                    should_adjust = spacing_change > 0.5  # 间距变化超过50%
+                    should_adjust = spacing_change > self.p.ranging_spacing_change
                 else:
-                    should_adjust = spacing_change > 0.3  # 间距变化超过30%
+                    should_adjust = spacing_change > self.p.trend_spacing_change
                     
                 if should_adjust:
                     self.last_adjustment_time = current_time
+                    self.grid_stats['grid_adjustments_time'].append(time_since_last_adjustment)
                     self.logger.info(
                         f"触发网格调整 - "
                         f"价格偏离: {price_deviation:.4f}, "
@@ -354,9 +375,9 @@ class AutoGridStrategy(BaseStrategy):
                         f"状态: {'横盘' if self.is_ranging else '趋势'}"
                     )
                     return True
-                
+                    
             return False
-            
+                
         except Exception as e:
             self.logger.error(f"网格调整检查错误: {str(e)}")
             return False

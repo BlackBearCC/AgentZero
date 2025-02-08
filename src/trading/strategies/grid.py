@@ -4,23 +4,21 @@ from typing import List, Dict
 from .base import BaseStrategy
 from src.utils.logger import Logger
 
-class AutoGridStrategy(BaseStrategy):
-    """自适应网格交易策略
+class SimpleGridStrategy(BaseStrategy):
+    """币安风格的中性合约网格策略
     
-    实现类似币安的中性网格交易功能:
-    1. 在价格区间内均匀设置网格
-    2. 支持上移和下移网格
-    3. 维护买卖单的状态
+    特点:
+    1. 价格之上做空,价格之下做多
+    2. 支持高杠杆(如20倍)
+    3. 在区间内来回交易赚取差价
     """
     
     params = {
-        # 基础参数
-        'grid_number': 100,         # 网格数量
-        'position_size': 0.01,      # 每格仓位比例
+        'grid_number': 20,         # 网格数量
+        'position_size': 0.02,      # 每格仓位比例
         'price_range': 0.2,        # 网格价格区间范围(上下各5%)
-        
-        # 移动参数
-        'move_threshold': 0.08,    # 提高移动阈值到8%
+        'move_threshold': 0.08,    # 移动阈值
+        'leverage': 20,            # 合约杠杆倍数
     }
     
     def __init__(self):
@@ -125,39 +123,43 @@ class AutoGridStrategy(BaseStrategy):
             for price in sorted(self.grids.keys()):
                 grid = self.grids[price]
                 
-                # 价格下跌,触发买入
+                # 当前价格低于网格价,做多
                 if current_price <= price and not grid['has_buy_order']:
-                    self.buy_at_grid(price)
+                    self.buy_at_grid(price)  # 开多
                     grid['has_buy_order'] = True
                     
-                # 价格上涨,触发卖出  
+                # 当前价格高于网格价,做空  
                 elif current_price >= price and not grid['has_sell_order']:
-                    self.sell_at_grid(price)
+                    self.sell_at_grid(price)  # 开空
                     grid['has_sell_order'] = True
                     
         except Exception as e:
             self.logger.error(f"策略执行错误: {str(e)}")
             
     def buy_at_grid(self, price):
-        """在网格价位买入"""
+        """在网格价位开多"""
         try:
+            # 计算合约张数 = 投入金额 * 杠杆 / 价格
             position_value = self.initial_cash * self.p.position_size
-            position_size = position_value / price
+            leveraged_value = position_value * self.p.leverage
+            position_size = leveraged_value / price
             
             self.buy(size=position_size, price=price, exectype=bt.Order.Limit)
-            self.logger.info(f"网格买入 [{self.current_time}] - 价格: {price:.4f}, 数量: {position_size:.4f}",color='green')
+            self.logger.info(f"网格开多 [{self.current_time}] - 价格: {price:.4f}, 数量: {position_size:.4f}")
             
         except Exception as e:
-            self.logger.error(f"买入错误: {str(e)}")
+            self.logger.error(f"开多错误: {str(e)}")
             
     def sell_at_grid(self, price):
-        """在网格价位卖出"""
+        """在网格价位开空"""
         try:
-            position_value = self.initial_cash * self.p.position_size
-            position_size = position_value / price
+            # 计算合约张数 = 投入金额 * 杠杆 / 价格
+            position_value = self.initial_cash * self.p.position_size  
+            leveraged_value = position_value * self.p.leverage
+            position_size = leveraged_value / price
             
             self.sell(size=position_size, price=price, exectype=bt.Order.Limit)
-            self.logger.info(f"网格卖出 [{self.current_time}] - 价格: {price:.4f}, 数量: {position_size:.4f}",color='red')
+            self.logger.info(f"网格开空 [{self.current_time}] - 价格: {price:.4f}, 数量: {position_size:.4f}")
             
         except Exception as e:
-            self.logger.error(f"卖出错误: {str(e)}")
+            self.logger.error(f"开空错误: {str(e)}")

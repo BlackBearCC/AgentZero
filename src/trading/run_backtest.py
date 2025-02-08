@@ -14,7 +14,7 @@ if project_root not in sys.path:
 # 使用绝对导入
 from src.utils.logger import Logger
 from src.trading.feeds.crypto_feed import DataManager
-from src.trading.strategies.grid import AutoGridStrategy
+from src.trading.strategies.grid import SimpleGridStrategy
 
 # 创建回测专用logger
 logger = Logger("backtest")
@@ -71,9 +71,9 @@ class BacktestRunner:
             # 添加策略
             self.logger.info("添加交易策略...")
             if strategy_params:
-                cerebro.addstrategy(AutoGridStrategy, **strategy_params)
+                cerebro.addstrategy(SimpleGridStrategy, **strategy_params)
             else:
-                cerebro.addstrategy(AutoGridStrategy)
+                cerebro.addstrategy(SimpleGridStrategy)
             
             # 运行回测
             self.logger.info(f"开始回测 - {symbol}, {timeframe}")

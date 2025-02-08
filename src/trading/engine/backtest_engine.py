@@ -114,23 +114,27 @@ class BacktestEngine:
         commission = order.quantity * order.filled_price * self.commission_rate
         
         # 计算所需保证金
-        required_margin = (order.quantity * order.filled_price / self.leverage) * (1 + self.commission_rate)
+        required_margin = (order.quantity * order.filled_price / self.leverage)
         
         if order.side == 'BUY':
             # 检查可用保证金是否足够
-            if required_margin > self.current_capital:
-                self.logger.warning(f"保证金不足 - 所需保证金: {required_margin:.2f}, 当前资金: {self.current_capital:.2f}")
+            if required_margin > self.available_capital:
+                self.logger.warning(f"保证金不足 - 所需保证金: {required_margin:.2f}, 可用资金: {self.available_capital:.2f}")
                 return False
             
-            self.current_capital -= required_margin
+            # 扣除保证金和手续费
+            self.available_capital -= (required_margin + commission)
+            self.current_capital -= commission
             
         elif order.side == 'SELL':
             # 开空仓
             if order.symbol not in self.positions:
-                if required_margin > self.current_capital:
-                    self.logger.warning(f"保证金不足 - 所需保证金: {required_margin:.2f}, 当前资金: {self.current_capital:.2f}")
+                if required_margin > self.available_capital:
+                    self.logger.warning(f"保证金不足 - 所需保证金: {required_margin:.2f}, 可用资金: {self.available_capital:.2f}")
                     return False
-                self.current_capital -= required_margin
+                # 扣除保证金和手续费
+                self.available_capital -= (required_margin + commission)
+                self.current_capital -= commission
                 
             # 平多仓
             else:
@@ -143,7 +147,10 @@ class BacktestEngine:
                     # 计算收益（考虑杠杆）
                     profit = (order.filled_price - pos.entry_price) * order.quantity - commission
                     released_margin = (order.quantity * pos.entry_price / self.leverage)
-                    self.current_capital += released_margin + profit
+                    
+                    # 释放保证金，加上收益
+                    self.available_capital += released_margin + profit
+                    self.current_capital += profit
         
         return True
     
@@ -214,11 +221,14 @@ class BacktestEngine:
 
     def update_capital(self):
         """更新资金状态"""
-        # 计算持仓占用的保证金
-        margin_used = sum(
-            (pos.quantity * self.data['close'].iloc[-1]) / self.leverage 
+        # 计算当前持仓的市值
+        total_position_value = sum(
+            pos.quantity * self.data['close'].iloc[-1]
             for pos in self.positions.values()
         )
+        
+        # 计算持仓占用的保证金
+        margin_used = total_position_value / self.leverage
         
         # 更新可用资金
         self.available_capital = self.current_capital - margin_used
@@ -226,6 +236,6 @@ class BacktestEngine:
         # 记录权益曲线
         self.equity_curve.append({
             'timestamp': self.data['timestamp'].iloc[-1],
-            'equity': self.current_capital,
+            'equity': self.current_capital + total_position_value,
             'available': self.available_capital
         })

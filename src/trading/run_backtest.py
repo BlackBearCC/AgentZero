@@ -163,7 +163,7 @@ def main():
     # 设置回测参数
     symbol = 'DOGE/USDT'
     timeframe = '1m'
-    start = datetime(2025, 2, 1)
+    start = datetime(2025, 2, 4)
     end = datetime(2025, 2, 7)
     
     # 调整策略参数

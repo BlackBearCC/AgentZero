@@ -17,7 +17,7 @@ from src.utils.logger import Logger
 
 class BacktestRunner:
     def __init__(self):
-        self.logger = Logger("backtest")  # 使用自定义Logger
+        self.logger = Logger("backtest")
         
     def load_data(self, 
                  symbol: str,
@@ -26,6 +26,7 @@ class BacktestRunner:
                  end: datetime) -> pd.DataFrame:
         """从CCXT加载数据"""
         self.logger.info(f"开始获取数据: {symbol} {timeframe}")
+        self.logger.info(f"时间范围: {start} - {end}")
         
         feed = CCXTFeed(
             symbol=symbol,
@@ -36,9 +37,18 @@ class BacktestRunner:
         
         # 使用1分钟数据进行回测
         df = feed._df_1m.copy()
-        # 将索引转换为timestamp列
+        
+        # 确保数据在指定的时间范围内
+        df = df[df.index >= pd.Timestamp(start)]
+        df = df[df.index <= pd.Timestamp(end)]
+        
+        # 重置索引，保持时间戳列
         df['timestamp'] = df.index
         df = df.reset_index(drop=True)
+        
+        self.logger.info(f"数据范围: {df['timestamp'].min()} - {df['timestamp'].max()}")
+        self.logger.info(f"数据点数: {len(df)}")
+        
         return df
         
     def run(self,
@@ -52,6 +62,10 @@ class BacktestRunner:
         # 加载数据
         data = self.load_data(symbol, timeframe, start, end)
         
+        if data.empty:
+            self.logger.error("未获取到数据")
+            return {}
+            
         # 默认策略参数
         default_params = {
             'initial_capital': 10000,
@@ -149,7 +163,7 @@ def main():
     # 设置回测参数
     symbol = 'DOGE/USDT'
     timeframe = '1m'
-    start = datetime(2025, 2, 5)
+    start = datetime(2025, 2, 1)
     end = datetime(2025, 2, 7)
     
     # 调整策略参数
@@ -158,7 +172,7 @@ def main():
         'commission_rate': 0.0004,   # 币安合约手续费率
         'leverage': 10,              # 杠杆倍数
         'grid_num': 10,             # 单边网格数量
-        'price_range': 0.1,        # 价格区间±2%（改小一些，避免过大波动）
+        'price_range': 0.1,        # 价格区间±2%
         'position_ratio': 0.8,      # 总资金使用比例80%
         'long_pos_limit': 0.4,      # 多头仓位上限40%
         'short_pos_limit': 0.4,     # 空头仓位上限40%

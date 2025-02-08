@@ -69,42 +69,75 @@ class CCXTFeed:
                    end: Optional[datetime] = None) -> pd.DataFrame:
         """获取历史数据"""
         try:
-            # 清理缓存文件
-            cache_file = self.cache_dir / f"{symbol.replace('/', '_')}_{timeframe}.parquet"
-            if cache_file.exists():
-                cache_file.unlink()
-                self.logger.info(f"清理缓存文件: {cache_file}")
-            
-            # 获取数据
             since = int(start.timestamp() * 1000) if start else None
             end_ts = int(end.timestamp() * 1000) if end else None
             
             self.logger.info(f"""
-                ====== 数据获取参数 ======
-                当前时间: {datetime.now()}
-                请求开始: {start}
-                请求结束: {end}
-                时间戳开始: {since}
-                时间戳结束: {end_ts}
-                交易对: {symbol}
-                时间周期: {timeframe}
-                ========================
+            ====== 开始获取数据 ======
+            交易对: {symbol}
+            时间周期: {timeframe}
+            开始时间: {start} ({since})
+            结束时间: {end} ({end_ts})
+            ========================
             """)
             
-            ohlcv = self.exchange.fetch_ohlcv(
-                symbol=symbol,
-                timeframe=timeframe,
-                since=since,
-                limit=1000  # 每次获取1000条
-            )
+            all_data = []
+            current_since = since
             
-            if not ohlcv:
+            while True:
+                # 获取数据
+                self.logger.info(f"获取数据片段 - since: {current_since}")
+                ohlcv = self.exchange.fetch_ohlcv(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    since=current_since,
+                    limit=1000
+                )
+                
+                if not ohlcv:
+                    self.logger.warning(f"未获取到数据 - since: {current_since}")
+                    break
+                    
+                # 添加到列表
+                all_data.extend(ohlcv)
+                
+                # 更新时间戳
+                last_timestamp = ohlcv[-1][0]
+                
+                # 检查是否达到结束时间
+                if end_ts and last_timestamp >= end_ts:
+                    self.logger.info(f"达到结束时间: {last_timestamp} >= {end_ts}")
+                    break
+                    
+                # 如果获取的数据少于1000条，说明已经没有更多数据
+                if len(ohlcv) < 1000:
+                    self.logger.info("获取的数据少于1000条，结束获取")
+                    break
+                    
+                current_since = last_timestamp + 1
+                self.logger.info(f"更新since为: {current_since}")
+                
+                # 添加延时避免超过频率限制
+                time.sleep(self.exchange.rateLimit / 1000)
+            
+            if not all_data:
                 raise ValueError(f"未获取到 {symbol} 的数据")
             
             # 转换为DataFrame
-            df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+            df = pd.DataFrame(all_data, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df.set_index('timestamp', inplace=True)
+            df = df.sort_index()  # 确保数据按时间排序
+            
+            # 确保数据在时间范围内
+            df = df[(df.index >= pd.Timestamp(start)) & (df.index <= pd.Timestamp(end))]
+            
+            self.logger.info(f"""
+            ====== 数据获取完成 ======
+            数据点数: {len(df)}
+            数据范围: {df.index.min()} - {df.index.max()}
+            ========================
+            """)
             
             return df
             
@@ -125,6 +158,16 @@ class CCXTFeed:
             end = min(end or now, now)
             start = start or (end - timedelta(days=30))
             
+            self.logger.info(f"""
+                ====== 数据获取参数 ======
+                缓存文件: {cache_file}
+                交易对: {symbol}
+                时间周期: {timeframe}
+                开始时间: {start}
+                结束时间: {end}
+                ========================
+            """)
+            
             # 检查是否存在缓存文件
             if cache_file.exists():
                 self.logger.info(f"发现缓存文件: {cache_file}")
@@ -136,51 +179,30 @@ class CCXTFeed:
                     cache_start = cached_df.index.min()
                     cache_end = cached_df.index.max()
                     
+                    self.logger.info(f"缓存数据范围: {cache_start} 到 {cache_end}")
+                    
                     # 如果缓存完全覆盖所需范围，直接使用缓存
                     if cache_start <= start and cache_end >= end:
-                        self.logger.info(f"使用缓存数据 - 范围: {cache_start} 到 {cache_end}")
+                        self.logger.info("缓存数据完全覆盖所需范围，使用缓存数据")
                         return cached_df[(cached_df.index >= start) & (cached_df.index <= end)]
-                    
-                    # 如果需要补充数据
-                    df_list = []
-                    
-                    # 获取开始日期之前的数据
-                    if start < cache_start:
-                        self.logger.info(f"获取早期数据: {start} 到 {cache_start}")
-                        early_df = self._fetch_data(symbol, timeframe, start, cache_start)
-                        if not early_df.empty:
-                            df_list.append(early_df)
-                    
-                    # 添加缓存数据
-                    cache_data = cached_df[(cached_df.index >= start) & (cached_df.index <= end)]
-                    if not cache_data.empty:
-                        df_list.append(cache_data)
-                    
-                    # 获取结束日期之后的数据
-                    if end > cache_end:
-                        self.logger.info(f"获取最新数据: {cache_end} 到 {end}")
-                        late_df = self._fetch_data(symbol, timeframe, cache_end, end)
-                        if not late_df.empty:
-                            df_list.append(late_df)
-                    
-                    if df_list:
-                        final_df = pd.concat(df_list, axis=0).sort_index()
-                        final_df = final_df[~final_df.index.duplicated(keep='first')]
-                        
-                        # 更新缓存
-                        final_df.to_parquet(cache_file)
-                        self.logger.info(f"更新缓存文件: {cache_file}")
-                        
-                        return final_df
+                    else:
+                        self.logger.info("缓存数据不完全覆盖所需范围，需要重新获取数据")
+                        # 删除缓存文件
+                        cache_file.unlink()
             
             # 如果没有缓存或缓存无效，获取新数据
-            self.logger.info("获取新数据并创建缓存")
+            self.logger.info("开始获取新数据")
             df = self._fetch_data(symbol, timeframe, start, end)
             
+            # 检查获取的数据
+            if df.empty:
+                raise ValueError(f"获取到的数据为空")
+            
+            self.logger.info(f"获取到数据范围: {df.index.min()} 到 {df.index.max()}")
+            
             # 保存到缓存
-            if not df.empty:
-                df.to_parquet(cache_file)
-                self.logger.info(f"创建缓存文件: {cache_file}")
+            df.to_parquet(cache_file)
+            self.logger.info(f"保存数据到缓存: {cache_file}")
             
             return df
             

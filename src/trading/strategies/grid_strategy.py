@@ -235,11 +235,52 @@ class GridStrategy(BacktestEngine):
 
     def on_bar(self, bar: pd.Series):
         """策略主逻辑"""
+        # 更新资金状态
+        self.update_capital()
+        
         # 只在第一次初始化网格
         if self.center_price is None:
             self.logger.info(f"初始化网格，中心价格: {bar['close']}")
             self.initialize_grid(bar['close'])
             return
+        
+        current_price = bar['close']
+        
+        # 记录当前资金状态
+        self.logger.info(f"""
+        ====== 资金状态 [{bar['timestamp']}] ======
+        当前价格: {current_price:.8f}
+        账户权益: ${self.current_capital:.2f}
+        可用资金: ${self.available_capital:.2f}
+        持仓数量: {len(self.positions)}
+        挂单数量: {len(self.grid_orders)}
+        多头持仓: {sum(1 for p in self.positions.values() if p.side == 'LONG')}
+        空头持仓: {sum(1 for p in self.positions.values() if p.side == 'SHORT')}
+        多头占用保证金: ${sum((p.quantity * current_price) / self.leverage for p in self.positions.values() if p.side == 'LONG'):.2f}
+        空头占用保证金: ${sum((p.quantity * current_price) / self.leverage for p in self.positions.values() if p.side == 'SHORT'):.2f}
+        ================================
+        """)
+        
+        # 计算网格边界
+        grid_step = self.center_price * (self.price_range / self.grid_num)
+        upper_boundary = self.center_price * (1 + self.price_range)
+        lower_boundary = self.center_price * (1 - self.price_range)
+        
+        # 检查价格是否超出网格边界
+        if current_price > upper_boundary:
+            self.logger.warning(f"""
+            价格超出上边界!
+            当前价格: {current_price:.8f}
+            上边界: {upper_boundary:.8f}
+            超出幅度: {((current_price - upper_boundary) / upper_boundary * 100):.2f}%
+            """)
+        elif current_price < lower_boundary:
+            self.logger.warning(f"""
+            价格超出下边界!
+            当前价格: {current_price:.8f}
+            下边界: {lower_boundary:.8f}
+            超出幅度: {((lower_boundary - current_price) / lower_boundary * 100):.2f}%
+            """)
         
         # 检查订单成交情况
         for order in self.pending_orders[:]:

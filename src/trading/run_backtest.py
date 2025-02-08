@@ -93,9 +93,9 @@ class BacktestRunner:
         # 输出回测结果
         self.print_results(results)
         
-        # 使用策略的plot_results方法
-        if plot:
-            strategy.plot_results(results, data)
+        # # 使用策略的plot_results方法
+        # if plot:
+        #     strategy.plot_results(results, data)
             
         return results
     

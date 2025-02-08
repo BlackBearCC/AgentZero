@@ -28,38 +28,38 @@ class Position:
     entry_time: datetime
 
 class BacktestEngine:
-    def __init__(self, data: pd.DataFrame, **kwargs):
+    def __init__(self,
+                 data: pd.DataFrame,
+                 initial_capital: float = 10000,
+                 commission_rate: float = 0.001,
+                 leverage: float = 1.0,
+                 **kwargs):  # 添加 **kwargs 来接收额外的参数
         """
-        初始化回测引擎
+        回测引擎初始化
         
         Args:
-            data: DataFrame with columns [timestamp, open, high, low, close, volume]
+            data: DataFrame with OHLCV data
+            initial_capital: 初始资金
+            commission_rate: 手续费率
+            leverage: 杠杆倍数
+            **kwargs: 其他参数
         """
-        # 初始化logger
+        self.data = data
+        self.initial_capital = initial_capital
+        self.current_capital = initial_capital  # 当前总资产
+        self.available_capital = initial_capital  # 可用资金
+        self.commission_rate = commission_rate
+        self.leverage = leverage
+        
+        # 交易相关
+        self.positions = {}  # 当前持仓
+        self.pending_orders = []  # 待成交订单
+        self.filled_orders = []  # 已成交订单
+        self.trades = []  # 已完成交易
+        self.equity_curve = []  # 权益曲线
+        
+        # 日志
         self.logger = Logger("backtest_engine")
-        
-        # 确保数据包含必要的列
-        required_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
-        if not all(col in data.columns for col in required_columns):
-            raise ValueError(f"数据必须包含以下列: {required_columns}")
-        
-        # 确保timestamp列是datetime类型
-        if not isinstance(data['timestamp'].iloc[0], (pd.Timestamp, datetime)):
-            raise ValueError("timestamp列必须是datetime类型")
-        
-        # 按时间排序
-        self.data = data.sort_values('timestamp').reset_index(drop=True)
-        
-        # 初始化其他参数
-        self.initial_capital = kwargs.get('initial_capital', 10000)
-        self.commission_rate = kwargs.get('commission_rate', 0.001)
-        self.leverage = kwargs.get('leverage', 20)  # 默认20倍杠杆
-        self.current_capital = self.initial_capital
-        self.positions = {}
-        self.pending_orders = []
-        self.filled_orders = []
-        self.equity_curve = []
-        self.trades = []
         
     def place_limit_order(self, symbol: str, side: str, price: float, quantity: float) -> Order:
         """下限价单"""
@@ -211,3 +211,21 @@ class BacktestEngine:
         子类需要重写此方法
         """
         pass 
+
+    def update_capital(self):
+        """更新资金状态"""
+        # 计算持仓占用的保证金
+        margin_used = sum(
+            (pos.quantity * self.data['close'].iloc[-1]) / self.leverage 
+            for pos in self.positions.values()
+        )
+        
+        # 更新可用资金
+        self.available_capital = self.current_capital - margin_used
+        
+        # 记录权益曲线
+        self.equity_curve.append({
+            'timestamp': self.data['timestamp'].iloc[-1],
+            'equity': self.current_capital,
+            'available': self.available_capital
+        })

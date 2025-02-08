@@ -288,29 +288,41 @@ class GridStrategy(BacktestEngine):
             trades_df['entry_num'] = mdates.date2num(trades_df['entry_time'])
             trades_df['exit_num'] = mdates.date2num(trades_df['exit_time'])
             
-            # 开多标记（绿色上三角）
+            # 开多标记（绿色三角）
             long_entries = trades_df[trades_df['side'] == 'LONG']
             ax1.scatter(long_entries['entry_num'], long_entries['entry_price'], 
-                       marker='^', color='lime', s=100, label='Long Entry', alpha=1)
+                       marker='^', color='lime', s=150, label='Long Entry', alpha=1)
             
-            # 平多标记（红色下三角）
+            # 平多标记（红色横线）
             ax1.scatter(long_entries['exit_num'], long_entries['exit_price'], 
-                       marker='v', color='magenta', s=100, label='Long Exit', alpha=1)
+                       marker='_', color='red', s=150, label='Long Exit', alpha=1)
             
-            # 开空标记（红色下三角）
+            # 开空标记（红色三角）
             short_entries = trades_df[trades_df['side'] == 'SHORT']
             ax1.scatter(short_entries['entry_num'], short_entries['entry_price'], 
-                       marker='v', color='magenta', s=100, label='Short Entry', alpha=1)
+                       marker='v', color='red', s=150, label='Short Entry', alpha=1)
             
-            # 平空标记（绿色上三角）
+            # 平空标记（绿色横线）
             ax1.scatter(short_entries['exit_num'], short_entries['exit_price'], 
-                       marker='^', color='lime', s=100, label='Short Exit', alpha=1)
+                       marker='_', color='lime', s=150, label='Short Exit', alpha=1)
             
             # 用线连接开仓和平仓点
             for _, trade in trades_df.iterrows():
                 ax1.plot([trade['entry_num'], trade['exit_num']], 
                         [trade['entry_price'], trade['exit_price']], 
                         color='gray', linestyle='--', alpha=0.3)
+        
+        # 添加所有开仓点（包括未平仓的）
+        for price, position in self.positions.items():
+            entry_num = mdates.date2num(position.entry_time)
+            if position.side == 'LONG':
+                ax1.scatter(entry_num, price, 
+                           marker='^', color='lime', s=150, 
+                           label='Open Long', alpha=0.5)
+            else:  # SHORT
+                ax1.scatter(entry_num, price, 
+                           marker='v', color='red', s=150, 
+                           label='Open Short', alpha=0.5)
         
         # 添加多空区域标注
         y_min, y_max = ax1.get_ylim()

@@ -69,80 +69,42 @@ class CCXTFeed:
                    end: Optional[datetime] = None) -> pd.DataFrame:
         """获取历史数据"""
         try:
-            # 确保时间范围有效
-            now = datetime.now()
-            end = min(end or now, now)
-            start = start or (end - timedelta(days=30))
+            # 清理缓存文件
+            cache_file = self.cache_dir / f"{symbol.replace('/', '_')}_{timeframe}.parquet"
+            if cache_file.exists():
+                cache_file.unlink()
+                self.logger.info(f"清理缓存文件: {cache_file}")
             
-            # 打印关键时间信息
+            # 获取数据
+            since = int(start.timestamp() * 1000) if start else None
+            end_ts = int(end.timestamp() * 1000) if end else None
+            
             self.logger.info(f"""
-            ====== 数据获取参数 ======
-            当前时间: {now}
-            请求开始: {start}
-            请求结束: {end}
-            时间戳开始: {int(start.timestamp() * 1000)}
-            时间戳结束: {int(end.timestamp() * 1000)}
-            交易对: {symbol}
-            时间周期: {timeframe}
-            ========================
+                ====== 数据获取参数 ======
+                当前时间: {datetime.now()}
+                请求开始: {start}
+                请求结束: {end}
+                时间戳开始: {since}
+                时间戳结束: {end_ts}
+                交易对: {symbol}
+                时间周期: {timeframe}
+                ========================
             """)
             
-            since = int(start.timestamp() * 1000)
-            all_data = []
+            ohlcv = self.exchange.fetch_ohlcv(
+                symbol=symbol,
+                timeframe=timeframe,
+                since=since,
+                limit=1000  # 每次获取1000条
+            )
             
-            # 分批获取数据
-            current_since = since
-            while current_since < end.timestamp() * 1000:
-                try:
-                    self.logger.info(f"获取数据批次 - 开始时间: {datetime.fromtimestamp(current_since/1000)}")
-                    ohlcv = self.exchange.fetch_ohlcv(
-                        symbol=symbol,
-                        timeframe=timeframe,
-                        since=current_since,
-                        limit=1000
-                    )
-                    
-                    if not ohlcv:
-                        self.logger.warning(f"未获取到数据 - since: {datetime.fromtimestamp(current_since/1000)}")
-                        break
-                        
-                    # 打印每批数据的时间范围
-                    batch_start = datetime.fromtimestamp(ohlcv[0][0]/1000)
-                    batch_end = datetime.fromtimestamp(ohlcv[-1][0]/1000)
-                    self.logger.info(f"获取到数据 - 从 {batch_start} 到 {batch_end}, 条数: {len(ohlcv)}")
-                    
-                    all_data.extend(ohlcv)
-                    current_since = ohlcv[-1][0] + 1
-                    
-                    if current_since >= end.timestamp() * 1000:
-                        break
-                        
-                    time.sleep(self.exchange.rateLimit / 1000)
-                    
-                except Exception as e:
-                    self.logger.error(f"获取数据失败: {str(e)}")
-                    break
-            
-            if not all_data:
+            if not ohlcv:
                 raise ValueError(f"未获取到 {symbol} 的数据")
             
             # 转换为DataFrame
-            df = pd.DataFrame(all_data, columns=['datetime', 'open', 'high', 'low', 'close', 'volume'])
-            df['datetime'] = pd.to_datetime(df['datetime'], unit='ms')
-            df.set_index('datetime', inplace=True)
-            
-            # 过滤时间范围
-            df = df[df.index <= end]
-            df = df[df.index >= start]
-            
-            # 打印最终数据信息
-            self.logger.info(f"""
-            ====== 最终数据信息 ======
-            数据条数: {len(df)}
-            时间范围: {df.index[0]} 到 {df.index[-1]}
-            时间间隔: {timeframe}
-            ========================
-            """)
+            df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            df.set_index('timestamp', inplace=True)
             
             return df
             

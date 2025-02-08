@@ -117,40 +117,112 @@ class BacktestEngine:
         required_margin = (order.quantity * order.filled_price / self.leverage)
         
         if order.side == 'BUY':
-            # 检查可用保证金是否足够
-            if required_margin > self.available_capital:
-                self.logger.warning(f"保证金不足 - 所需保证金: {required_margin:.2f}, 可用资金: {self.available_capital:.2f}")
-                return False
-            
-            # 扣除保证金和手续费
-            self.available_capital -= (required_margin + commission)
-            self.current_capital -= commission
-            
-        elif order.side == 'SELL':
-            # 开空仓
-            if order.symbol not in self.positions:
+            # 检查是否是平空单
+            if order.symbol in self.positions and self.positions[order.symbol].side == 'SHORT':
+                pos = self.positions[order.symbol]
+                if order.quantity > pos.quantity:
+                    self.logger.warning(f"持仓不足 - 需要: {order.quantity}, 实际: {pos.quantity}")
+                    return False
+                
+                # 计算收益（考虑杠杆）
+                profit = (pos.entry_price - order.filled_price) * order.quantity - commission
+                released_margin = (order.quantity * pos.entry_price / self.leverage)
+                
+                # 释放保证金，加上收益
+                self.available_capital += released_margin + profit
+                self.current_capital += profit
+                
+                # 记录交易
+                self.trades.append({
+                    'entry_time': pos.entry_time,
+                    'exit_time': order.filled_time,
+                    'symbol': order.symbol,
+                    'side': 'SHORT',
+                    'entry_price': pos.entry_price,
+                    'exit_price': order.filled_price,
+                    'quantity': order.quantity,
+                    'profit': profit,
+                    'return': profit / (pos.entry_price * order.quantity)
+                })
+                
+                # 更新或删除持仓
+                if order.quantity == pos.quantity:
+                    del self.positions[order.symbol]
+                else:
+                    pos.quantity -= order.quantity
+                
+            else:  # 开多单
+                # 检查可用保证金是否足够
                 if required_margin > self.available_capital:
                     self.logger.warning(f"保证金不足 - 所需保证金: {required_margin:.2f}, 可用资金: {self.available_capital:.2f}")
                     return False
+                
                 # 扣除保证金和手续费
                 self.available_capital -= (required_margin + commission)
                 self.current_capital -= commission
                 
-            # 平多仓
-            else:
+                # 记录开仓
+                self.positions[order.symbol] = Position(
+                    symbol=order.symbol,
+                    side='LONG',
+                    entry_price=order.filled_price,
+                    quantity=order.quantity,
+                    entry_time=order.filled_time
+                )
+                
+        elif order.side == 'SELL':
+            # 检查是否是平多单
+            if order.symbol in self.positions and self.positions[order.symbol].side == 'LONG':
                 pos = self.positions[order.symbol]
-                if pos.side == 'LONG':
-                    if order.quantity > pos.quantity:
-                        self.logger.warning(f"持仓不足 - 需要: {order.quantity}, 实际: {pos.quantity}")
-                        return False
-                    
-                    # 计算收益（考虑杠杆）
-                    profit = (order.filled_price - pos.entry_price) * order.quantity - commission
-                    released_margin = (order.quantity * pos.entry_price / self.leverage)
-                    
-                    # 释放保证金，加上收益
-                    self.available_capital += released_margin + profit
-                    self.current_capital += profit
+                if order.quantity > pos.quantity:
+                    self.logger.warning(f"持仓不足 - 需要: {order.quantity}, 实际: {pos.quantity}")
+                    return False
+                
+                # 计算收益（考虑杠杆）
+                profit = (order.filled_price - pos.entry_price) * order.quantity - commission
+                released_margin = (order.quantity * pos.entry_price / self.leverage)
+                
+                # 释放保证金，加上收益
+                self.available_capital += released_margin + profit
+                self.current_capital += profit
+                
+                # 记录交易
+                self.trades.append({
+                    'entry_time': pos.entry_time,
+                    'exit_time': order.filled_time,
+                    'symbol': order.symbol,
+                    'side': 'LONG',
+                    'entry_price': pos.entry_price,
+                    'exit_price': order.filled_price,
+                    'quantity': order.quantity,
+                    'profit': profit,
+                    'return': profit / (pos.entry_price * order.quantity)
+                })
+                
+                # 更新或删除持仓
+                if order.quantity == pos.quantity:
+                    del self.positions[order.symbol]
+                else:
+                    pos.quantity -= order.quantity
+                
+            else:  # 开空单
+                # 检查可用保证金是否足够
+                if required_margin > self.available_capital:
+                    self.logger.warning(f"保证金不足 - 所需保证金: {required_margin:.2f}, 可用资金: {self.available_capital:.2f}")
+                    return False
+                
+                # 扣除保证金和手续费
+                self.available_capital -= (required_margin + commission)
+                self.current_capital -= commission
+                
+                # 记录开仓
+                self.positions[order.symbol] = Position(
+                    symbol=order.symbol,
+                    side='SHORT',
+                    entry_price=order.filled_price,
+                    quantity=order.quantity,
+                    entry_time=order.filled_time
+                )
         
         return True
     

@@ -163,7 +163,7 @@ def main():
     # 设置回测参数
     symbol = 'DOGE/USDT'
     timeframe = '1m'
-    start = datetime(2025, 2, 4)
+    start = datetime(2025, 2, 1)
     end = datetime(2025, 2, 7)
     
     # 调整策略参数
@@ -171,8 +171,8 @@ def main():
         'initial_capital': 10000,    # 初始资金
         'commission_rate': 0.0004,   # 币安合约手续费率
         'leverage': 10,              # 杠杆倍数
-        'grid_num': 10,             # 单边网格数量
-        'price_range': 0.1,        # 价格区间±2%
+        'grid_num': 20,             # 单边网格数量
+        'price_range': 0.4,        # 价格区间±2%
         'position_ratio': 0.8,      # 总资金使用比例80%
         'long_pos_limit': 0.4,      # 多头仓位上限40%
         'short_pos_limit': 0.4,     # 空头仓位上限40%

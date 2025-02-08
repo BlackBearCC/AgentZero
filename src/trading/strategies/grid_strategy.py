@@ -137,11 +137,26 @@ class GridStrategy(BacktestEngine):
         
         self.logger.info(f"订单成交 - {order.side} {order.quantity}@{price}")
         
-        # 记录持仓
+        # 记录交易
         if order.side == 'BUY':
             if self._is_closing_short(price):  # 如果是平空单
-                self._close_short_position(price, order)
-                self.logger.info(f"平空仓 - 价格: {price}")
+                # 找到对应的空头持仓
+                for pos_price, pos in self.positions.items():
+                    if pos.side == 'SHORT' and pos_price < price:  # 找到对应的空头持仓
+                        profit = (pos.entry_price - price) * order.quantity
+                        self.trades.append({
+                            'entry_time': pos.entry_time,
+                            'exit_time': order.filled_time,
+                            'symbol': order.symbol,
+                            'side': 'SHORT',
+                            'entry_price': pos.entry_price,
+                            'exit_price': price,
+                            'quantity': order.quantity,
+                            'profit': profit,
+                            'return': profit / (pos.entry_price * order.quantity)
+                        })
+                        self._close_short_position(pos_price, order)
+                        break
             else:  # 开多单
                 self.positions[price] = Position(
                     symbol=order.symbol,
@@ -150,11 +165,26 @@ class GridStrategy(BacktestEngine):
                     quantity=order.quantity,
                     entry_time=order.filled_time
                 )
-                self.logger.info(f"开多仓 - 价格: {price}")
+            
         else:  # 'SELL'
             if self._is_closing_long(price):  # 如果是平多单
-                self._close_long_position(price, order)
-                self.logger.info(f"平多仓 - 价格: {price}")
+                # 找到对应的多头持仓
+                for pos_price, pos in self.positions.items():
+                    if pos.side == 'LONG' and pos_price < price:  # 找到对应的多头持仓
+                        profit = (price - pos.entry_price) * order.quantity
+                        self.trades.append({
+                            'entry_time': pos.entry_time,
+                            'exit_time': order.filled_time,
+                            'symbol': order.symbol,
+                            'side': 'LONG',
+                            'entry_price': pos.entry_price,
+                            'exit_price': price,
+                            'quantity': order.quantity,
+                            'profit': profit,
+                            'return': profit / (pos.entry_price * order.quantity)
+                        })
+                        self._close_long_position(pos_price, order)
+                        break
             else:  # 开空单
                 self.positions[price] = Position(
                     symbol=order.symbol,
@@ -163,15 +193,16 @@ class GridStrategy(BacktestEngine):
                     quantity=order.quantity,
                     entry_time=order.filled_time
                 )
-                self.logger.info(f"开空仓 - 价格: {price}")
         
         # 移除已触发的订单
         del self.grid_orders[price]
         
-        # 在对称的位置放置反向订单
-        opposite_price = self.center_price * 2 - price
-        opposite_side = 'SELL' if order.side == 'BUY' else 'BUY'
-        self._place_grid_order(opposite_price, opposite_side, order.quantity)
+        # 在相反方向放置新的网格订单
+        grid_step = self.center_price * (self.price_range / self.grid_num)
+        new_price = price + grid_step if order.side == 'BUY' else price - grid_step
+        new_side = 'SELL' if order.side == 'BUY' else 'BUY'
+        
+        self._place_grid_order(new_price, new_side, order.quantity)
 
     def _is_closing_long(self, price: float) -> bool:
         """检查是否是平多单"""

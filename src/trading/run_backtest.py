@@ -36,7 +36,7 @@ class BacktestRunner:
 
     async def run(self,
                  symbol: str = 'DOGE/USDT',
-                 timeframe: str = '15m',
+                 timeframe: str = '1m',
                  start: datetime = None,
                  end: datetime = None,
                  initial_cash: float = 10000,
@@ -58,15 +58,16 @@ class BacktestRunner:
             cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trades')
             cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
             
-            # 获取数据并添加到回测引擎
-            self.logger.info("开始加载历史数据...")
-            data = self.data_manager.get_feed(
+            # 获取数据源
+            data_feeds = self.data_manager.get_feed(
                 symbol=symbol,
-                timeframe=timeframe,
+                timeframe='1m',
                 start=start,
                 end=end
             )
-            cerebro.adddata(data)
+            
+            # 只使用1分钟数据源
+            cerebro.adddata(data_feeds['execution'], name='execution')
             
             # 添加策略
             self.logger.info("添加交易策略...")
@@ -127,14 +128,14 @@ async def main():
     """主函数"""
     # 创建参数解析器
     parser = argparse.ArgumentParser(description='网格交易策略回测')
-    parser.add_argument('--start', type=parse_date, default="2025-01-01",
+    parser.add_argument('--start', type=parse_date, default="2025-02-04",
                       help='回测开始日期 (YYYY-MM-DD)')
-    parser.add_argument('--end', type=parse_date, default="2025-02-05",
+    parser.add_argument('--end', type=parse_date, default="2025-02-07",
                       help='回测结束日期 (YYYY-MM-DD)')
     parser.add_argument('--symbol', type=str, default='DOGE/USDT',
                       help='交易对 (默认: DOGE/USDT)')
-    parser.add_argument('--timeframe', type=str, default='15m',
-                      help='K线周期 (默认: 15m)')
+    parser.add_argument('--timeframe', type=str, default='1m',
+                      help='K线周期 (默认: 1m)')
     parser.add_argument('--cash', type=float, default=10000,
                       help='初始资金 (默认: 10000)')
     

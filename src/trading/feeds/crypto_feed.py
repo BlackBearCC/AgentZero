@@ -12,40 +12,55 @@ from src.utils.logger import Logger
 class CCXTFeed:
     """CCXT数据源"""
     
-    def __init__(self, **kwargs):
-        # 使用统一的日志管理
+    def __init__(self, symbol: str, timeframe: str, start: datetime, end: datetime):
         self.logger = Logger()
-        
-        # 打印调试信息
-        self.logger.info(f"CCXTFeed初始化参数: {kwargs}")
-        
-        self.symbol = kwargs.get('symbol', 'BTC/USDT')
-        self.timeframe = kwargs.get('timeframe', '1h')
-        self.exchange_id = kwargs.get('exchange', 'binance')
-        
-        # 添加数据缓存路径
-        self.cache_dir = Path("data/cache")
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self._symbol = symbol
+        self._timeframe = timeframe
+        self._start = start
+        self._end = end
         
         # 初始化交易所
-        exchange_class = getattr(ccxt, self.exchange_id)
-        self.exchange = exchange_class({
+        self.exchange = ccxt.binance({
             'enableRateLimit': True,
-            'timeout': 30000,
+            'options': {
+                'defaultType': 'future',  # 使用合约市场
+            }
         })
         
-        # 获取数据
-        self.df = self._get_data(
-            symbol=self.symbol,
-            timeframe=self.timeframe,
-            start=kwargs.get('start'),
-            end=kwargs.get('end')
-        )
+        # 设置缓存目录
+        self.cache_dir = Path('data/cache')
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         
-        # 打印DataFrame信息
-        self.logger.info(f"DataFrame信息:\n{self.df.info()}")
-        self.logger.info(f"DataFrame前5行:\n{self.df.head()}")
-        self.logger.info(f"DataFrame最后5行:\n{self.df.tail()}")
+        # 添加1分钟级别数据
+        self._df_1m = None  # 1分钟数据用于订单执行
+        self.df = None      # 原始timeframe数据用于指标计算
+        
+        self._load_data()
+
+    def _load_data(self):
+        try:
+            # 加载原始timeframe数据用于指标计算
+            self.df = self._get_data(
+                symbol=self._symbol,
+                timeframe=self._timeframe,
+                start=self._start,
+                end=self._end
+            )
+            
+            # 同时加载1分钟数据用于订单执行
+            if self._timeframe != '1m':
+                self._df_1m = self._get_data(
+                    symbol=self._symbol,
+                    timeframe='1m',
+                    start=self._start,
+                    end=self._end
+                )
+            else:
+                self._df_1m = self.df
+
+        except Exception as e:
+            self.logger.error(f"获取数据错误: {str(e)}")
+            raise
 
     def _fetch_data(self, 
                    symbol: str, 
@@ -211,18 +226,30 @@ class CCXTFeed:
             self.logger.error(f"获取数据错误: {str(e)}")
             raise
 
-    def get_data(self) -> bt.feeds.PandasData:
-        """返回backtrader可用的数据源"""
-        return bt.feeds.PandasData(
-            dataname=self.df,
-            datetime=None,  # 使用索引作为日期时间
-            open=0,        # DataFrame中的列索引
-            high=1,
-            low=2,
-            close=3,
-            volume=4,
-            openinterest=-1
-        )
+    def get_data(self) -> Dict[str, bt.feeds.PandasData]:
+        """返回两个数据源"""
+        return {
+            'indicator': bt.feeds.PandasData(  # 用于指标计算的数据
+                dataname=self.df,
+                datetime=None,
+                open=0,
+                high=1,
+                low=2,
+                close=3,
+                volume=4,
+                openinterest=-1
+            ),
+            'execution': bt.feeds.PandasData(  # 用于订单执行的数据
+                dataname=self._df_1m,
+                datetime=None,
+                open=0,
+                high=1,
+                low=2,
+                close=3,
+                volume=4,
+                openinterest=-1
+            )
+        }
 
 class DataManager:
     """数据管理器"""
@@ -235,7 +262,7 @@ class DataManager:
                 symbol: str,
                 timeframe: str,
                 start: datetime,
-                end: datetime) -> bt.feeds.PandasData:
+                end: datetime) -> Dict[str, bt.feeds.PandasData]:
         """获取回测数据"""
         try:
             # 确保时间参数正确
@@ -262,25 +289,8 @@ class DataManager:
                 end=end
             )
             
-            # 获取DataFrame数据
-            df = feed.df
-            
-            if df.empty:
-                raise ValueError(f"获取到的数据为空: {symbol}")
-            
-            # 创建 backtrader 数据源
-            data = bt.feeds.PandasData(
-                dataname=df,
-                datetime=None,  # 使用索引作为日期时间
-                open=0,        # DataFrame中的列索引
-                high=1,
-                low=2,
-                close=3,
-                volume=4,
-                openinterest=-1
-            )
-            
-            return data
+            # 获取两个数据源
+            return feed.get_data()
             
         except Exception as e:
             self.logger.error(f"数据加载错误: {str(e)}")

@@ -127,9 +127,10 @@ class GridStrategy(BacktestEngine):
     def on_order_filled(self, order):
         """订单成交回调"""
         price = float(order.price)  # 确保价格是浮点数
+        
+        # 检查是否是网格订单
         if price not in self.grid_orders:
-            self.logger.warning(f"找不到对应的网格订单 - 价格: {price}")
-            return
+            return  # 不是网格订单，直接返回
         
         self.logger.info(f"订单成交 - {order.side} {order.quantity}@{price}")
         
@@ -152,7 +153,7 @@ class GridStrategy(BacktestEngine):
                     quantity=order.quantity,
                     entry_time=order.filled_time
                 )
-                
+        
         else:  # 'SELL'
             if self._is_closing_long(price):  # 如果是平多单
                 # 找到对应的多头持仓
@@ -218,19 +219,19 @@ class GridStrategy(BacktestEngine):
         
         # 记录当前资金状态
         equity = self._calculate_equity(bar)
-        self.logger.info(f"""
-        ====== 资金状态 [{bar['timestamp']}] ======
-        当前价格: {current_price:.8f}
-        账户权益: ${equity:.2f}
-        可用资金: ${self.available_capital:.2f}
-        持仓数量: {len(self.grid_positions)}
-        挂单数量: {len(self.grid_orders)}
-        多头持仓: {sum(1 for p in self.grid_positions.values() if p.side == 'LONG')}
-        空头持仓: {sum(1 for p in self.grid_positions.values() if p.side == 'SHORT')}
-        多头占用保证金: ${sum((p.quantity * current_price) / self.leverage for p in self.grid_positions.values() if p.side == 'LONG'):.2f}
-        空头占用保证金: ${sum((p.quantity * current_price) / self.leverage for p in self.grid_positions.values() if p.side == 'SHORT'):.2f}
-        ================================
-        """)
+        # self.logger.info(f"""
+        # ====== 资金状态 [{bar['timestamp']}] ======
+        # 当前价格: {current_price:.8f}
+        # 账户权益: ${equity:.2f}
+        # 可用资金: ${self.available_capital:.2f}
+        # 持仓数量: {len(self.grid_positions)}
+        # 挂单数量: {len(self.grid_orders)}
+        # 多头持仓: {sum(1 for p in self.grid_positions.values() if p.side == 'LONG')}
+        # 空头持仓: {sum(1 for p in self.grid_positions.values() if p.side == 'SHORT')}
+        # 多头占用保证金: ${sum((p.quantity * current_price) / self.leverage for p in self.grid_positions.values() if p.side == 'LONG'):.2f}
+        # 空头占用保证金: ${sum((p.quantity * current_price) / self.leverage for p in self.grid_positions.values() if p.side == 'SHORT'):.2f}
+        # ================================
+        # """)
         
         # 计算网格边界
         grid_step = self.center_price * (self.price_range / self.grid_num)

@@ -26,7 +26,7 @@ class AutoGridStrategy(BaseStrategy):
     def __init__(self):
         """初始化策略"""
         super().__init__()
-        self.logger = Logger("strategy")
+        self.logger = Logger("strategy")  # 移除color参数
         
         # 核心数据结构
         self.grids = {}           # 存储网格信息
@@ -43,6 +43,11 @@ class AutoGridStrategy(BaseStrategy):
         # 计算所需资金
         self.initial_cash = self.broker.startingcash
         self.min_cash_required = self.initial_cash * self.p.position_size
+    
+    @property
+    def current_time(self) -> str:
+        """获取当前时间字符串"""
+        return self.data.datetime.datetime().strftime('%Y-%m-%d %H:%M:%S')
     
     def initialize_grids(self):
         """初始化网格"""
@@ -65,7 +70,7 @@ class AutoGridStrategy(BaseStrategy):
                 'has_sell_order': False
             }
             
-        self.logger.info(f"初始化网格 - 价格区间: [{self.lower_price:.4f}, {self.upper_price:.4f}]")
+        self.logger.info(f"初始化网格 [{self.current_time}] - 价格区间: [{self.lower_price:.4f}, {self.upper_price:.4f}]", color='yellow')
     
     def should_move_grids(self, current_price):
         """判断是否需要移动网格"""
@@ -97,7 +102,7 @@ class AutoGridStrategy(BaseStrategy):
         # 重新初始化网格
         self.initialize_grids()
         
-        self.logger.info(f"移动网格 - 方向: {direction}, 新区间: [{self.lower_price:.4f}, {self.upper_price:.4f}]")
+        self.logger.info(f"移动网格 [{self.current_time}] - 方向: {direction}, 新区间: [{self.lower_price:.4f}, {self.upper_price:.4f}]", color='yellwo')
     
     def next(self):
         """策略主逻辑"""
@@ -140,7 +145,7 @@ class AutoGridStrategy(BaseStrategy):
             position_size = position_value / price
             
             self.buy(size=position_size, price=price, exectype=bt.Order.Limit)
-            self.logger.info(f"网格买入 - 价格: {price:.4f}, 数量: {position_size:.4f}")
+            self.logger.info(f"网格买入 [{self.current_time}] - 价格: {price:.4f}, 数量: {position_size:.4f}",color='green')
             
         except Exception as e:
             self.logger.error(f"买入错误: {str(e)}")
@@ -152,7 +157,7 @@ class AutoGridStrategy(BaseStrategy):
             position_size = position_value / price
             
             self.sell(size=position_size, price=price, exectype=bt.Order.Limit)
-            self.logger.info(f"网格卖出 - 价格: {price:.4f}, 数量: {position_size:.4f}")
+            self.logger.info(f"网格卖出 [{self.current_time}] - 价格: {price:.4f}, 数量: {position_size:.4f}",color='red')
             
         except Exception as e:
             self.logger.error(f"卖出错误: {str(e)}")

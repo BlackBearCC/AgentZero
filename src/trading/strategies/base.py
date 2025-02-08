@@ -24,9 +24,9 @@ class BaseStrategy(bt.Strategy):
         """订单状态通知"""
         if order.status in [order.Completed]:
             self.trade_count += 1
-            self.logger.info(
-                f'{order.ordtypename()} 订单执行 @ {order.executed.price:.2f}'
-            )
+            # self.logger.info(
+            #     f'{order.ordtypename()} 订单执行 @ {order.executed.price:.2f}'
+            # )
             
     def get_analysis(self) -> Dict[str, Any]:
         """获取策略分析结果"""

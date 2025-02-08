@@ -1,164 +1,180 @@
-import asyncio
-import sys
+import pandas as pd
+import numpy as np
 from datetime import datetime
+import matplotlib.pyplot as plt
 from pathlib import Path
-import argparse
-import backtrader as bt
 from typing import Dict, Any
+import sys
 
 # 添加项目根目录到 Python 路径
 project_root = str(Path(__file__).parent.parent.parent)
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-# 使用绝对导入
+from src.trading.strategies.grid_strategy import GridStrategy
+from src.trading.feeds.crypto_feed import CCXTFeed
 from src.utils.logger import Logger
-from src.trading.feeds.crypto_feed import DataManager
-from src.trading.strategies.grid import SimpleGridStrategy
-
-# 创建回测专用logger
-logger = Logger("backtest")
-logger.info(f"添加 {project_root} 到 Python 路径")
-
-def parse_date(date_str):
-    """解析日期字符串为datetime对象"""
-    try:
-        return datetime.strptime(date_str, '%Y-%m-%d')
-    except ValueError as e:
-        raise argparse.ArgumentTypeError(f"无效的日期格式: {date_str}. 请使用 YYYY-MM-DD 格式")
 
 class BacktestRunner:
-    """回测运行器"""
-    
     def __init__(self):
-        self.logger = logger  # 使用全局logger
-        self.data_manager = DataManager()
-
-    async def run(self,
-                 symbol: str = 'DOGE/USDT',
-                 timeframe: str = '1m',
-                 start: datetime = None,
-                 end: datetime = None,
-                 initial_cash: float = 10000,
-                 commission: float = 0.001,
-                 strategy_params: Dict[str, Any] = None):
+        self.logger = Logger("backtest")  # 使用自定义Logger
+        
+    def load_data(self, 
+                 symbol: str,
+                 timeframe: str,
+                 start: datetime,
+                 end: datetime) -> pd.DataFrame:
+        """从CCXT加载数据"""
+        self.logger.info(f"开始获取数据: {symbol} {timeframe}")
+        
+        feed = CCXTFeed(
+            symbol=symbol,
+            timeframe=timeframe,
+            start=start,
+            end=end
+        )
+        
+        # 使用1分钟数据进行回测
+        df = feed._df_1m.copy()
+        # 将索引转换为timestamp列
+        df['timestamp'] = df.index
+        df = df.reset_index(drop=True)
+        return df
+        
+    def run(self,
+            symbol: str,
+            timeframe: str,
+            start: datetime,
+            end: datetime,
+            strategy_params: Dict[str, Any] = None,
+            plot: bool = True) -> Dict:
         """运行回测"""
-        try:
-            self.logger.info(f"初始化回测引擎 - {symbol}, {timeframe}")
-            cerebro = bt.Cerebro()
+        # 加载数据
+        data = self.load_data(symbol, timeframe, start, end)
+        
+        # 默认策略参数
+        default_params = {
+            'initial_capital': 10000,
+            'commission_rate': 0.001,
+            'grid_num': 20,
+            'price_range': 0.1,
+            'position_ratio': 0.01,
+            'take_profit': 0.005,
+            'symbol': symbol
+        }
+        
+        # 更新策略参数
+        if strategy_params:
+            default_params.update(strategy_params)
             
-            # 设置资金和手续费
-            cerebro.broker.setcash(initial_cash)
-            cerebro.broker.setcommission(commission=commission)
-            self.logger.info(f"设置初始资金: ${initial_cash:.2f}, 手续费率: {commission:.4f}")
+        self.logger.info("策略参数:")
+        for k, v in default_params.items():
+            self.logger.info(f"  {k}: {v}")
             
-            # 添加分析器
-            cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
-            cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
-            cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trades')
-            cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
+        # 创建并运行策略
+        self.logger.info("开始回测...")
+        strategy = GridStrategy(data=data, **default_params)
+        results = strategy.run()
+        
+        # 输出回测结果
+        self.print_results(results)
+        
+        # 使用策略的plot_results方法
+        if plot:
+            strategy.plot_results(results, data)
             
-            # 获取数据源
-            data_feeds = self.data_manager.get_feed(
-                symbol=symbol,
-                timeframe='1m',
-                start=start,
-                end=end
-            )
+        return results
+    
+    def print_results(self, results: Dict):
+        """打印回测结果"""
+        self.logger.info("====== 回测结果 ======")
+        self.logger.info(f"初始资金: ${results['initial_capital']:,.2f}")
+        self.logger.info(f"最终权益: ${results['final_equity']:,.2f}")
+        self.logger.info(f"总收益率: {results['total_return']:.2%}")
+        self.logger.info(f"总交易次数: {results['total_trades']}")
+        self.logger.info(f"胜率: {results['win_rate']:.2%}")
+        self.logger.info(f"平均收益率: {results['avg_return']:.2%}")
+        self.logger.info(f"最大回撤: {results['max_drawdown']:.2%}")
+        
+    def plot_results(self, results: Dict, price_data: pd.DataFrame):
+        """绘制回测结果"""
+        plt.style.use('seaborn')
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 12), height_ratios=[2, 1, 1])
+        
+        # 绘制价格和权益曲线
+        equity_curve = results['equity_curve']
+        ax1.plot(price_data.index, price_data['close'], label='Price', color='gray', alpha=0.5)
+        ax1_twin = ax1.twinx()
+        ax1_twin.plot(equity_curve['timestamp'], equity_curve['equity'], 
+                     label='Portfolio Value', color='blue')
+        ax1.set_title('Price and Equity Curve')
+        ax1.set_xlabel('Date')
+        ax1.set_ylabel('Price')
+        ax1_twin.set_ylabel('Portfolio Value ($)')
+        ax1.grid(True)
+        
+        # 合并两个轴的图例
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax1_twin.get_legend_handles_labels()
+        ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+        
+        # 绘制交易分布
+        if len(results['trades']) > 0:
+            returns = results['trades']['return']
+            ax2.hist(returns, bins=50, alpha=0.75)
+            ax2.set_title('Trade Returns Distribution')
+            ax2.set_xlabel('Return')
+            ax2.set_ylabel('Frequency')
+            ax2.grid(True)
             
-            # 只使用1分钟数据源
-            cerebro.adddata(data_feeds['execution'], name='execution')
-            
-            # 添加策略
-            self.logger.info("添加交易策略...")
-            if strategy_params:
-                cerebro.addstrategy(SimpleGridStrategy, **strategy_params)
-            else:
-                cerebro.addstrategy(SimpleGridStrategy)
-            
-            # 运行回测
-            self.logger.info(f"开始回测 - {symbol}, {timeframe}")
-            results = cerebro.run()
-            strat = results[0]
-            
-            # 获取分析结果
-            final_value = cerebro.broker.getvalue()
-            trade_analysis = strat.analyzers.trades.get_analysis()
-            
-            # 计算交易统计
-            total_trades = trade_analysis.get('total', {}).get('total', 0)
-            won_trades = trade_analysis.get('won', {}).get('total', 0)
-            lost_trades = trade_analysis.get('lost', {}).get('total', 0)
-            win_rate = (won_trades / total_trades * 100) if total_trades > 0 else 0
-            
-            # 计算盈亏统计
-            avg_won = trade_analysis.get('won', {}).get('pnl', {}).get('average', 0)
-            avg_lost = trade_analysis.get('lost', {}).get('pnl', {}).get('average', 0)
-            profit_factor = abs(avg_won / avg_lost) if avg_lost != 0 else 0
-            max_drawdown = strat.analyzers.drawdown.get_analysis().get('max', {}).get('drawdown', 0)
-            
-            # 记录回测结果
-            self.logger.info("\n=== 回测结果 ===")
-            self.logger.info(f"初始资金: ${initial_cash:.2f}")
-            self.logger.info(f"最终资金: ${final_value:.2f}")
-            self.logger.info(f"总收益率: {((final_value/initial_cash - 1) * 100):.2f}%")
-            self.logger.info(f"总交易次数: {total_trades}")
-            self.logger.info(f"胜率: {win_rate:.2f}%")
-            self.logger.info(f"盈亏比: {profit_factor:.2f}")
-            self.logger.info(f"平均盈利: ${avg_won:.2f}")
-            self.logger.info(f"平均亏损: ${abs(avg_lost):.2f}")
-            self.logger.info(f"最大回撤: {max_drawdown:.2f}%")
-            
-            # 绘制图表
-            # cerebro.plot(style='candlestick', volume=False)
-            
-            return {
-                'final_value': final_value,
-                'total_trades': total_trades,
-                'win_rate': win_rate,
-                'profit_factor': profit_factor,
-                'max_drawdown': max_drawdown
-            }
-            
-        except Exception as e:
-            self.logger.error(f"回测执行失败: {str(e)}")
-            raise
+        # 绘制回撤
+        equity_series = equity_curve['equity']
+        running_max = equity_series.expanding().max()
+        drawdown = (equity_series - running_max) / running_max
+        
+        ax3.fill_between(equity_curve['timestamp'], drawdown, 0, 
+                        color='red', alpha=0.3)
+        ax3.set_title('Drawdown')
+        ax3.set_xlabel('Date')
+        ax3.set_ylabel('Drawdown %')
+        ax3.grid(True)
+        
+        plt.tight_layout()
+        plt.show()
 
-async def main():
-    """主函数"""
-    # 创建参数解析器
-    parser = argparse.ArgumentParser(description='网格交易策略回测')
-    parser.add_argument('--start', type=parse_date, default="2025-02-04",
-                      help='回测开始日期 (YYYY-MM-DD)')
-    parser.add_argument('--end', type=parse_date, default="2025-02-07",
-                      help='回测结束日期 (YYYY-MM-DD)')
-    parser.add_argument('--symbol', type=str, default='DOGE/USDT',
-                      help='交易对 (默认: DOGE/USDT)')
-    parser.add_argument('--timeframe', type=str, default='1m',
-                      help='K线周期 (默认: 1m)')
-    parser.add_argument('--cash', type=float, default=10000,
-                      help='初始资金 (默认: 10000)')
+def main():
+    # 创建回测运行器
+    runner = BacktestRunner()
     
-    args = parser.parse_args()
+    # 设置回测参数
+    symbol = 'DOGE/USDT'
+    timeframe = '1m'
+    start = datetime(2025, 2, 5)
+    end = datetime(2025, 2, 7)
     
-    # 检查日期范围
-    if args.end <= args.start:
-        logger.error("结束日期必须晚于开始日期")
-        return
-    
-
+    # 调整策略参数
+    strategy_params = {
+        'initial_capital': 10000,    # 初始资金
+        'commission_rate': 0.0004,   # 币安合约手续费率
+        'leverage': 10,              # 杠杆倍数
+        'grid_num': 10,             # 单边网格数量
+        'price_range': 0.1,        # 价格区间±2%（改小一些，避免过大波动）
+        'position_ratio': 0.8,      # 总资金使用比例80%
+        'long_pos_limit': 0.4,      # 多头仓位上限40%
+        'short_pos_limit': 0.4,     # 空头仓位上限40%
+        'min_price_precision': 0.01, # 最小价格精度
+        'min_qty_precision': 0.001   # 最小数量精度
+    }
     
     # 运行回测
-    runner = BacktestRunner()
-    await runner.run(
-        symbol=args.symbol,
-        timeframe=args.timeframe,
-        start=args.start,
-        end=args.end,
-        initial_cash=args.cash,
+    results = runner.run(
+        symbol=symbol,
+        timeframe=timeframe,
+        start=start,
+        end=end,
+        strategy_params=strategy_params,
+        plot=True
     )
 
 if __name__ == '__main__':
-    logger.info("启动回测脚本...")
-    asyncio.run(main())
-    logger.info("回测完成") 
+    main() 

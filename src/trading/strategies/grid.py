@@ -1,237 +1,215 @@
 import backtrader as bt
 import numpy as np
-from typing import List, Dict
+from typing import Dict
 from .base import BaseStrategy
 from src.utils.logger import Logger
 from datetime import timedelta
 
-class SimpleGridStrategy(BaseStrategy):
-    """币安风格中性合约网格策略(修复版)"""
+class BinanceGridStrategy(BaseStrategy):
+    """科学版双向合约网格策略"""
     
     params = (
-        ('grid_number', 20),         # 网格线数量
-        ('position_ratio', 0.01),    # 每格仓位比例(基于当前余额)
-        ('price_range_ratio', 0.1),  # 价格区间比例(上下各10%)
-        ('leverage', 10),            # 杠杆倍数
-        ('take_profit_ratio', 0.05),# 止盈比例(0.5%)
-        # ('stop_loss_ratio', 0.1),   # 止损比例(2%)
+        ('grids', 20),              # 单边网格数量
+        ('position_ratio', 0.01),   # 每格风险比例
+        ('price_range', 0.10),      # 价格波动区间(±10%)
+        ('leverage', 10),           # 杠杆倍数
+        ('take_profit', 0.005),     # 止盈间距(0.5%)
     )
 
     def __init__(self):
         super().__init__()
-        self.logger = Logger("strategy")
+        self.logger = Logger("grid_strategy")
         
         # 核心数据结构
-        self.active_orders = []      
-        self.grid_lines = []         
-        self.position_size = 0       
-        self.entry_prices = []       
-        
-        # 新增统计数据
-        self.trade_stats = {
-            'total_trades': 0,           # 总交易次数
-            'tp_trades': 0,              # 止盈次数
-            'total_profit': 0,           # 总盈利
-            'total_hold_time': timedelta(),  # 总持仓时间
-            'positions': {},             # 持仓记录
-            'closed_trades': []          # 已平仓交易记录
-        }
+        self.grid_orders = {}       # {price: order}
+        self.active_trades = {}     # {trade_id: trade_info}
+        self.grid_levels = []       # 所有网格价格
         
         # 策略状态
-        self.upper_bound = None      # 当前区间上界
-        self.lower_bound = None      # 当前区间下界
-        self.base_price = None       # 网格基准价
+        self.current_center = None  # 当前网格中心价
+        self.upper_limit = None     # 区间上界
+        self.lower_limit = None     # 区间下界
         
-        # 参数校验
-        if self.p.leverage < 1 or self.p.leverage > 125:
-            raise ValueError("杠杆倍数必须在1-125之间")
+        # 风控参数
+        self.max_drawdown = 0.20    # 最大回撤
+        self.equity_high = self.broker.startingcash
 
-        # 使用execution数据源
-        self.execution = self.datas[0]
+        # 添加交易统计
+        self.total_trades = 0
+        self.winning_trades = 0
+        self.total_profit = 0
+        self.total_loss = 0
 
     def notify_order(self, order):
-        """订单状态通知处理"""
-        current_time = self.execution.datetime.datetime()
+        """订单处理改进版"""
+        if order.status in [order.Submitted, order.Accepted]:
+            # 订单提交和接受状态不输出日志，避免日志过多
+            return
         
-        if order.status in [order.Completed]:
-            self.logger.info(f"订单成交 - 时间: {current_time}, "
-                            f"类型: {order.ordtypename()}, "
-                            f"数量: {order.size:.4f}, "
-                            f"价格: {order.executed.price:.4f}")
+        if order.status == order.Completed:
+            # 订单成交时输出详细信息
+            order_type = "开仓" if order.ordtype in [bt.Order.Limit, bt.Order.Stop] else "平仓"
+            direction = "买入" if order.isbuy() else "卖出"
+            self.logger.info(f"{order_type}{direction} - 价格: {order.executed.price:.5f}, "
+                            f"数量: {order.executed.size:.4f}, "
+                            f"时间: {self.data.datetime.datetime()}")
             
             # 移除已完成订单
-            if order in self.active_orders:
-                self.active_orders.remove(order)
+            if order.ref in self.grid_orders.values():
+                price = [k for k,v in self.grid_orders.items() if v == order.ref][0]
+                del self.grid_orders[price]
             
-            # 如果是网格单成交，挂出止盈单（下一个网格价格）
-            if order.ref not in self.trade_stats['positions']:
-                self.trade_stats['total_trades'] += 1
-                grid_price = order.created.price
-                grid_index = np.searchsorted(self.grid_lines, grid_price)
-                
-                if order.isbuy():
-                    # 多单止盈 - 使用上一个网格价格
-                    tp_price = self.grid_lines[grid_index + 1]
-                    tp_order = self.sell(size=abs(order.size), exectype=bt.Order.Limit, price=tp_price)
-                    self.active_orders.append(tp_order)
-                    self.trade_stats['positions'][tp_order.ref] = {
-                        'entry_time': current_time,
-                        'entry_price': order.executed.price,
-                        'size': order.size,
-                        'side': 'long',
-                        'grid_price': grid_price
-                    }
-                    self.logger.info(f"多单止盈挂单 - 时间: {current_time}, 价格: {tp_price:.4f}")
-                    
-                    # 在当前价格重新挂多单（如果该位置没有订单）
-                    if grid_price not in self.grid_orders:
-                        new_order = self.buy(size=self.calculate_position_size(), 
-                                           exectype=bt.Order.Limit, 
-                                           price=grid_price)
-                        self.active_orders.append(new_order)
-                        self.grid_orders[grid_price] = new_order
-                else:
-                    # 空单止盈 - 使用下一个网格价格
-                    tp_price = self.grid_lines[grid_index - 1]
-                    tp_order = self.buy(size=abs(order.size), exectype=bt.Order.Limit, price=tp_price)
-                    self.active_orders.append(tp_order)
-                    self.trade_stats['positions'][tp_order.ref] = {
-                        'entry_time': current_time,
-                        'entry_price': order.executed.price,
-                        'size': order.size,
-                        'side': 'short',
-                        'grid_price': grid_price
-                    }
-                    self.logger.info(f"空单止盈挂单 - 时间: {current_time}, 价格: {tp_price:.4f}")
-                    
-                    # 在当前价格重新挂空单（如果该位置没有订单）
-                    if grid_price not in self.grid_orders:
-                        new_order = self.sell(size=self.calculate_position_size(), 
-                                            exectype=bt.Order.Limit, 
-                                            price=grid_price)
-                        self.active_orders.append(new_order)
-                        self.grid_orders[grid_price] = new_order
+            # 处理开仓单
+            if order.ordtype in [bt.Order.Limit, bt.Order.Stop]:
+                self.process_entry_order(order)
+            
+            # 处理平仓单
+            elif order.ordtype == bt.Order.Close:
+                self.process_exit_order(order)
             
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.logger.warning(f"订单异常 - 时间: {current_time}, "
-                              f"状态: {order.status}, "
+            # 订单异常状态时输出警告信息
+            self.logger.warning(f"订单异常 - 状态: {order.getstatusname()}, "
                               f"类型: {order.ordtypename()}, "
-                              f"数量: {order.size:.4f}, "
-                              f"价格: {order.created.price:.4f}")
-            if order in self.active_orders:
-                self.active_orders.remove(order)
+                              f"时间: {self.data.datetime.datetime()}")
+
+    def process_entry_order(self, order):
+        """处理开仓逻辑"""
+        # 不做时间间隔检查，直接处理订单
+        current_price = self.data.close[0]
+        trade_side = 'long' if order.isbuy() else 'short'
+        
+        # 计算止盈价格
+        if trade_side == 'long':
+            tp_price = order.executed.price * (1 + self.p.take_profit)
+        else:
+            tp_price = order.executed.price * (1 - self.p.take_profit)
+        
+        # 立即挂出止盈单
+        tp_order = self.sell(size=order.size, exectype=bt.Order.Limit, 
+                            price=tp_price) if trade_side == 'long' else \
+                   self.buy(size=order.size, exectype=bt.Order.Limit, 
+                           price=tp_price)
+        
+        # 更新统计
+        self.total_trades += 1
+        
+        # 记录交易信息
+        self.active_trades[order.ref] = {
+            'side': trade_side,
+            'entry_price': order.executed.price,
+            'size': order.size,
+            'tp_order': tp_order.ref,
+            'entry_time': self.data.datetime.datetime()
+        }
+        
+        # 重新挂出网格单
+        self.place_grid_order(order.executed.price)
+
+    def place_grid_order(self, price):
+        """在指定价格挂出双向订单"""
+        # 多单（价格下方买入）
+        buy_price = price * (1 - self.p.take_profit/2)
+        if buy_price not in self.grid_orders:
+            size = self.calculate_position_size(buy_price)
+            order = self.buy(size=size, exectype=bt.Order.Limit, price=buy_price)
+            self.grid_orders[buy_price] = order.ref
+        
+        # 空单（价格上方卖出）
+        sell_price = price * (1 + self.p.take_profit/2)
+        if sell_price not in self.grid_orders:
+            size = self.calculate_position_size(sell_price)
+            order = self.sell(size=size, exectype=bt.Order.Limit, price=sell_price)
+            self.grid_orders[sell_price] = order.ref
+
+    def calculate_position_size(self, price):
+        """科学计算仓位"""
+        risk_amount = self.broker.getvalue() * self.p.position_ratio
+        leveraged_amount = risk_amount * self.p.leverage
+        return leveraged_amount / price
 
     def initialize_grid(self):
-        """初始化网格系统"""
-        self.cancel_all_orders()
+        """科学初始化网格"""
+        self.current_center = self.data.close[0]
+        self.upper_limit = self.current_center * (1 + self.p.price_range)
+        self.lower_limit = self.current_center * (1 - self.p.price_range)
         
-        # 获取当前价格作为基准价
-        self.base_price = self.execution.close[0]
-        price_range = self.base_price * self.p.price_range_ratio
+        # 生成网格价格
+        self.grid_levels = np.linspace(
+            self.lower_limit, 
+            self.upper_limit, 
+            self.p.grids*2 + 1  # 包含中线
+        )
         
-        # 计算网格边界
-        self.upper_bound = self.base_price + price_range
-        self.lower_bound = self.base_price - price_range
-        
-        # 生成网格线
-        self.grid_lines = np.linspace(
-            self.lower_bound, 
-            self.upper_bound, 
-            self.p.grid_number + 1
-        ).round(4)
-        
-        self.logger.info(f"初始化网格:")
-        self.logger.info(f"基准价格: {self.base_price:.4f}")
-        self.logger.info(f"价格区间: {self.lower_bound:.4f} - {self.upper_bound:.4f}")
-        self.logger.info(f"网格数量: {len(self.grid_lines)}")
-        self.logger.info(f"网格间距: {(self.upper_bound - self.lower_bound) / self.p.grid_number:.4f}")
-        
-        # 记录每个网格价格的订单状态
-        self.grid_orders = {}  # 用于跟踪每个价格位置的订单
-        
-        # 在每个网格线位置挂单
-        for i, price in enumerate(self.grid_lines[:-1]):  # 除了最后一个价格
-            if price > self.base_price:
-                # 价格线在当前价格上方，挂空单
-                sell_size = self.calculate_position_size()
-                order = self.sell(size=sell_size, exectype=bt.Order.Limit, price=price)
-                self.active_orders.append(order)
-                self.grid_orders[price] = order  # 记录该价格位置的订单
-                self.logger.info(f"挂空单: 价格={price:.4f}, 止盈={self.grid_lines[i+1]:.4f}, 数量={sell_size:.4f}")
-            elif price < self.base_price:
-                # 价格线在当前价格下方，挂多单
-                buy_size = self.calculate_position_size()
-                order = self.buy(size=buy_size, exectype=bt.Order.Limit, price=price)
-                self.active_orders.append(order)
-                self.grid_orders[price] = order  # 记录该价格位置的订单
-                self.logger.info(f"挂多单: 价格={price:.4f}, 止盈={self.grid_lines[i+1]:.4f}, 数量={buy_size:.4f}")
-
-    def cancel_all_orders(self):
-        """撤销所有未完成订单"""
-        for order in self.active_orders:
-            self.cancel(order)
-        self.active_orders.clear()
+        # 双向挂单
+        for price in self.grid_levels:
+            self.place_grid_order(price)
 
     def rebalance_grid(self):
-        """重新平衡网格系统"""
-        current_price = self.execution.close[0]
+        """网格再平衡逻辑"""
+        current_price = self.data.close[0]
         
-        # 当价格突破边界时重新初始化网格
-        if current_price > self.upper_bound or current_price < self.lower_bound:
-            self.logger.warning("价格突破区间，重新调整网格")
+        # 价格偏离超过区间50%时重置
+        if (current_price > self.current_center * (1 + self.p.price_range*0.5)) or \
+           (current_price < self.current_center * (1 - self.p.price_range*0.5)):
+            self.logger.warning("触发网格再平衡")
             self.initialize_grid()
-
-    def calculate_position_size(self):
-        """计算每格仓位大小"""
-        target_value = 200  # 每格固定价值200 USDT (已经考虑了杠杆)
-        current_price = self.execution.close[0]
-        return target_value / current_price  # 直接返回数量，因为target_value已经考虑了杠杆
 
     def next(self):
-        """策略主逻辑 - 每分钟执行一次"""
-        current_time = self.execution.datetime.datetime()
-        current_price = self.execution.close[0]
-        
-        # 添加详细日志
-        self.logger.debug(f"当前时间: {current_time}, 价格: {current_price:.4f}")
-        
-        # 首次运行初始化网格
-        if self.upper_bound is None:
-            self.base_price = self.execution.close[0]
+        """执行主逻辑"""
+        # 首次运行初始化
+        if not self.current_center:
             self.initialize_grid()
             return
+            
+        # 每4小时检查一次网格
+        if self.data.datetime.time().hour % 4 == 0:
+            self.rebalance_grid()
+            self.check_risk()
 
-    def get_balance_status(self):
-        """获取账户风险数据"""
-        equity = self.broker.getvalue()
-        # 由于回测环境不支持保证金查询，仅返回净值信息
-        return f"净值:{equity:.2f}"
+    def check_risk(self):
+        """风险控制"""
+        current_equity = self.broker.getvalue()
+        self.equity_high = max(self.equity_high, current_equity)
+        drawdown = (self.equity_high - current_equity)/self.equity_high
+        
+        if drawdown > self.max_drawdown:
+            self.logger.error(f"触发最大回撤限制 {drawdown:.2%}")
+            self.close_all_positions()
+
+    def close_all_positions(self):
+        """紧急平仓"""
+        for trade in list(self.active_trades.values()):
+            self.cancel(trade['tp_order'])
+            if trade['side'] == 'long':
+                self.sell(size=trade['size'])
+            else:
+                self.buy(size=trade['size'])
+        self.grid_orders.clear()
+
+    def process_exit_order(self, order):
+        """处理平仓订单逻辑"""
+        # 找到对应的开仓订单
+        entry_order_ref = [ref for ref, trade in self.active_trades.items() 
+                          if trade['tp_order'] == order.ref]
+        
+        if entry_order_ref:
+            trade_info = self.active_trades[entry_order_ref[0]]
+            
+            # 计算收益
+            if trade_info['side'] == 'long':
+                profit = (order.executed.price - trade_info['entry_price']) * trade_info['size']
+            else:
+                profit = (trade_info['entry_price'] - order.executed.price) * trade_info['size']
+            
+            # 记录交易结果
+            self.logger.info(f"平仓成功 - 方向: {trade_info['side']}, "
+                            f"收益: {profit:.2f}, "
+                            f"持仓时间: {self.data.datetime.datetime() - trade_info['entry_time']}")
+            
+            # 清理交易记录
+            del self.active_trades[entry_order_ref[0]]
 
     def stop(self):
-        """策略结束时输出统计信息"""
-        self.logger.info("\n====== 策略统计信息 ======")
-        self.logger.info(f"总交易次数: {self.trade_stats['total_trades']}")
-        self.logger.info(f"止盈次数: {self.trade_stats['tp_trades']}")
-        self.logger.info(f"总盈利: {self.trade_stats['total_profit']:.4f}")
-        
-        if self.trade_stats['tp_trades'] > 0:
-            avg_hold_time = self.trade_stats['total_hold_time'] / self.trade_stats['tp_trades']
-            avg_profit = self.trade_stats['total_profit'] / self.trade_stats['tp_trades']
-            self.logger.info(f"平均持仓时间: {avg_hold_time}")
-            self.logger.info(f"平均每单盈利: {avg_profit:.4f}")
-        
-        self.logger.info("\n====== 交易明细 ======")
-        for i, trade in enumerate(self.trade_stats['closed_trades'], 1):
-            self.logger.info(
-                f"交易 {i:04d}: "
-                f"方向={trade['side']} "
-                f"开仓时间={trade['entry_time']} "
-                f"平仓时间={trade['exit_time']} "
-                f"持仓时间={trade['hold_time']} "
-                f"开仓价={trade['entry_price']:.4f} "
-                f"平仓价={trade['exit_price']:.4f} "
-                f"数量={trade['size']:.4f} "
-                f"盈利={trade['profit']:.4f}"
-            )
-        
-        self.logger.info(f"\n策略运行结束 净值:{self.broker.getvalue():.2f}")
+        """策略终止"""
+        self.logger.info("最终净值: %.2f" % self.broker.getvalue())

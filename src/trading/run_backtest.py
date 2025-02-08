@@ -127,7 +127,7 @@ async def main():
     """主函数"""
     # 创建参数解析器
     parser = argparse.ArgumentParser(description='网格交易策略回测')
-    parser.add_argument('--start', type=parse_date, default="2024-12-01",
+    parser.add_argument('--start', type=parse_date, default="2025-01-01",
                       help='回测开始日期 (YYYY-MM-DD)')
     parser.add_argument('--end', type=parse_date, default="2025-02-05",
                       help='回测结束日期 (YYYY-MM-DD)')

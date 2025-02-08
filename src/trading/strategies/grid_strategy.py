@@ -1,89 +1,48 @@
 from typing import Dict, List
 import numpy as np
 import pandas as pd
-from src.trading.engine.backtest_engine import BacktestEngine
-from src.trading.engine.position import Position
+from src.trading.engine.backtest_engine import BacktestEngine, Order, Position
 import matplotlib.pyplot as plt
 from mplfinance.original_flavor import candlestick_ohlc
 import matplotlib.dates as mdates
+from src.utils.logger import Logger
 
 class GridStrategy(BacktestEngine):
-    def __init__(self,
-                 data: pd.DataFrame,
-                 symbol: str,
-                 grid_num: int = 20,
-                 price_range: float = 0.1,
-                 position_ratio: float = 0.01,
-                 take_profit: float = 0.005,
-                 **kwargs):
-        """
-        网格策略实现
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        initial_capital: float = 10000,
+        commission_rate: float = 0.001,
+        leverage: float = 1.0,
+        grid_num: int = 10,
+        price_range: float = 0.1,
+        position_ratio: float = 0.8,
+        long_pos_limit: float = 0.8,
+        short_pos_limit: float = 0.8,
+        **kwargs
+    ):
+        super().__init__(
+            data=data,
+            initial_capital=initial_capital,
+            commission_rate=commission_rate,
+            leverage=leverage,
+            **kwargs
+        )
         
-        Args:
-            data: DataFrame with OHLCV data
-            symbol: 交易对名称
-            grid_num: 单边网格数量，默认20个
-            price_range: 价格区间范围（如±10%）
-            position_ratio: 总资金使用比例
-            take_profit: 网格间距（止盈点）
-        """
-        super().__init__(data, **kwargs)
-        self.symbol = symbol
+        # 网格参数
         self.grid_num = grid_num
         self.price_range = price_range
-        self.position_ratio = position_ratio  # 修改为总资金使用比例
-        self.take_profit = take_profit
+        self.position_ratio = position_ratio
+        self.long_pos_limit = long_pos_limit
+        self.short_pos_limit = short_pos_limit
         
-        # 新增属性
-        self.long_pos_limit = kwargs.get('long_pos_limit', 0.4)  # 多头仓位上限 40%
-        self.short_pos_limit = kwargs.get('short_pos_limit', 0.4)  # 空头仓位上限 40%
-        self.min_price_precision = kwargs.get('min_price_precision', 0.01)  # 最小价格精度
-        self.min_qty_precision = kwargs.get('min_qty_precision', 0.001)  # 最小数量精度
-        
-        # 策略状态
-        self.grid_orders: Dict[float, Dict[str, float]] = {}  # price -> {'order_id': id, 'side': side, 'quantity': size}
+        # 网格状态
         self.center_price = None
-        self.positions = {}    # 记录每个价格点的持仓
+        self.grid_orders = {}  # price -> order
+        self.grid_positions = {}  # price -> position
         
-    def initialize_grid(self, center_price: float):
-        """初始化网格"""
-        self.center_price = center_price
-        self.grid_orders.clear()
-        self.positions.clear()
+        self.symbol = 'GRID'  # 使用固定symbol
         
-        # 计算网格间距
-        grid_step = center_price * (self.price_range / self.grid_num)
-        self.logger.info(f"网格间距: {grid_step:.8f}")
-        
-        # 修改资金分配逻辑
-        total_margin = self.current_capital * self.position_ratio
-        # 考虑仓位限制，将资金分配调整为不超过限制
-        max_long_margin = self.current_capital * self.long_pos_limit
-        max_short_margin = self.current_capital * self.short_pos_limit
-        margin_per_grid = min(
-            total_margin / (self.grid_num * 2),  # 原始计划的每格资金
-            max_long_margin / self.grid_num,     # 考虑多头限制的每格资金
-            max_short_margin / self.grid_num     # 考虑空头限制的每格资金
-        )
-        self.logger.info(f"每格资金量: {margin_per_grid:.2f}")
-        
-        # 计算每个网格的数量（考虑杠杆）
-        position_size = round((margin_per_grid * self.leverage) / center_price, 8)
-        
-        # 在中心价格上下对称放置网格
-        for i in range(self.grid_num):
-            # 上方网格
-            upper_price = round(center_price + (i + 1) * grid_step, 8)
-            # 下方网格
-            lower_price = round(center_price - (i + 1) * grid_step, 8)
-            
-            self.logger.info(f"创建网格 - 上方[{i}]: {upper_price}, 下方[{i}]: {lower_price}, 数量: {position_size}")
-            
-            # 上方放sell单，下方放buy单
-            if position_size >= self.min_qty_precision:
-                self._place_grid_order(upper_price, 'SELL', position_size)
-                self._place_grid_order(lower_price, 'BUY', position_size)
-
     def _check_position_limits(self, side: str, new_size: float) -> bool:
         """检查是否超出仓位限制"""
         # 计算新订单的保证金占用（考虑杠杆）
@@ -91,10 +50,10 @@ class GridStrategy(BacktestEngine):
         
         # 计算当前持仓的保证金占用
         current_long_margin = sum((p.quantity * self.center_price) / self.leverage 
-                                for p in self.positions.values() 
+                                for p in self.grid_positions.values() 
                                 if isinstance(p, Position) and p.side == 'LONG')
         current_short_margin = sum((p.quantity * self.center_price) / self.leverage 
-                                 for p in self.positions.values() 
+                                 for p in self.grid_positions.values() 
                                  if isinstance(p, Position) and p.side == 'SHORT')
         
         # 基于保证金计算仓位比例
@@ -107,30 +66,67 @@ class GridStrategy(BacktestEngine):
             self.logger.info(f"空头仓位检查 - 当前: {current_short_margin:.2f}, 新增: {new_margin:.2f}, 比例: {new_short_ratio:.2%}")
             return new_short_ratio <= self.short_pos_limit
 
+    def calculate_position_size(self, price: float) -> float:
+        """计算单个网格仓位大小"""
+        # 考虑杠杆的可用保证金
+        available_margin = self._calculate_equity(self.data.iloc[-1])
+        
+        # 单个网格的保证金使用比例
+        max_margin_per_grid = available_margin * self.position_ratio / self.grid_num
+        
+        # 考虑杠杆的仓位大小
+        position_size = (max_margin_per_grid * self.leverage) / price
+        
+        # 考虑手续费和滑点
+        position_size = position_size * 0.98
+        
+        return round(position_size, 2)
+
     def _place_grid_order(self, price: float, side: str, quantity: float):
-        """在指定价格放置网格订单"""
+        """放置网格订单"""
         # 检查仓位限制
         if not self._check_position_limits(side, quantity):
-            self.logger.warning(f"超出仓位限制 - {side} {quantity}")
+            self.logger.warning(f"超出仓位限制 - {side} {quantity}@{price}")
             return
-            
-        order = self.place_limit_order(
+        
+        # 使用引擎的place_order方法下单
+        order = self.place_order(
             symbol=self.symbol,
             side=side,
+            order_type='LIMIT',
             price=price,
             quantity=quantity
         )
         
-        self.grid_orders[price] = {
-            'order_id': order.id,
-            'side': side,
-            'quantity': quantity
-        }
-        self.logger.info(f"下单成功 - {side} {quantity}@{price}")
+        if order:
+            # 记录到网格订单字典中
+            self.grid_orders[price] = order
+            self.logger.info(f"放置网格订单 - {side} {quantity}@{price}")
+        
+        return order
+
+    def initialize_grid(self, center_price: float):
+        """初始化网格"""
+        self.center_price = center_price
+        grid_step = center_price * (self.price_range / self.grid_num)
+        
+        # 在中心价格上下创建网格
+        for i in range(1, self.grid_num + 1):
+            # 上方网格（做空）
+            sell_price = center_price + i * grid_step
+            # 下方网格（做多）
+            buy_price = center_price - i * grid_step
+            
+            # 计算网格订单数量
+            quantity = self.calculate_position_size(center_price)
+            
+            # 放置网格订单
+            self._place_grid_order(sell_price, 'SELL', quantity)
+            self._place_grid_order(buy_price, 'BUY', quantity)
 
     def on_order_filled(self, order):
         """订单成交回调"""
-        price = order.price
+        price = float(order.price)  # 确保价格是浮点数
         if price not in self.grid_orders:
             self.logger.warning(f"找不到对应的网格订单 - 价格: {price}")
             return
@@ -141,52 +137,34 @@ class GridStrategy(BacktestEngine):
         if order.side == 'BUY':
             if self._is_closing_short(price):  # 如果是平空单
                 # 找到对应的空头持仓
-                for pos_price, pos in self.positions.items():
+                for pos_price, pos in self.grid_positions.items():
+                    pos_price = float(pos_price)  # 转换为浮点数
                     if pos.side == 'SHORT' and pos_price < price:  # 找到对应的空头持仓
                         profit = (pos.entry_price - price) * order.quantity
-                        self.trades.append({
-                            'entry_time': pos.entry_time,
-                            'exit_time': order.filled_time,
-                            'symbol': order.symbol,
-                            'side': 'SHORT',
-                            'entry_price': pos.entry_price,
-                            'exit_price': price,
-                            'quantity': order.quantity,
-                            'profit': profit,
-                            'return': profit / (pos.entry_price * order.quantity)
-                        })
-                        self._close_short_position(pos_price, order)
+                        self._record_trade(pos, order, profit)
+                        del self.grid_positions[str(pos_price)]
                         break
             else:  # 开多单
-                self.positions[price] = Position(
+                self.grid_positions[str(price)] = Position(
                     symbol=order.symbol,
                     side='LONG',
                     entry_price=price,
                     quantity=order.quantity,
                     entry_time=order.filled_time
                 )
-            
+                
         else:  # 'SELL'
             if self._is_closing_long(price):  # 如果是平多单
                 # 找到对应的多头持仓
-                for pos_price, pos in self.positions.items():
+                for pos_price, pos in self.grid_positions.items():
+                    pos_price = float(pos_price)  # 转换为浮点数
                     if pos.side == 'LONG' and pos_price < price:  # 找到对应的多头持仓
                         profit = (price - pos.entry_price) * order.quantity
-                        self.trades.append({
-                            'entry_time': pos.entry_time,
-                            'exit_time': order.filled_time,
-                            'symbol': order.symbol,
-                            'side': 'LONG',
-                            'entry_price': pos.entry_price,
-                            'exit_price': price,
-                            'quantity': order.quantity,
-                            'profit': profit,
-                            'return': profit / (pos.entry_price * order.quantity)
-                        })
-                        self._close_long_position(pos_price, order)
+                        self._record_trade(pos, order, profit)
+                        del self.grid_positions[str(pos_price)]
                         break
             else:  # 开空单
-                self.positions[price] = Position(
+                self.grid_positions[str(price)] = Position(
                     symbol=order.symbol,
                     side='SHORT',
                     entry_price=price,
@@ -206,35 +184,15 @@ class GridStrategy(BacktestEngine):
 
     def _is_closing_long(self, price: float) -> bool:
         """检查是否是平多单"""
-        return any(pos.side == 'LONG' and pos.entry_price < price 
-                  for pos in self.positions.values())
+        return any(pos.side == 'LONG' and float(pos_price) < price 
+                  for pos_price, pos in self.grid_positions.items())
 
     def _is_closing_short(self, price: float) -> bool:
         """检查是否是平空单"""
-        return any(pos.side == 'SHORT' and pos.entry_price > price 
-                  for pos in self.positions.values())
+        return any(pos.side == 'SHORT' and float(pos_price) > price 
+                  for pos_price, pos in self.grid_positions.items())
 
-    def _close_long_position(self, price: float, order):
-        """平多仓"""
-        # 找到对应的多头持仓
-        for pos_price, position in self.positions.items():
-            if position.side == 'LONG' and position.entry_price < price:
-                profit = (price - position.entry_price) * order.quantity
-                self._process_trade(position, order, profit)
-                del self.positions[pos_price]
-                break
-
-    def _close_short_position(self, price: float, order):
-        """平空仓"""
-        # 找到对应的空头持仓
-        for pos_price, position in self.positions.items():
-            if position.side == 'SHORT' and position.entry_price > price:
-                profit = (position.entry_price - price) * order.quantity
-                self._process_trade(position, order, profit)
-                del self.positions[pos_price]
-                break
-
-    def _process_trade(self, position: Position, order, profit: float):
+    def _record_trade(self, position: Position, order, profit: float):
         """处理交易记录"""
         self.trades.append({
             'entry_time': position.entry_time,
@@ -248,27 +206,8 @@ class GridStrategy(BacktestEngine):
             'return': profit / (position.entry_price * order.quantity / self.leverage)
         })
 
-    def calculate_position_size(self, price: float) -> float:
-        """计算单个网格仓位大小"""
-        # 考虑杠杆的可用保证金
-        available_margin = self.current_capital
-        
-        # 单个网格的保证金使用比例
-        max_margin_per_grid = available_margin * self.position_ratio / self.grid_num
-        
-        # 考虑杠杆的仓位大小
-        position_size = (max_margin_per_grid * self.leverage) / price
-        
-        # 考虑手续费和滑点
-        position_size = position_size * 0.98
-        
-        return round(position_size, 2)
-
     def on_bar(self, bar: pd.Series):
         """策略主逻辑"""
-        # 更新资金状态
-        self.update_capital()
-        
         # 只在第一次初始化网格
         if self.center_price is None:
             self.logger.info(f"初始化网格，中心价格: {bar['close']}")
@@ -278,17 +217,18 @@ class GridStrategy(BacktestEngine):
         current_price = bar['close']
         
         # 记录当前资金状态
+        equity = self._calculate_equity(bar)
         self.logger.info(f"""
         ====== 资金状态 [{bar['timestamp']}] ======
         当前价格: {current_price:.8f}
-        账户权益: ${self.current_capital:.2f}
+        账户权益: ${equity:.2f}
         可用资金: ${self.available_capital:.2f}
-        持仓数量: {len(self.positions)}
+        持仓数量: {len(self.grid_positions)}
         挂单数量: {len(self.grid_orders)}
-        多头持仓: {sum(1 for p in self.positions.values() if p.side == 'LONG')}
-        空头持仓: {sum(1 for p in self.positions.values() if p.side == 'SHORT')}
-        多头占用保证金: ${sum((p.quantity * current_price) / self.leverage for p in self.positions.values() if p.side == 'LONG'):.2f}
-        空头占用保证金: ${sum((p.quantity * current_price) / self.leverage for p in self.positions.values() if p.side == 'SHORT'):.2f}
+        多头持仓: {sum(1 for p in self.grid_positions.values() if p.side == 'LONG')}
+        空头持仓: {sum(1 for p in self.grid_positions.values() if p.side == 'SHORT')}
+        多头占用保证金: ${sum((p.quantity * current_price) / self.leverage for p in self.grid_positions.values() if p.side == 'LONG'):.2f}
+        空头占用保证金: ${sum((p.quantity * current_price) / self.leverage for p in self.grid_positions.values() if p.side == 'SHORT'):.2f}
         ================================
         """)
         
@@ -385,7 +325,7 @@ class GridStrategy(BacktestEngine):
                         color='gray', linestyle='--', alpha=0.3)
         
         # 添加所有开仓点（包括未平仓的）
-        for price, position in self.positions.items():
+        for price, position in self.grid_positions.items():
             entry_num = mdates.date2num(position.entry_time)
             if position.side == 'LONG':
                 ax1.scatter(entry_num, price, 

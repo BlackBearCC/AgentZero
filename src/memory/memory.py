@@ -8,7 +8,7 @@ import asyncio
 from collections import deque
 
 class Memory:
-    def __init__(self, llm=None, max_history: int = 20, min_recent: int = 5):
+    def __init__(self, llm=None, max_history: int = 20, min_recent: int = 5, enable_summary: bool = True):
         # 使用字典存储不同用户的对话历史
         self.chat_histories: Dict[str, List[Message]] = {}
         # 使用字典存储不同用户的对话概要
@@ -25,6 +25,8 @@ class Memory:
         self._summary_tasks: Dict[str, asyncio.Task] = {}  # 每个用户的summary生成任务
         self._summary_queues: Dict[str, deque] = {}  # 每个用户的消息队列
         self._is_generating: Dict[str, bool] = {}  # 每个用户的生成状态
+        
+        self.enable_summary = enable_summary  # 新增概要开关
         
     def _ensure_user_state(self, user_id: str):
         """确保用户相关的状态已初始化"""
@@ -50,13 +52,11 @@ class Memory:
                 
         self.chat_histories[user_id].append(Message(role=role, content=content))
         
-        # 检查是否需要生成概要
-        if len(self.chat_histories[user_id]) > self.max_history:
-            # 将需要总结的消息添加到队列
+        # 仅在启用概要时进行处理
+        if self.enable_summary and len(self.chat_histories[user_id]) > self.max_history:
             messages_to_summarize = self.chat_histories[user_id][:-self.min_recent]
             self._summary_queues[user_id].append(messages_to_summarize)
             
-            # 如果没有正在运行的任务，启动新任务
             if not self._is_generating[user_id]:
                 self._summary_tasks[user_id] = asyncio.create_task(
                     self._process_summary_queue(user_id)

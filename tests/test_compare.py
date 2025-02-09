@@ -14,17 +14,21 @@ from openpyxl.styles import Alignment, Font
 class TestConfig:
     """测试配置类"""
     name: str  # 配置名称
+    enable_memory_recall: bool = True  # 新增记忆召回开关
     use_memory_queue: bool = True  # 是否使用记忆队列
     use_combined_query: bool = False  # 是否使用组合查询
+    use_event_summary: bool = True  # 新增事件概要开关
     memory_queue_limit: int = 15  # 记忆队列长度
     llm_model: str = "doubao"  # LLM模型选择
     llm_temperature: float = 0.7  # 温度参数
-    max_parallel: int = 2  # 新增最大并行数控制
+    max_parallel: int = 3  # 新增最大并行数控制
     
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "enable_memory_recall": self.enable_memory_recall,
             "use_memory_queue": self.use_memory_queue,
             "use_combined_query": self.use_combined_query,
+            "use_event_summary": self.use_event_summary,
             "memory_queue_limit": self.memory_queue_limit,
             "llm_model": self.llm_model,
             "llm_temperature": self.llm_temperature
@@ -55,12 +59,27 @@ class ComparisonTester:
         )
         self._logger = logging.getLogger(__name__)
         
-        # 预定义测试配置
+        # 更新测试配置
         self.test_configs = [
-            TestConfig(name="基础配置", use_memory_queue=False, use_combined_query=False),
-            TestConfig(name="记忆队列", use_memory_queue=True, use_combined_query=False),
-            TestConfig(name="组合查询", use_memory_queue=True, use_combined_query=True),
-            TestConfig(name="DeepSeek模型", use_memory_queue=True, use_combined_query=True, llm_model="deepseek"),
+            TestConfig(name="无记忆聊天", 
+                      enable_memory_recall=False,
+                      use_memory_queue=False,
+                      use_combined_query=False),
+            TestConfig(name="记忆召回-队列", 
+                      enable_memory_recall=True,
+                      use_memory_queue=True,
+                      use_combined_query=False),
+            TestConfig(name="记忆召回-无队列", 
+                      enable_memory_recall=True,
+                      use_memory_queue=True,
+                      use_combined_query=False),
+            TestConfig(name="事件概要", 
+                      use_memory_queue=False, 
+                      use_event_summary=True),
+            TestConfig(name="事件概要-记忆召回", 
+                      enable_memory_recall=True,
+                      use_memory_queue=False,
+                      use_event_summary=True),
         ]
         
         # 保存配置信息
@@ -92,6 +111,12 @@ class ComparisonTester:
             return
 
         try:
+            # 在结果中添加配置状态
+            for result in self.results:
+                config = next(c for c in self.test_configs if c.name == result['config_name'])
+                result['use_event_summary'] = config.use_event_summary
+                result['enable_memory_recall'] = config.enable_memory_recall
+
             # 生成合并单元格的对比表格
             comparison_data = {}
             for result in self.results:
@@ -108,7 +133,7 @@ class ComparisonTester:
 
             # 转换为DataFrame
             df = pd.DataFrame(comparison_data.values())
-            columns = ['test_id', 'topic', 'input', 'timestamp'] + [c.name for c in self.test_configs]
+            columns = ['test_id', 'topic', 'input', 'timestamp', 'enable_memory_recall'] + [c.name for c in self.test_configs]
             df = df.reindex(columns=columns)
 
             # 使用正确的文件写入模式

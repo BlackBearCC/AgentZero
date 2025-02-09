@@ -30,6 +30,8 @@ class ZeroAgent(BaseAgent):
         self.event_queue = []    # 存储历史事件
         self.entity_queue = []   # 存储相关记忆
         self.max_memory_length = 1000  # 每类记忆的最大长度
+        self.use_event_summary = config.get("use_event_summary", True)  # 新增配置项
+        self.enable_memory_recall = config.get("enable_memory_recall", True)  # 新增
         self._logger.debug(f"[ZeroAgent] 初始化完成，角色ID: {self.role_id}, 名称: {config.get('name')}")
         # 初始化系统提示词
         if config.get("system_prompt"):
@@ -198,9 +200,14 @@ class ZeroAgent(BaseAgent):
         
         self._logger.debug(f"[ZeroAgent] 实体记忆查询文本: {query_text}")
         
-        # 查询实体记忆
-        self._logger.debug("[ZeroAgent] 正在查询实体记忆...")
-        entity_memories = await self.memory.query_entity_memory(query_text)
+        # 修改实体记忆查询部分
+        if self.enable_memory_recall:
+            self._logger.debug("[ZeroAgent] 正在查询实体记忆...")
+            entity_memories = await self.memory.query_entity_memory(query_text)
+        else:
+            self._logger.debug("[ZeroAgent] 记忆召回已禁用")
+            entity_memories = {}
+        
         self._logger.debug(f"[ZeroAgent] 获取到实体记忆: {json.dumps(entity_memories, ensure_ascii=False)}")
 
         # 处理实体记忆
@@ -210,8 +217,8 @@ class ZeroAgent(BaseAgent):
         if entity_memories and isinstance(entity_memories, dict):
             self._logger.debug(f"[ZeroAgent] 开始处理实体记忆... 队列模式: {self.use_memory_queue}")
             
-            # 处理记忆事件
-            if 'memory_events' in entity_memories:
+            # 事件记忆处理（根据配置决定是否启用）
+            if self.use_event_summary and 'memory_events' in entity_memories:
                 processed_events = self._process_memories(
                     entity_memories['memory_events'], 
                     self.event_queue,
@@ -222,7 +229,7 @@ class ZeroAgent(BaseAgent):
                 
                 self._logger.debug(f"[ZeroAgent] 事件处理完成，数量: {len(processed_events)}")
                 
-                # 格式化事件记忆
+                # 格式化事件记忆（仅在启用时处理）
                 event_lines = []
                 for event in processed_events:
                     event_time = event['updatetime'].split('T')[0] if event.get('updatetime') else ''

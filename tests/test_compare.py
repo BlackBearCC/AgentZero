@@ -94,6 +94,7 @@ class ComparisonTester:
             # 构建请求数据
             request_data = {
                 "message": message,
+                "user_id": f"test_user_{config.name}",  # 为每个测试配置生成唯一的用户ID
                 "remark": f"配置测试: {config.name}"
             }
             
@@ -205,6 +206,7 @@ class ComparisonTester:
                         'topic': test_case['topic'],
                         'input': test_case['input'],
                         'config_name': config.name,
+                        'user_id': f"test_user_{config.name}",  # 添加用户ID到结果中
                         'response': response.get('response', ''),
                         'error': response.get('error', ''),
                         'timestamp': datetime.now().isoformat()

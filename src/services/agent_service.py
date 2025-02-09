@@ -203,16 +203,25 @@ class AgentService:
             self.logger.error(f"Failed to create temporary LLM: {str(e)}")
             return None
 
-    async def get_agent(self, agent_id: str, config: Optional[AgentConfig] = None) -> Optional[BaseAgent]:
-        """获取指定的 Agent 实例，支持临时配置"""
+    async def get_agent(
+        self, 
+        agent_id: str,
+        user_id: str,  # 添加user_id参数
+        config: Optional[AgentConfig] = None
+    ) -> Optional[BaseAgent]:
+        """获取指定的 Agent 实例"""
         agent = self.agents.get(agent_id)
-        if not agent or not config:
-            return agent
+        if not agent:
+            return None
+            
+        # 设置当前用户ID
+        agent.current_user_id = user_id
             
         # 如果需要临时切换 LLM
-        temp_llm = await self._get_llm_for_config(agent, config)
-        if temp_llm:
-            agent.llm = temp_llm
+        if config:
+            temp_llm = await self._get_llm_for_config(agent, config)
+            if temp_llm:
+                agent.llm = temp_llm
             
         return agent
 

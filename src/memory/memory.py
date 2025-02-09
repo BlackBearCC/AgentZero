@@ -9,8 +9,11 @@ from collections import deque
 
 class Memory:
     def __init__(self, llm=None, max_history: int = 20, min_recent: int = 5):
-        self.chat_history: List[Message] = []
-        self.summary: str = ""  # 对话概要
+        # 使用字典存储不同用户的对话历史
+        self.chat_histories: Dict[str, List[Message]] = {}
+        # 使用字典存储不同用户的对话概要
+        self.summaries: Dict[str, str] = {}
+        
         self.max_history = max_history
         self.min_recent = min_recent
         self.llm = llm
@@ -18,13 +21,26 @@ class Memory:
         self.entity_api_url = "http://192.168.52.114:8014/query"
         self.entity_api_headers = {"Content-Type": "application/json"}
         
-        # 新增：异步任务相关
-        self._summary_task = None  # 当前运行的summary生成任务
-        self._summary_queue = deque()  # 等待处理的消息队列
-        self._is_generating = False  # 是否正在生成summary
+        # 新增：异步任务相关 - 按用户ID隔离
+        self._summary_tasks: Dict[str, asyncio.Task] = {}  # 每个用户的summary生成任务
+        self._summary_queues: Dict[str, deque] = {}  # 每个用户的消息队列
+        self._is_generating: Dict[str, bool] = {}  # 每个用户的生成状态
         
-    async def add_message(self, role: str, content: str):
+    def _ensure_user_state(self, user_id: str):
+        """确保用户相关的状态已初始化"""
+        if user_id not in self.chat_histories:
+            self.chat_histories[user_id] = []
+        if user_id not in self.summaries:
+            self.summaries[user_id] = ""
+        if user_id not in self._summary_queues:
+            self._summary_queues[user_id] = deque()
+        if user_id not in self._is_generating:
+            self._is_generating[user_id] = False
+            
+    async def add_message(self, role: str, content: str, user_id: str):
         """添加新消息并在需要时触发异步生成概要"""
+        self._ensure_user_state(user_id)
+        
         if role == "assistant":
             try:
                 response_json = json.loads(content)
@@ -32,32 +48,34 @@ class Memory:
             except json.JSONDecodeError:
                 pass
                 
-        self.chat_history.append(Message(role=role, content=content))
+        self.chat_histories[user_id].append(Message(role=role, content=content))
         
         # 检查是否需要生成概要
-        if len(self.chat_history) > self.max_history:
+        if len(self.chat_histories[user_id]) > self.max_history:
             # 将需要总结的消息添加到队列
-            messages_to_summarize = self.chat_history[:-self.min_recent]
-            self._summary_queue.append(messages_to_summarize)
+            messages_to_summarize = self.chat_histories[user_id][:-self.min_recent]
+            self._summary_queues[user_id].append(messages_to_summarize)
             
             # 如果没有正在运行的任务，启动新任务
-            if not self._is_generating:
-                self._summary_task = asyncio.create_task(self._process_summary_queue())
+            if not self._is_generating[user_id]:
+                self._summary_tasks[user_id] = asyncio.create_task(
+                    self._process_summary_queue(user_id)
+                )
             
-    async def _process_summary_queue(self):
-        """处理概要生成队列"""
+    async def _process_summary_queue(self, user_id: str):
+        """处理特定用户的概要生成队列"""
         try:
-            self._is_generating = True
-            while self._summary_queue:
-                messages = self._summary_queue.popleft()
-                await self._generate_summary_for_messages(messages)
+            self._is_generating[user_id] = True
+            while self._summary_queues[user_id]:
+                messages = self._summary_queues[user_id].popleft()
+                await self._generate_summary_for_messages(messages, user_id)
                 
         finally:
-            self._is_generating = False
-            self._summary_task = None
+            self._is_generating[user_id] = False
+            self._summary_tasks[user_id] = None
             
-    async def _generate_summary_for_messages(self, messages_to_summarize: List[Message]):
-        """为指定消息生成概要"""
+    async def _generate_summary_for_messages(self, messages_to_summarize: List[Message], user_id: str):
+        """为指定用户的消息生成概要"""
         try:
             # 构建对话内容
             new_lines = ""
@@ -96,7 +114,7 @@ class Memory:
    - 过时的细节
 
 当前概要：
-{self.summary or '对话开始'}
+{self.summaries[user_id] or '对话开始'}
 
 新的对话内容：
 {new_lines}
@@ -115,42 +133,39 @@ class Memory:
                 summary = response
 
             summary = summary.replace("USER", "木木").replace("AI", "祁煜")
-            self.summary = summary
+            self.summaries[user_id] = summary
             
             # 更新历史记录
-            self.chat_history = self.chat_history[-self.min_recent:]
+            self.chat_histories[user_id] = self.chat_histories[user_id][-self.min_recent:]
                 
         except Exception as e:
-            self._logger.error(f"生成概要时出错: {str(e)}")
+            self._logger.error(f"生成用户 {user_id} 的概要时出错: {str(e)}")
         
-    async def get_full_memory(self) -> Tuple[str, List[Message]]:
-        """获取完整上下文（概要 + 最近消息）"""
-        return self.summary, self.chat_history
+    async def get_full_memory(self, user_id: str) -> Tuple[str, List[Message]]:
+        """获取指定用户的完整上下文"""
+        self._ensure_user_state(user_id)
+        return self.summaries[user_id], self.chat_histories[user_id]
     
-    async def get_summary(self) -> str:
-        """获取对话概要"""
-        return self.summary
+    async def get_summary(self, user_id: str) -> str:
+        """获取指定用户的对话概要"""
+        self._ensure_user_state(user_id)
+        return self.summaries[user_id]
         
-    async def get_recent_messages(self, limit: int = 10) -> List[Message]:
-        """获取最近的消息"""
-        return self.chat_history[-limit:]
+    async def get_recent_messages(self, user_id: str, limit: int = 10) -> List[Message]:
+        """获取指定用户的最近消息"""
+        self._ensure_user_state(user_id)
+        return self.chat_histories[user_id][-limit:]
         
-    async def query_entity_memory(self, query: str, limit: int = 5) -> Optional[List[Dict[str, Any]]]:
-        """查询实体记忆
-        
-        Args:
-            query: 查询文本
-            limit: 返回结果数量限制
-            
-        Returns:
-            List[Dict]: 实体记忆列表，每个实体包含相关信息
-            None: 查询失败时返回
-        """
+    async def query_entity_memory(self, query: str, limit: int = 5) -> Optional[Dict[str, Any]]:
+        """查询指定用户的实体记忆"""
         try:
             response = requests.post(
                 url=self.entity_api_url,
                 headers=self.entity_api_headers,
-                json={"query": query, "limit": limit}
+                json={
+                    "query": query,
+                    "limit": limit,
+                }
             )
             response.raise_for_status()
             return response.json()
@@ -159,27 +174,27 @@ class Memory:
             self._logger.error(f"查询实体记忆失败: {str(e)}")
             return None
             
-    async def add_entity_memory(self, entity_data: Dict[str, Any]) -> bool:
-        """添加实体记忆（预留接口）
-        
-        Args:
-            entity_data: 实体数据
-            
-        Returns:
-            bool: 是否添加成功
-        """
+    async def add_entity_memory(self, entity_data: Dict[str, Any], user_id: str) -> bool:
+        """添加指定用户的实体记忆"""
         # TODO: 实现实体记忆存储逻辑
         pass
         
-    async def update_entity_memory(self, entity_id: str, entity_data: Dict[str, Any]) -> bool:
-        """更新实体记忆（预留接口）
-        
-        Args:
-            entity_id: 实体ID
-            entity_data: 更新的实体数据
-            
-        Returns:
-            bool: 是否更新成功
-        """
+    async def update_entity_memory(self, entity_id: str, entity_data: Dict[str, Any], user_id: str) -> bool:
+        """更新指定用户的实体记忆"""
         # TODO: 实现实体记忆更新逻辑
-        pass 
+        pass
+
+    async def get_chat_history(self, user_id: str) -> List[Message]:
+        """获取聊天历史"""
+        self._ensure_user_state(user_id)
+        return self.chat_histories[user_id]
+
+    async def get_entity_memory(self, user_id: str) -> Dict[str, Any]:
+        """获取实体记忆"""
+        # 实现获取实体记忆的逻辑
+        return {}
+
+    async def get_processed_memory(self, user_id: str) -> str:
+        """获取处理后的记忆"""
+        self._ensure_user_state(user_id)
+        return self.summaries[user_id] 

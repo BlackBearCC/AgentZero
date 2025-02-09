@@ -74,18 +74,23 @@ class ChatService:
     async def stream_message(
         self,
         agent_id: str,
+        user_id: str,
         message: str,
         context: Optional[Dict[str, Any]] = None
     ) -> AsyncIterator[str]:
         """流式处理聊天消息"""
         try:
             # 获取 agent 实例
-            agent = await self.agent_service.get_agent(agent_id)
+            agent = await self.agent_service.get_agent(
+                agent_id=agent_id,
+                user_id=user_id  # 确保传递user_id
+            )
             if not agent:
                 raise ValueError(f"Agent {agent_id} not found")
 
             # 确保 context 存在
             context = context or {}
+            context["user_id"] = user_id  # 添加user_id到上下文
             remark = context.get("remark", "")
             config = context.get("config")
             
@@ -94,7 +99,12 @@ class ChatService:
             
             try:
                 # 生成流式回复
-                async for chunk in agent.astream_response(message, remark=remark):
+                async for chunk in agent.astream_response(
+                    message, 
+                    user_id=user_id,
+                    remark=remark,
+                    context=context
+                ):
                     yield chunk
             finally:
                 # 恢复原始配置

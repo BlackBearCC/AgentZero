@@ -21,56 +21,63 @@ class MySQLClient:
                 autocommit=True
             )
     
-    async def save_chat_record(self,
-                             role_id: str,
-                             chat_id: str,
-                             data: Dict[str, Any]) -> Optional[int]:
-        """保存聊天记录到单一表"""
-        if not self.pool:
-            await self.init_pool()
+    async def save_chat_record(
+        self,
+        role_id: str,
+        chat_id: str,
+        user_id: str,
+        data: Dict[str, Any]
+    ) -> bool:
+        """保存聊天记录"""
+        try:
+            sql = """
+            INSERT INTO chat_records (
+                role_id, chat_id, user_id, input, output,
+                query_text, remark, summary, 
+                raw_entity_memory, processed_entity_memory,
+                raw_history, processed_history, 
+                prompt, agent_info, timestamp
+            ) VALUES (
+                %s, %s, %s, %s, %s, 
+                %s, %s, %s, 
+                %s, %s,
+                %s, %s, 
+                %s, %s, %s
+            )
+            """
             
-        async with self.pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                try:
-                    sql = """
-                    INSERT INTO chat_records 
-                    (role_id, chat_id, input_text, output_text, query_text, remark,
-                     summary, raw_entity_memory, processed_entity_memory, 
-                     raw_history, processed_history, prompt, agent_info)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """
-                    
-                    # 序列化 JSON 字段
-                    raw_entity_memory_json = json.dumps(data.get('raw_entity_memory', {}), ensure_ascii=False)
-                    raw_history_json = json.dumps(data.get('raw_history', []), ensure_ascii=False)
-                    processed_history_json = json.dumps(data.get('processed_history', []), ensure_ascii=False)
-                    agent_info_json = json.dumps(data.get('agent_info', {}), ensure_ascii=False)
-                    
+            async with self.pool.acquire() as conn:
+                async with conn.cursor() as cur:
                     await cur.execute(sql, (
                         role_id,
                         chat_id,
+                        user_id,
                         data['input'],
                         data['output'],
                         data.get('query_text', ''),
                         data.get('remark', ''),
                         data.get('summary', ''),
-                        raw_entity_memory_json,
+                        json.dumps(data.get('raw_entity_memory', {}), ensure_ascii=False),
                         data.get('processed_entity_memory', ''),
-                        raw_history_json,
-                        processed_history_json,
+                        json.dumps(data.get('raw_history', []), ensure_ascii=False),
+                        json.dumps(data.get('processed_history', []), ensure_ascii=False),
                         data.get('prompt', ''),
-                        agent_info_json
+                        json.dumps(data.get('agent_info', {}), ensure_ascii=False),
+                        data.get('timestamp', datetime.now().isoformat())
                     ))
+                    await conn.commit()
+                    return True
                     
-                    return cur.lastrowid
-                    
-                except Exception as e:
-                    print(f"MySQL save error: {str(e)}")
-                    raise
+        except Exception as e:
+            print(f"MySQL save error: {str(e)}")
+            return False
     
-    async def get_chat_records(self,
-                             role_id: str,
-                             chat_id: str) -> List[Dict[str, Any]]:
+    async def get_chat_records(
+        self,
+        role_id: str,
+        user_id: str,
+        chat_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """获取聊天记录"""
         if not self.pool:
             await self.init_pool()
@@ -78,14 +85,16 @@ class MySQLClient:
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 try:
-                    await cur.execute(
-                        """
-                        SELECT * FROM chat_records 
-                        WHERE role_id = %s AND chat_id = %s
-                        ORDER BY created_at DESC
-                        """,
-                        (role_id, chat_id)
-                    )
+                    sql = """
+                    SELECT * FROM chat_records 
+                    WHERE role_id = %s AND user_id = %s
+                    """
+                    params = [role_id, user_id]
+                    if chat_id:
+                        sql += " AND chat_id = %s"
+                        params.append(chat_id)
+                    
+                    await cur.execute(sql, params)
                     records = await cur.fetchall()
                     
                     result = []

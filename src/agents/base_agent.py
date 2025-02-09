@@ -29,6 +29,7 @@ class BaseAgent(ABC):
         self.name = config.get("name", "Assistant")
         self.role_id = config.get("role_id")
         self.variables = config.get("variables", {})
+        self.current_user_id = None  # 添加当前用户ID字段
         
         self.llm = llm or DoubaoLLM(
             model_name="ep-20241113173739-b6v4g",
@@ -76,12 +77,49 @@ class BaseAgent(ABC):
         pass
         
     @abstractmethod
-    async def generate_response(self, input_text: str) -> str:
+    async def generate_response(self, input_text: str, user_id: str, remark: str = '') -> str:
         """生成回复"""
         pass
         
     @abstractmethod
-    async def astream_response(self, input_text: str) -> AsyncIterator[str]:
+    async def astream_response(self, input_text: str, user_id: str, remark: str = '', context: Dict[str, Any] = None) -> AsyncIterator[str]:
         """流式生成回复"""
         pass
+
+    async def _save_interaction(self, input_text: str, output_text: str, context: Dict[str, Any]) -> None:
+        """保存交互记录"""
+        await self._ensure_db()
+        
+        if not self.current_user_id:
+            raise ValueError("No user_id set for interaction")
+            
+        data = {
+            "user_id": self.current_user_id,
+            "input": input_text,
+            "output": output_text,
+            "raw_history": self.messages,
+            "processed_history": await self.memory.get_chat_history(self.current_user_id),
+            "raw_entity_memory": await self.memory.get_entity_memory(self.current_user_id),
+            "processed_entity_memory": await self.memory.get_processed_memory(self.current_user_id),
+            "prompt": await self.load_prompt(),
+            "agent_info": {
+                "name": self.name,
+                "role_id": self.role_id
+            }
+        }
+        
+        # 保存到Redis和MySQL
+        await self._db.redis.save_chat_record(
+            role_id=self.role_id,
+            chat_id=self.chat_id,
+            user_id=self.current_user_id,
+            data=data
+        )
+        
+        await self._db.mysql.save_chat_record(
+            role_id=self.role_id,
+            chat_id=self.chat_id,
+            user_id=self.current_user_id,
+            data=data
+        )
 

@@ -39,18 +39,26 @@ async def stream_chat(
     chat_service: ChatService = Depends(get_chat_service)
 ) -> StreamingResponse:
     """流式聊天接口"""
-    # 只有当 remark 有值时才创建 context
-    context = None
-    if request.remark:
+    try:
+        # 构建上下文
         context = {
-            "remark": request.remark
+            "remark": request.remark,
+            "config": request.config.dict() if request.config else None
         }
-    
-    return StreamingResponse(
-        chat_service.stream_message(
+        
+        # 调用服务层处理消息
+        message_stream = chat_service.stream_message(
             agent_id=agent_id,
+            user_id=request.user_id,
             message=request.message,
             context=context
-        ),
-        media_type="text/event-stream"
-    )
+        )
+        
+        return StreamingResponse(
+            message_stream,
+            media_type="text/event-stream"
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

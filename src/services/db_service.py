@@ -1,4 +1,4 @@
-from typing import Optional, AsyncGenerator
+from typing import Optional, AsyncGenerator, List, Dict, Any
 from contextlib import asynccontextmanager
 from src.utils.redis_client import RedisClient
 from src.utils.mysql_client import MySQLClient
@@ -16,12 +16,15 @@ class DBService:
     
     @classmethod
     async def initialize(cls) -> None:
-        """初始化数据库连接"""
+        """初始化数据库连接和表结构"""
         if not cls._instance:
             cls._instance = cls()
             await cls._instance.mysql.init_pool()
             if not cls._instance.redis.test_connection():
                 raise Exception("Redis connection failed!")
+            
+            # 初始化数据库表结构
+            await cls._instance._init_database()
     
     @classmethod
     async def get_instance(cls) -> 'DBService':
@@ -47,6 +50,47 @@ class DBService:
         if self.mysql.pool:
             self.mysql.pool.close()
             await self.mysql.pool.wait_closed()
+
+    async def get_chat_records(self, role_id: str, user_id: str) -> List[Dict[str, Any]]:
+        """获取指定用户的聊天记录"""
+        return await self.mysql.get_chat_records(role_id=role_id, user_id=user_id)
+
+    async def _init_database(self):
+        """初始化或升级数据库表结构"""
+        try:
+            # 创建或更新聊天记录表
+            chat_records_sql = """
+            CREATE TABLE IF NOT EXISTS chat_records (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                role_id VARCHAR(64) NOT NULL,
+                chat_id VARCHAR(64) NOT NULL,
+                user_id VARCHAR(64) NOT NULL,
+                input TEXT NOT NULL,
+                output TEXT NOT NULL,
+                query_text TEXT,
+                remark TEXT,
+                summary TEXT,
+                raw_entity_memory JSON,
+                processed_entity_memory TEXT,
+                raw_history JSON,
+                processed_history JSON,
+                prompt TEXT,
+                agent_info JSON,
+                timestamp DATETIME NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_user_role (user_id, role_id),
+                INDEX idx_chat (chat_id)
+            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+            """
+            
+            async with self.mysql.pool.acquire() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(chat_records_sql)
+                    await conn.commit()
+                    
+        except Exception as e:
+            print(f"数据库初始化失败: {str(e)}")
+            raise
 
 # 依赖注入函数
 async def get_db_service() -> DBService:

@@ -11,6 +11,7 @@ class AgentConfig(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    user_id: str = Field(..., description="用户ID,用于数据隔离")
     remark: Optional[str] = None
     config: Optional[AgentConfig] = None
 

@@ -16,6 +16,7 @@ class RedisClient:
     async def save_chat_record(self, 
                              role_id: str,
                              chat_id: str,
+                             user_id: str,
                              data: Dict[str, Any],
                              expire: int = 60 * 60 * 24 * 7):  # 默认保存7天
         """保存聊天记录
@@ -23,10 +24,11 @@ class RedisClient:
         Args:
             role_id: 角色ID
             chat_id: 对话ID
+            user_id: 用户ID
             data: 聊天数据
             expire: 过期时间(秒)
         """
-        key = f"chat:{role_id}:{chat_id}"
+        key = f"chat:{role_id}:{user_id}:{chat_id}"
         
         # # 添加调试日志
         # print(f"Saving to Redis - Key: {key}")
@@ -50,9 +52,9 @@ class RedisClient:
             print(f"Redis save error: {str(e)}")
             raise  # 抛出异常以便追踪问题
             
-    async def get_chat_record(self, role_id: str, chat_id: str) -> Optional[Dict[str, Any]]:
+    async def get_chat_record(self, role_id: str, chat_id: str, user_id: str) -> Optional[Dict[str, Any]]:
         """获取聊天记录"""
-        key = f"chat:{role_id}:{chat_id}"
+        key = f"chat:{role_id}:{user_id}:{chat_id}"
         try:
             data = self.redis.hgetall(key)
             if not data:

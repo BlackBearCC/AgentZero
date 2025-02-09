@@ -165,12 +165,25 @@ class ZeroAgent(BaseAgent):
         """构建上下文信息"""
         self._logger.debug(f"[ZeroAgent] 开始构建上下文，输入文本: {input_text}")
         
-        # 获取最新对话概要和历史消息
+        if not self.current_user_id:
+            raise ValueError("No user_id set for interaction")
+        
+        # 获取对话记忆
         self._logger.debug("[ZeroAgent] 正在获取对话记忆...")
-        recent_messages = await self.memory.get_recent_messages(limit=20)
-        summary = await self.memory.get_summary()
-        self._logger.debug(f"[ZeroAgent] 获取到对话概要: {summary}")
-        self._logger.debug(f"[ZeroAgent] 获取到历史消息数量: {len(recent_messages)}")
+        recent_messages = await self.memory.get_recent_messages(
+            user_id=self.current_user_id,  # 添加user_id
+            limit=20
+        )
+        
+        # 获取实体记忆
+        self._logger.debug("[ZeroAgent] 正在获取实体记忆...")
+        entity_memories = await self.memory.get_entity_memory(self.current_user_id)  # 添加user_id
+        
+        # 获取场景信息
+        scence_info = self._build_scene_info()
+        
+        # 获取对话概要
+        summary = await self.memory.get_processed_memory(self.current_user_id)  # 添加user_id
         
         # 构建查询文本
         query_text = input_text
@@ -190,8 +203,6 @@ class ZeroAgent(BaseAgent):
         entity_memories = await self.memory.query_entity_memory(query_text)
         self._logger.debug(f"[ZeroAgent] 获取到实体记忆: {json.dumps(entity_memories, ensure_ascii=False)}")
 
-        scence_info  = self._build_scene_info()
-        
         # 处理实体记忆
         event_memory = ""
         entity_memory = ""
@@ -312,6 +323,9 @@ class ZeroAgent(BaseAgent):
         
         await self._ensure_db()
         
+        if not self.current_user_id:
+            raise ValueError("No user_id set for interaction")
+            
         # 获取完整的 LLM 信息
         self._logger.debug("[ZeroAgent] 正在获取LLM信息...")
         agent_info = {
@@ -341,17 +355,18 @@ class ZeroAgent(BaseAgent):
         ]
         
         data = {
+            "user_id": self.current_user_id,  # 添加用户ID
             "input": input_text,
             "output": output_text,
-            "query_text": context.get("query_text", ""),  # 添加查询文本
-            "remark": context.get("remark", ""),  # 添加备注信息
+            "query_text": context.get("query_text", ""),
+            "remark": context.get("remark", ""),
             "summary": context["summary"],
             "raw_entity_memory": context["raw_entity_memory"],
             "processed_entity_memory": context["processed_entity_memory"],
             "raw_history": raw_history,
             "processed_history": history_messages,
             "prompt": context["prompt"],
-            "agent_info": agent_info,  # 使用更新后的 agent_info
+            "agent_info": agent_info,
             "timestamp": datetime.now().isoformat()
         }
         
@@ -360,6 +375,7 @@ class ZeroAgent(BaseAgent):
         await self._db.redis.save_chat_record(
             role_id=self.role_id,
             chat_id=self.chat_id,
+            user_id=self.current_user_id,  # 添加用户ID
             data=data
         )
         
@@ -367,43 +383,54 @@ class ZeroAgent(BaseAgent):
         await self._db.mysql.save_chat_record(
             role_id=self.role_id,
             chat_id=self.chat_id,
+            user_id=self.current_user_id,
             data=data
         )
         
         # 更新对话历史
         self._logger.debug("[ZeroAgent] 正在更新对话历史...")
-        await self.memory.add_message("user", input_text)
-        await self.memory.add_message("assistant", output_text)
+        await self.memory.add_message("user", input_text, self.current_user_id)
+        await self.memory.add_message("assistant", output_text, self.current_user_id)
         
         self._logger.debug("[ZeroAgent] 交互记录保存完成")
 
-    async def generate_response(self, input_text: str, remark: str = '') -> str:
+    async def generate_response(self, input_text: str, user_id: str, remark: str = '') -> str:
         """生成回复"""
         self._logger.debug(f"[ZeroAgent] 开始生成回复，输入文本: {input_text}")
         try:
+            # 设置当前用户ID
+            self.current_user_id = user_id
+            
             # 生成新的 chat_id
             self.chat_id = str(uuid.uuid4())
             
             context = await self._build_context(input_text, remark)
             self._logger.debug("[ZeroAgent] 正在调用LLM生成回复...")
+            
+            # 添加用户消息到历史记录
+            await self.memory.add_message("user", input_text, user_id)  # 添加 user_id
+            
             response = await self.llm.agenerate(context["messages"])
             self._logger.debug(f"[ZeroAgent] LLM返回响应: {response}")
             
             await self._save_interaction(input_text, response, context)
+            
+            # 添加助手回复到历史记录
+            await self.memory.add_message("assistant", response, user_id)  # 添加 user_id
+            
             self._logger.debug("[ZeroAgent] 回复生成完成")
-
-                        # 更新对话历史
-            await self.memory.add_message("user", input_text)
-            await self.memory.add_message("assistant", response)
             return response
             
         except Exception as e:
             self._logger.error(f"[ZeroAgent] 生成回复时出错: {str(e)}")
             raise
             
-    async def astream_response(self, input_text: str, remark: str = '') -> AsyncIterator[str]:
+    async def astream_response(self, input_text: str, user_id: str, remark: str = '', context: Dict[str, Any] = None) -> AsyncIterator[str]:
         """流式生成回复"""
         try:
+            # 设置当前用户ID
+            self.current_user_id = user_id
+            
             # 生成新的对话ID
             self.chat_id = str(uuid.uuid4())
             self._logger.debug(f"[ZeroAgent] 开始新对话，ID: {self.chat_id}")
@@ -416,6 +443,9 @@ class ZeroAgent(BaseAgent):
             self._logger.debug("[ZeroAgent] 开始流式生成回复...")
             response = ""
             
+            # 添加用户消息到历史记录
+            await self.memory.add_message("user", input_text, user_id)  # 添加 user_id
+            
             async for chunk in self.llm.astream(context["messages"]):
                 response += chunk
                 yield chunk
@@ -425,10 +455,8 @@ class ZeroAgent(BaseAgent):
                 
             await self._save_interaction(input_text, response, context)
             
-            # 更新对话历史
-            self._logger.debug("[ZeroAgent] 正在更新对话历史...")
-            await self.memory.add_message("user", input_text)
-            await self.memory.add_message("assistant", response)
+            # 添加助手回复到历史记录
+            await self.memory.add_message("assistant", response, user_id)  # 添加 user_id
             
             self._logger.debug("[ZeroAgent] 流式对话完成")
                 

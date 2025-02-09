@@ -8,6 +8,7 @@ import logging
 import aiohttp
 from dataclasses import dataclass
 import pandas as pd
+from openpyxl.styles import Alignment, Font
 
 @dataclass
 class TestConfig:
@@ -18,6 +19,7 @@ class TestConfig:
     memory_queue_limit: int = 15  # 记忆队列长度
     llm_model: str = "doubao"  # LLM模型选择
     llm_temperature: float = 0.7  # 温度参数
+    max_parallel: int = 2  # 新增最大并行数控制
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -33,6 +35,18 @@ class ComparisonTester:
         self.base_url = "http://localhost:8000"
         self.api_version = "v1"
         self.agent_id = "qiyu_001"
+        self.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        self.output_dir = Path('tests/results/comparison')
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 新的文件路径
+        self.comparison_table = self.output_dir / f'comparison_table_{self.timestamp}.xlsx'
+        self.raw_data_file = self.output_dir / f'raw_data_{self.timestamp}.csv'
+        self.config_file = self.output_dir / f'test_configs_{self.timestamp}.json'
+        
+        # 存储结果的数据结构
+        self.results = []
+        self.comparison_data = {}  # 用于存储对比数据 {test_id: {config_name: response}}
         
         # 设置日志
         logging.basicConfig(
@@ -43,28 +57,90 @@ class ComparisonTester:
         
         # 预定义测试配置
         self.test_configs = [
-            TestConfig(
-                name="基础配置",
-                use_memory_queue=False,
-                use_combined_query=False,
-            ),
-            TestConfig(
-                name="记忆队列",
-                use_memory_queue=True,
-                use_combined_query=False,
-            ),
-            TestConfig(
-                name="组合查询",
-                use_memory_queue=True,
-                use_combined_query=True,
-            ),
-            TestConfig(
-                name="DeepSeek模型",
-                use_memory_queue=True,
-                use_combined_query=True,
-                llm_model="deepseek",
-            ),
+            TestConfig(name="基础配置", use_memory_queue=False, use_combined_query=False),
+            TestConfig(name="记忆队列", use_memory_queue=True, use_combined_query=False),
+            TestConfig(name="组合查询", use_memory_queue=True, use_combined_query=True),
+            TestConfig(name="DeepSeek模型", use_memory_queue=True, use_combined_query=True, llm_model="deepseek"),
         ]
+        
+        # 保存配置信息
+        self._save_config_info()
+        self.semaphore = asyncio.Semaphore(3)  # 默认最大并行数3
+        
+        # 确保输出目录存在
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 初始化Excel文件
+        self._init_excel_file()
+
+    def _save_config_info(self):
+        """保存配置信息到JSON文件"""
+        config_info = [config.to_dict() for config in self.test_configs]
+        with open(self.config_file, 'w', encoding='utf-8') as f:
+            json.dump(config_info, f, ensure_ascii=False, indent=2)
+
+    def _init_excel_file(self):
+        """初始化Excel文件并写入表头"""
+        columns = ['test_id', 'topic', 'input', 'timestamp'] + [c.name for c in self.test_configs]
+        init_df = pd.DataFrame(columns=columns)
+        with pd.ExcelWriter(self.comparison_table, engine='openpyxl') as writer:
+            init_df.to_excel(writer, sheet_name='对比结果', index=False)
+
+    def save_comparison_results(self):
+        """保存对比结果"""
+        if not self.results:
+            return
+
+        try:
+            # 生成合并单元格的对比表格
+            comparison_data = {}
+            for result in self.results:
+                key = (result['test_id'], result['topic'], result['input'])
+                if key not in comparison_data:
+                    comparison_data[key] = {
+                        'test_id': result['test_id'],
+                        'topic': result['topic'],
+                        'input': result['input'],
+                        'timestamp': result['timestamp']
+                    }
+                response = result.get('response') or result.get('error', 'ERROR')
+                comparison_data[key][result['config_name']] = response
+
+            # 转换为DataFrame
+            df = pd.DataFrame(comparison_data.values())
+            columns = ['test_id', 'topic', 'input', 'timestamp'] + [c.name for c in self.test_configs]
+            df = df.reindex(columns=columns)
+
+            # 使用正确的文件写入模式
+            if Path(self.comparison_table).exists():
+                mode = 'a'
+                if_sheet_exists = 'overlay'
+            else:
+                mode = 'w'
+                if_sheet_exists = None
+
+            with pd.ExcelWriter(
+                self.comparison_table, 
+                engine='openpyxl', 
+                mode=mode, 
+                if_sheet_exists=if_sheet_exists
+            ) as writer:
+                df.to_excel(writer, sheet_name='对比结果', index=False, header=not writer.sheets)
+                
+                # 设置样式
+                worksheet = writer.sheets['对比结果']
+                for row in worksheet.iter_rows(min_row=2):
+                    for cell in row[:4]:  # 合并前四列
+                        cell.alignment = Alignment(vertical='top', wrap_text=True)
+                    for cell in row[4:]:  # 响应列
+                        cell.alignment = Alignment(vertical='top', wrap_text=True)
+                        cell.font = Font(color='000000')
+
+            self._logger.info(f"增量保存结果到: {self.comparison_table}")
+
+        except Exception as e:
+            self._logger.error(f"保存结果失败: {str(e)}")
+            raise
 
     async def load_test_cases(self) -> List[Dict[str, Any]]:
         """加载测试用例"""
@@ -112,117 +188,90 @@ class ComparisonTester:
                     error_text = await response.text()
                     raise Exception(f"API错误: {response.status} - {error_text}")
                 
-                # 读取流式响应
+                # 完整接收流式响应
                 response_text = ""
                 async for chunk in response.content.iter_chunks():
                     chunk_data, _ = chunk
                     chunk_text = chunk_data.decode('utf-8')
-                    print(chunk_text, end='', flush=True)
                     response_text += chunk_text
+                    print(chunk_text, end='', flush=True)  # 实时显示流式输出
                 
                 print("\n---")  # 换行分隔符
                 print()  # 空行
                 
-                return {"response": response_text}
+                return response_text
                             
         except Exception as e:
             self._logger.error(f"聊天请求失败: {str(e)}")
-            return {"error": str(e)}
+            return ""
 
-    def save_comparison_results(self, results: List[Dict[str, Any]], timestamp: str):
-        """保存对比结果到CSV"""
-        output_dir = Path('tests/results/comparison')
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # 确保结果不为空
-        if not results:
-            self._logger.warning("没有测试结果可保存")
-            return
-            
-        # 保存原始结果
-        detailed_file = output_dir / f'detailed_comparison_{timestamp}.csv'
-        df = pd.DataFrame(results)
-        df.to_csv(detailed_file, index=False, encoding='utf-8')
-        
-        try:
-            # 生成对比表格
-            if 'response' not in df.columns:
-                self._logger.warning("结果中缺少response字段，使用error字段代替")
-                df['response'] = df.apply(
-                    lambda row: row.get('response', row.get('error', 'No Response')), 
-                    axis=1
+    async def _process_batch(self, session, test_case):
+        """处理单个测试用例的所有配置"""
+        async with self.semaphore:
+            tasks = []
+            for config in self.test_configs:
+                task = asyncio.create_task(
+                    self._execute_test(session, test_case, config)
                 )
+                tasks.append(task)
+            return await asyncio.gather(*tasks)
+
+    async def _execute_test(self, session, test_case, config):
+        """执行单个配置的测试"""
+        try:
+            self._logger.info(f"\n--- 使用配置: {config.name} ---")
+            print(f"\n用户: {test_case['input']}")
+            print(f"[{config.name}] 回复: ", end='', flush=True)
             
-            pivot_table = pd.pivot_table(
-                df,
-                values='response',
-                index=['test_id', 'topic', 'input'],
-                columns=['config_name'],
-                aggfunc='first'
-            )
-            
-            comparison_file = output_dir / f'comparison_table_{timestamp}.csv'
-            pivot_table.to_csv(comparison_file, encoding='utf-8')
-            
+            response_text = await self.stream_chat(session, test_case['input'], config)
+            return {
+                'test_id': f"{test_case['test_type']}_{hash(test_case['input'])}",
+                'topic': test_case['topic'],
+                'input': test_case['input'],
+                'config_name': config.name,
+                'response': response_text,
+                'error': '',
+                'timestamp': datetime.now().isoformat()
+            }
         except Exception as e:
-            self._logger.error(f"生成对比表格失败: {str(e)}")
-            
-        self._logger.info(f"详细结果已保存到: {detailed_file}")
-        
-        # 保存配置信息
-        config_info = [config.to_dict() for config in self.test_configs]
-        config_file = output_dir / f'test_configs_{timestamp}.json'
-        with open(config_file, 'w', encoding='utf-8') as f:
-            json.dump(config_info, f, ensure_ascii=False, indent=2)
+            self._logger.error(f"测试执行失败: {str(e)}")
+            return {
+                'test_id': f"{test_case['test_type']}_{hash(test_case['input'])}",
+                'topic': test_case['topic'],
+                'input': test_case['input'],
+                'config_name': config.name,
+                'response': '',
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
 
     async def run_comparison_tests(self):
         """运行对比测试"""
         self._logger.info("开始执行对比测试...")
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        
         test_cases = await self.load_test_cases()
-        results = []
         
         async with aiohttp.ClientSession() as session:
-            current_topic = None
-            
-            for test_case in test_cases:
-                # 如果话题改变，打印分隔符
-                if test_case['topic'] != current_topic:
-                    current_topic = test_case['topic']
-                    self._logger.info(f"\n=== 开始新话题: {current_topic} ===")
+            # 按批次处理测试用例
+            batch_size = 3  # 每批处理3个测试用例
+            for i in range(0, len(test_cases), batch_size):
+                batch = test_cases[i:i+batch_size]
+                batch_tasks = [self._process_batch(session, tc) for tc in batch]
                 
-                for config in self.test_configs:
-                    self._logger.info(f"\n--- 使用配置: {config.name} ---")
-                    print(f"\n用户: {test_case['input']}")
-                    print(f"[{config.name}] 回复: ", end='', flush=True)
-                    
-                    # 执行测试
-                    response = await self.stream_chat(session, test_case['input'], config)
-                    
-                    # 记录结果
-                    result = {
-                        'test_id': f"{test_case['test_type']}_{len(results)}",
-                        'topic': test_case['topic'],
-                        'input': test_case['input'],
-                        'config_name': config.name,
-                        'user_id': f"test_user_{config.name}",  # 添加用户ID到结果中
-                        'response': response.get('response', ''),
-                        'error': response.get('error', ''),
-                        'timestamp': datetime.now().isoformat()
-                    }
-                    results.append(result)
-                    
-                    # 等待一段时间再进行下一次测试
-                    await asyncio.sleep(2)
-        
-        # 保存结果
-        self.save_comparison_results(results, timestamp)
+                for batch_result in await asyncio.gather(*batch_tasks):
+                    for result in batch_result:
+                        self.results.append(result)
+                    # 每批处理完成后保存
+                    self.save_comparison_results()
+                
+                await asyncio.sleep(5)  # 批次间隔
+
         self._logger.info("\n=== 对比测试完成 ===")
 
 async def main():
     """主函数"""
+    # 调整并行参数
     tester = ComparisonTester()
+    tester.semaphore = asyncio.Semaphore(2)  # 设置最大并行数
     await tester.run_comparison_tests()
 
 if __name__ == "__main__":

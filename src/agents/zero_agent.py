@@ -355,7 +355,7 @@ class ZeroAgent(BaseAgent):
         ]
         
         data = {
-            "user_id": self.current_user_id,  # 添加用户ID
+            "user_id": self.current_user_id,
             "input": input_text,
             "output": output_text,
             "query_text": context.get("query_text", ""),
@@ -375,7 +375,7 @@ class ZeroAgent(BaseAgent):
         await self._db.redis.save_chat_record(
             role_id=self.role_id,
             chat_id=self.chat_id,
-            user_id=self.current_user_id,  # 添加用户ID
+            user_id=self.current_user_id,
             data=data
         )
         
@@ -387,79 +387,51 @@ class ZeroAgent(BaseAgent):
             data=data
         )
         
-        # 更新对话历史
-        self._logger.debug("[ZeroAgent] 正在更新对话历史...")
-        await self.memory.add_message("user", input_text, self.current_user_id)
-        await self.memory.add_message("assistant", output_text, self.current_user_id)
-        
         self._logger.debug("[ZeroAgent] 交互记录保存完成")
 
     async def generate_response(self, input_text: str, user_id: str, remark: str = '') -> str:
         """生成回复"""
         self._logger.debug(f"[ZeroAgent] 开始生成回复，输入文本: {input_text}")
         try:
-            # 设置当前用户ID
             self.current_user_id = user_id
-            
-            # 生成新的 chat_id
             self.chat_id = str(uuid.uuid4())
             
+
+            
+            # 构建上下文并生成回复
             context = await self._build_context(input_text, remark)
-            self._logger.debug("[ZeroAgent] 正在调用LLM生成回复...")
-            
-            # 添加用户消息到历史记录
-            await self.memory.add_message("user", input_text, user_id)  # 添加 user_id
-            
             response = await self.llm.agenerate(context["messages"])
-            self._logger.debug(f"[ZeroAgent] LLM返回响应: {response}")
             
+            await self.memory.add_message("user", input_text, user_id)
+            await self.memory.add_message("assistant", response, user_id)
             await self._save_interaction(input_text, response, context)
             
-            # 添加助手回复到历史记录
-            await self.memory.add_message("assistant", response, user_id)  # 添加 user_id
-            
-            self._logger.debug("[ZeroAgent] 回复生成完成")
             return response
             
         except Exception as e:
             self._logger.error(f"[ZeroAgent] 生成回复时出错: {str(e)}")
             raise
-            
+
     async def astream_response(self, input_text: str, user_id: str, remark: str = '', context: Dict[str, Any] = None) -> AsyncIterator[str]:
         """流式生成回复"""
         try:
-            # 设置当前用户ID
             self.current_user_id = user_id
-            
-            # 生成新的对话ID
             self.chat_id = str(uuid.uuid4())
-            self._logger.debug(f"[ZeroAgent] 开始新对话，ID: {self.chat_id}")
-            self._logger.debug(f"[ZeroAgent] 输入文本: {input_text}")
-            self._logger.debug(f"[ZeroAgent] 备注信息: {remark}")
             
+            
+            # 构建上下文
             context = await self._build_context(input_text, remark)
-            
-            # 流式生成回复
-            self._logger.debug("[ZeroAgent] 开始流式生成回复...")
             response = ""
             
-            # 添加用户消息到历史记录
-            await self.memory.add_message("user", input_text, user_id)  # 添加 user_id
-            
+            # 流式生成回复
             async for chunk in self.llm.astream(context["messages"]):
                 response += chunk
                 yield chunk
             
-            self._logger.debug("[ZeroAgent] 流式生成完成")
-            self._logger.debug(f"[ZeroAgent] 完整响应: {response}")
-                
+            await self.memory.add_message("user", input_text, user_id)
+            await self.memory.add_message("assistant", response, user_id)
             await self._save_interaction(input_text, response, context)
             
-            # 添加助手回复到历史记录
-            await self.memory.add_message("assistant", response, user_id)  # 添加 user_id
-            
-            self._logger.debug("[ZeroAgent] 流式对话完成")
-                
         except Exception as e:
             self._logger.error(f"[ZeroAgent] 流式对话出错: {str(e)}")
             raise

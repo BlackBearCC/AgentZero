@@ -4,22 +4,36 @@ import aiomysql
 import json
 from datetime import datetime
 
+from src.utils.logger import Logger
+
+
 class MySQLClient:
     def __init__(self):
         self.pool = None
+        self._logger = Logger()
         
     async def init_pool(self):
         """初始化连接池"""
+        try:
+            if not self.pool:
+                self.pool = await aiomysql.create_pool(
+                    host=os.getenv('MYSQL_HOST', 'mysql'),
+                    port=int(os.getenv('MYSQL_PORT', 3306)),
+                    user=os.getenv('MYSQL_USER', 'root'),
+                    password=os.getenv('MYSQL_PASSWORD', 'Jing91101'),
+                    db=os.getenv('MYSQL_DATABASE', 'agent_zero'),
+                    charset='utf8mb4',
+                    autocommit=True
+                )
+                self._logger.debug("MySQL连接池初始化成功")
+        except Exception as e:
+            self._logger.error(f"MySQL连接池初始化失败: {str(e)}")
+            raise
+    
+    async def _ensure_pool(self):
+        """确保连接池已初始化"""
         if not self.pool:
-            self.pool = await aiomysql.create_pool(
-                host=os.getenv('MYSQL_HOST', 'mysql'),
-                port=int(os.getenv('MYSQL_PORT', 3306)),
-                user=os.getenv('MYSQL_USER', 'root'),
-                password=os.getenv('MYSQL_PASSWORD', 'Jing91101'),
-                db=os.getenv('MYSQL_DATABASE', 'agent_zero'),
-                charset='utf8mb4',
-                autocommit=True
-            )
+            await self.init_pool()
     
     async def save_chat_record(
         self,
@@ -30,6 +44,9 @@ class MySQLClient:
     ) -> bool:
         """保存聊天记录"""
         try:
+            # 确保连接池已初始化
+            await self._ensure_pool()
+            
             sql = """
             INSERT INTO chat_records (
                 role_id, chat_id, user_id, input, output,
@@ -66,10 +83,11 @@ class MySQLClient:
                         data.get('timestamp', datetime.now().isoformat())
                     ))
                     await conn.commit()
+                    self._logger.debug("MySQL记录保存成功")
                     return True
                     
         except Exception as e:
-            print(f"MySQL save error: {str(e)}")
+            self._logger.error(f"MySQL保存记录失败: {str(e)}")
             return False
     
     async def get_chat_records(

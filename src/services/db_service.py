@@ -19,7 +19,9 @@ class DBService:
         """初始化数据库连接和表结构"""
         if not cls._instance:
             cls._instance = cls()
+            # 先初始化MySQL连接池
             await cls._instance.mysql.init_pool()
+            # 再测试Redis连接
             if not cls._instance.redis.test_connection():
                 raise Exception("Redis connection failed!")
             

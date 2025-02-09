@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from fastapi import Depends
 from src.agents.base_agent import BaseAgent
 from src.agents.zero_agent import ZeroAgent
@@ -10,6 +10,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 from src.services.db_service import DBService
+from src.api.schemas.chat import AgentConfig
 
 # 加载环境变量
 load_dotenv()
@@ -187,9 +188,33 @@ class AgentService:
             self.logger.error(f"Failed to create agent: {str(e)}")
             raise
 
-    async def get_agent(self, agent_id: str) -> Optional[BaseAgent]:
-        """获取指定的 Agent 实例"""
-        return self.agents.get(agent_id)
+    async def _get_llm_for_config(self, agent: BaseAgent, config: Optional[AgentConfig]) -> Optional[Any]:
+        """根据配置获取临时 LLM 实例"""
+        if not config or not config.llm_model:
+            return None
+            
+        try:
+            llm_config = LLMConfig(
+                model_type=config.llm_model,
+                temperature=config.llm_temperature
+            )
+            return self._create_llm(llm_config)
+        except Exception as e:
+            self.logger.error(f"Failed to create temporary LLM: {str(e)}")
+            return None
+
+    async def get_agent(self, agent_id: str, config: Optional[AgentConfig] = None) -> Optional[BaseAgent]:
+        """获取指定的 Agent 实例，支持临时配置"""
+        agent = self.agents.get(agent_id)
+        if not agent or not config:
+            return agent
+            
+        # 如果需要临时切换 LLM
+        temp_llm = await self._get_llm_for_config(agent, config)
+        if temp_llm:
+            agent.llm = temp_llm
+            
+        return agent
 
     async def delete_agent(self, agent_id: str) -> bool:
         """删除 Agent 实例"""

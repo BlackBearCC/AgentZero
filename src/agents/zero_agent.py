@@ -277,13 +277,12 @@ class ZeroAgent(BaseAgent):
                 for event in processed_events:
                     event_time = event['updatetime'].split('T')[0] if event.get('updatetime') else ''
                     description = event.get('description', '')
+                    deepinsight = event.get('deepinsight', '')
                     memory_line = f"- {event_time}：{description}"
                     
-                    # 根据use_event_summary决定是否添加深层见解
-                    if self.use_event_summary:
-                        deepinsight = event.get('deepinsight', '')
-                        if deepinsight:
-                            memory_line += f" ({deepinsight})"
+                    # 总是添加深层见解，使用括号包裹
+                    if deepinsight:
+                        memory_line += f" ({deepinsight})"
                     
                     event_lines.append(memory_line)
                 

@@ -71,11 +71,25 @@ class ComparisonTester:
                       use_memory_queue=False,
                       use_combined_query=False,
                       use_event_summary=False),
-            TestConfig(name="记忆召回-有队列", 
+            TestConfig(name="记忆召回-有队列-15", 
                       enable_memory_recall=True,
                       use_memory_queue=True,
                       use_combined_query=False,
                       use_event_summary=False),
+            TestConfig(name="记忆召回-有队列-10", 
+                      enable_memory_recall=True,
+                      use_memory_queue=True,
+                      use_combined_query=False,
+                      use_event_summary=False,
+                      memory_queue_limit=10),
+            TestConfig(name="记忆召回-有队列-5", 
+                      enable_memory_recall=True,
+                      use_memory_queue=True,
+                      use_combined_query=False,
+                      use_event_summary=False,
+                      memory_queue_limit=5),
+
+            
 
             # TestConfig(name="事件概要", 
             #           enable_memory_recall=False,
@@ -119,26 +133,22 @@ class ComparisonTester:
             return
 
         try:
-            # 构建表格行
-            rows = []
+            # 确保配置顺序固定
+            self.test_configs = sorted(self.test_configs, key=lambda x: x.name)
+            
             columns = ['用户输入'] + [c.name for c in self.test_configs]
-            
-            # 检查文件是否存在以确定是否需要添加表头
             file_exists = Path(self.comparison_table).exists()
-            if not file_exists:
-                rows.append(columns)  # 添加表头
             
-            # 按测试用例分组结果
+            # 构建数据行（新增空行合并逻辑）
+            prev_has_content = False
+            rows = []
             grouped_results = {}
             for result in self.results:
                 key = (result['test_id'], result['topic'], result['input'])
-                if key not in grouped_results:
-                    grouped_results[key] = []
-                grouped_results[key].append(result)
+                grouped_results.setdefault(key, []).append(result)
 
-            # 添加数据行
-            for key in grouped_results:
-                test_case = grouped_results[key]
+            for key in grouped_results.values():
+                test_case = key
                 input_text = test_case[0]['input']
                 
                 # 用户输入行
@@ -158,20 +168,24 @@ class ComparisonTester:
                     memory_row.append(memory)
                 rows.append(memory_row)
                 
-                # 添加空行分隔
-                rows.append([''] * (len(self.test_configs) + 1))
+                rows.append([''] * (len(columns)))  # 空行
 
-            # 转换为DataFrame
+            # 创建DataFrame
             df = pd.DataFrame(rows, columns=columns if not file_exists else None)
 
             # 写入Excel
             with pd.ExcelWriter(
-                self.comparison_table, 
-                engine='openpyxl', 
+                self.comparison_table,
+                engine='openpyxl',
                 mode='a' if file_exists else 'w',
                 if_sheet_exists='overlay'
             ) as writer:
-                df.to_excel(writer, sheet_name='对比结果', index=False, header=not file_exists)
+                df.to_excel(
+                    writer,
+                    sheet_name='对比结果',
+                    index=False,
+                    header=not file_exists  # 仅首次添加表头
+                )
                 
                 # 设置样式
                 worksheet = writer.sheets['对比结果']
@@ -191,10 +205,10 @@ class ComparisonTester:
                         elif cell.value and cell.value.startswith('→'):
                             cell.font = Font(color='666666')  # 灰色
 
-            self._logger.info(f"保存结果到: {self.comparison_table}")
+            self._logger.info(f"结果保存成功: {self.comparison_table}")
 
         except Exception as e:
-            self._logger.error(f"保存结果失败: {str(e)}")
+            self._logger.error(f"保存失败: {str(e)}")
             raise
 
     async def load_test_cases(self) -> List[Dict[str, Any]]:

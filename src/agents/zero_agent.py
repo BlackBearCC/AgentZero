@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional, AsyncIterator
+from typing import Dict, Any, List, Optional, AsyncIterator, Union
 from src.agents.base_agent import BaseAgent
 from langchain.schema import (
     SystemMessage,
@@ -466,7 +466,13 @@ class ZeroAgent(BaseAgent):
             self._logger.error(f"[ZeroAgent] 生成回复时出错: {str(e)}")
             raise
 
-    async def astream_response(self, input_text: str, user_id: str, remark: str = '', config: Optional[Dict[str, Any]] = None) -> AsyncIterator[str]:
+    async def astream_response(
+        self, 
+        input_text: str, 
+        user_id: str, 
+        remark: str = '', 
+        config: Optional[Dict[str, Any]] = None
+    ) -> AsyncIterator[Union[str, Dict[str, Any]]]:
         """流式生成回复"""
         try:
             self.current_user_id = user_id
@@ -482,17 +488,26 @@ class ZeroAgent(BaseAgent):
             
             # 构建上下文
             context = await self._build_context(input_text, remark)
-            response = ""
+
             
-            # 流式生成回复
+            # 首先yield元数据
+            metadata = {
+                "processed_entity_memory": context["processed_entity_memory"],
+                "raw_entity_memory": context["raw_entity_memory"],
+                "agent_info": context["agent_info"]
+            }
+            yield metadata
+            
+            # 生成流式回复
+            response_text = ""
             async for chunk in self.llm.astream(context["messages"]):
-                response += chunk
+                response_text += chunk
                 yield chunk
             
-            # 只在流式响应完成后保存一次交互记录
+            # 保存交互记录
             await self.memory.add_message("user", input_text, user_id)
-            await self.memory.add_message("assistant", response, user_id)
-            await self._save_interaction(input_text, response, context)
+            await self.memory.add_message("assistant", response_text, user_id)
+            await self._save_interaction(input_text, response_text, context)
             
         except Exception as e:
             self._logger.error(f"[ZeroAgent] 流式对话出错: {str(e)}")

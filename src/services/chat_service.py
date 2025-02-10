@@ -4,6 +4,7 @@ from src.services.agent_service import AgentService, get_agent_service
 from src.utils.logger import Logger
 from src.api.schemas.chat import AgentConfig
 import asyncio
+import json
 
 class ChatService:
     def __init__(self, agent_service: AgentService):
@@ -83,7 +84,6 @@ class ChatService:
     ) -> AsyncIterator[str]:
         """流式处理聊天消息"""
         try:
-            # 获取 agent 实例
             agent = await self.agent_service.get_agent(
                 agent_id=agent_id,
                 user_id=user_id,
@@ -92,18 +92,23 @@ class ChatService:
             if not agent:
                 raise ValueError(f"Agent {agent_id} not found")
             
-            # 生成流式回复
+            metadata_sent = False
             async for chunk in agent.astream_response(
                 input_text=message,
                 user_id=user_id,
                 remark=remark or "",
                 config=config
             ):
-                yield chunk
+                if isinstance(chunk, dict):
+                    # 元数据使用data字段
+                    yield f"event: metadata\ndata: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                else:
+                    # 文本内容使用data字段
+                    yield f"data: {chunk}\n\n"
 
         except Exception as e:
             self.logger.error(f"Error streaming message: {str(e)}")
-            raise
+            yield f"event: error\ndata: {str(e)}\n\n"
 
 # 依赖注入函数
 async def get_chat_service(

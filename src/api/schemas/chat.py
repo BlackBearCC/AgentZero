@@ -19,7 +19,11 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = Field(None, description="包含实体召回等中间数据")
+
+class StreamChatResponse(BaseModel):
+    content: str
+    metadata: Optional[Dict[str, Any]] = Field(None, description="包含实体召回等中间数据")
 
 class AgentResponse(BaseModel):
     agent_id: str

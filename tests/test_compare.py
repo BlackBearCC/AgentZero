@@ -77,11 +77,11 @@ class ComparisonTester:
                       use_combined_query=False,
                       use_event_summary=False),
 
-            TestConfig(name="事件概要", 
-                      enable_memory_recall=False,
-                      use_memory_queue=False,
-                      use_combined_query=False, 
-                      use_event_summary=True),
+            # TestConfig(name="事件概要", 
+            #           enable_memory_recall=False,
+            #           use_memory_queue=False,
+            #           use_combined_query=False, 
+            #           use_event_summary=True),
 
             # TestConfig(name="事件概要-记忆召回", 
             #           enable_memory_recall=True,
@@ -124,6 +124,13 @@ class ComparisonTester:
                 config = next(c for c in self.test_configs if c.name == result['config_name'])
                 result['use_event_summary'] = config.use_event_summary
                 result['enable_memory_recall'] = config.enable_memory_recall
+                # 添加元数据列
+                if result.get('metadata'):
+                    result['processed_entity_memory'] = result['metadata'].get('processed_entity_memory', '')
+                    result['raw_entity_memory'] = json.dumps(result['metadata'].get('raw_entity_memory', {}), ensure_ascii=False)
+                else:
+                    result['processed_entity_memory'] = ''
+                    result['raw_entity_memory'] = '{}'
 
             # 生成合并单元格的对比表格
             comparison_data = {}
@@ -136,12 +143,25 @@ class ComparisonTester:
                         'input': result['input'],
                         'timestamp': result['timestamp']
                     }
-                response = result.get('response') or result.get('error', 'ERROR')
-                comparison_data[key][result['config_name']] = response
+                # 添加响应和元数据列
+                config_name = result['config_name']
+                comparison_data[key][f"{config_name}_response"] = result.get('response') or result.get('error', 'ERROR')
+                comparison_data[key][f"{config_name}_memory"] = result.get('processed_entity_memory', '')
+                comparison_data[key][f"{config_name}_raw_memory"] = result.get('raw_entity_memory', '{}')
 
             # 转换为DataFrame
             df = pd.DataFrame(comparison_data.values())
-            columns = ['test_id', 'topic', 'input', 'timestamp', 'enable_memory_recall'] + [c.name for c in self.test_configs]
+            
+            # 构建列名列表
+            base_columns = ['test_id', 'topic', 'input', 'timestamp']
+            config_columns = []
+            for config in self.test_configs:
+                config_columns.extend([
+                    f"{config.name}_response",
+                    f"{config.name}_memory",
+                    f"{config.name}_raw_memory"
+                ])
+            columns = base_columns + config_columns
             df = df.reindex(columns=columns)
 
             # 使用正确的文件写入模式
@@ -163,9 +183,11 @@ class ComparisonTester:
                 # 设置样式
                 worksheet = writer.sheets['对比结果']
                 for row in worksheet.iter_rows(min_row=2):
-                    for cell in row[:4]:  # 合并前四列
+                    # 基础信息列（前4列）
+                    for cell in row[:4]:
                         cell.alignment = Alignment(vertical='top', wrap_text=True)
-                    for cell in row[4:]:  # 响应列
+                    # 响应和记忆列
+                    for cell in row[4:]:
                         cell.alignment = Alignment(vertical='top', wrap_text=True)
                         cell.font = Font(color='000000')
 
@@ -196,39 +218,67 @@ class ComparisonTester:
                 
         return test_cases
 
-    async def stream_chat(self, session: aiohttp.ClientSession, message: str, config: TestConfig) -> str:
+    async def stream_chat(self, session: aiohttp.ClientSession, message: str, config: TestConfig) -> Dict[str, Any]:
         """调用流式对话 API"""
         url = f"{self.base_url}/api/{self.api_version}/chat/{self.agent_id}/stream"
         try:
-            # 构建请求数据
             request_data = {
                 "message": message,
-                "user_id": f"test_user_{config.name}",  # 为每个测试配置生成唯一的用户ID
+                "user_id": f"test_user_{config.name}",
                 "remark": f"配置测试: {config.name}",
-                "config": config.to_dict()  # 直接添加配置，不做默认值判断
+                "config": config.to_dict()
             }
+            
+            response_text = ""
+            metadata = None
             
             async with session.post(url, json=request_data) as response:
                 if response.status != 200:
                     error_text = await response.text()
                     raise Exception(f"API错误: {response.status} - {error_text}")
                 
-                # 完整接收流式响应
-                response_text = ""
-                async for chunk in response.content.iter_chunks():
-                    chunk_data, _ = chunk
-                    chunk_text = chunk_data.decode('utf-8')
-                    response_text += chunk_text
-                    print(chunk_text, end='', flush=True)  # 实时显示流式输出
+                # 读取SSE流
+                async for chunk in response.content:
+                    chunk_text = chunk.decode('utf-8').strip()
+                    if not chunk_text:
+                        continue
+                        
+                    # 解析SSE格式
+                    for line in chunk_text.split('\n'):
+                        if line.startswith('event: metadata'):
+                            continue
+                        if line.startswith('event: error'):
+                            continue
+                        if line.startswith('data: '):
+                            data = line[6:]  # 去掉 "data: " 前缀
+                            try:
+                                # 尝试解析为JSON（可能是元数据）
+                                data_json = json.loads(data)
+                                if isinstance(data_json, dict):
+                                    metadata = data_json
+                                else:
+                                    print(data, end='', flush=True)
+                                    response_text += data
+                            except json.JSONDecodeError:
+                                # 普通文本内容
+                                print(data, end='', flush=True)
+                                response_text += data
                 
                 print("\n---")  # 换行分隔符
                 print()  # 空行
                 
-                return response_text
+                return {
+                    "response": response_text,
+                    "metadata": metadata
+                }
                             
         except Exception as e:
             self._logger.error(f"聊天请求失败: {str(e)}")
-            return ""
+            return {
+                "response": "",
+                "metadata": None,
+                "error": str(e)
+            }
 
     async def run_comparison_tests(self):
         """运行对比测试"""

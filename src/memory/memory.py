@@ -8,7 +8,7 @@ import asyncio
 from collections import deque
 
 class Memory:
-    def __init__(self, llm=None, max_history: int = 3, min_recent: int = 5, enable_summary: bool = False):
+    def __init__(self, llm=None, max_history: int = 20, min_recent: int = 5, enable_summary: bool = False):
         # 使用字典存储不同用户的对话历史
         self.chat_histories: Dict[str, List[Message]] = {}
         # 使用字典存储不同用户的对话概要

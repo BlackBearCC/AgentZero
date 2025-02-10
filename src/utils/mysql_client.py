@@ -138,3 +138,43 @@ class MySQLClient:
                 except Exception as e:
                     print(f"MySQL get error: {str(e)}")
                     return [] 
+
+    async def save_summary(self, user_id: str, summary: str) -> bool:
+        """保存用户对话概要"""
+        try:
+            await self._ensure_pool()
+            
+            sql = """
+            INSERT INTO chat_summaries (
+                user_id, summary, created_at
+            ) VALUES (
+                %s, %s, NOW()
+            ) ON DUPLICATE KEY UPDATE 
+                summary = VALUES(summary),
+                updated_at = NOW()
+            """
+            
+            async with self.pool.acquire() as conn:
+                async with conn.cursor() as cur:
+                    # 先创建表（如果不存在）
+                    create_table_sql = """
+                    CREATE TABLE IF NOT EXISTS chat_summaries (
+                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        user_id VARCHAR(64) NOT NULL,
+                        summary TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        UNIQUE KEY idx_user_id (user_id)
+                    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                    """
+                    await cur.execute(create_table_sql)
+                    
+                    # 保存概要
+                    await cur.execute(sql, (user_id, summary))
+                    await conn.commit()
+                    self._logger.info(f"[MySQL] 成功保存用户 {user_id} 的对话概要")
+                    return True
+                    
+        except Exception as e:
+            self._logger.error(f"[MySQL] 保存用户 {user_id} 的对话概要失败: {str(e)}")
+            return False 

@@ -26,7 +26,7 @@ class ZeroAgent(BaseAgent):
         # 初始化配置
         self.use_memory_queue = config.get("use_memory_queue", False)  # 是否使用记忆队列
         self.use_combined_query = config.get("use_combined_query", False)  # 是否使用组合查询
-        self.memory_queue_limit = config.get("memory_queue_limit", 15)  # 默认队列长度为15
+        self.memory_queue_limit = config.get("memory_queue_limit", 10)  # 默认队列长度为10
         self.event_queue = []    # 存储历史事件
         self.entity_queue = []   # 存储相关记忆
         self.max_memory_length = 1000  # 每类记忆的最大长度

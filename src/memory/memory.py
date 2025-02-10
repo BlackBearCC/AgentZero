@@ -8,7 +8,7 @@ import asyncio
 from collections import deque
 
 class Memory:
-    def __init__(self, llm=None, max_history: int = 20, min_recent: int = 5, enable_summary: bool = True):
+    def __init__(self, llm=None, max_history: int = 3, min_recent: int = 5, enable_summary: bool = False):
         # 使用字典存储不同用户的对话历史
         self.chat_histories: Dict[str, List[Message]] = {}
         # 使用字典存储不同用户的对话概要
@@ -27,6 +27,8 @@ class Memory:
         self._is_generating: Dict[str, bool] = {}  # 每个用户的生成状态
         
         self.enable_summary = enable_summary  # 新增概要开关
+        
+        self._db = None  # 数据库服务实例
         
     def _ensure_user_state(self, user_id: str):
         """确保用户相关的状态已初始化"""
@@ -66,17 +68,31 @@ class Memory:
         """处理特定用户的概要生成队列"""
         try:
             self._is_generating[user_id] = True
+            self._logger.info(f"[Memory] 开始处理用户 {user_id} 的概要生成队列")
+            
             while self._summary_queues[user_id]:
                 messages = self._summary_queues[user_id].popleft()
+                self._logger.info(f"[Memory] 正在为用户 {user_id} 生成对话概要，消息数量: {len(messages)}")
                 await self._generate_summary_for_messages(messages, user_id)
                 
+        except Exception as e:
+            self._logger.error(f"[Memory] 处理用户 {user_id} 的概要队列时出错: {str(e)}")
         finally:
             self._is_generating[user_id] = False
             self._summary_tasks[user_id] = None
             
+    async def _ensure_db(self):
+        """确保数据库服务已初始化"""
+        if not self._db:
+            from src.services.db_service import DBService
+            self._db = await DBService.get_instance()
+
     async def _generate_summary_for_messages(self, messages_to_summarize: List[Message], user_id: str):
         """为指定用户的消息生成概要"""
         try:
+            # 确保数据库连接已初始化
+            await self._ensure_db()
+            
             # 构建对话内容
             new_lines = ""
             for msg in messages_to_summarize:
@@ -133,13 +149,24 @@ class Memory:
                 summary = response
 
             summary = summary.replace("USER", "木木").replace("AI", "祁煜")
+            self._logger.info(f"[Memory] 处理后的概要: \n{summary}")
+            
+            # 保存到数据库
+            save_result = await self._db.save_summary(user_id, summary)
+            if save_result:
+                self._logger.info(f"[Memory] 成功保存概要到数据库，用户ID: {user_id}")
+            else:
+                self._logger.error(f"[Memory] 保存概要到数据库失败，用户ID: {user_id}")
+            
+            # 更新内存中的概要
             self.summaries[user_id] = summary
             
             # 更新历史记录
             self.chat_histories[user_id] = self.chat_histories[user_id][-self.min_recent:]
+            self._logger.info(f"[Memory] 更新历史记录完成，保留最近 {self.min_recent} 条消息")
                 
         except Exception as e:
-            self._logger.error(f"生成用户 {user_id} 的概要时出错: {str(e)}")
+            self._logger.error(f"[Memory] 生成用户 {user_id} 的概要时出错: {str(e)}")
         
     async def get_full_memory(self, user_id: str) -> Tuple[str, List[Message]]:
         """获取指定用户的完整上下文"""

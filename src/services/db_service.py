@@ -94,6 +94,10 @@ class DBService:
             print(f"数据库初始化失败: {str(e)}")
             raise
 
+    async def save_summary(self, user_id: str, summary: str) -> bool:
+        """保存用户对话概要"""
+        return await self.mysql.save_summary(user_id=user_id, summary=summary)
+
 # 依赖注入函数
 async def get_db_service() -> DBService:
     async with DBService.get_db() as db:

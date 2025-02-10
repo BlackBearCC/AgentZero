@@ -77,11 +77,11 @@ class ComparisonTester:
                       use_combined_query=False,
                       use_event_summary=False),
 
-            # TestConfig(name="事件概要", 
-            #           enable_memory_recall=False,
-            #           use_memory_queue=False,
-            #           use_combined_query=False, 
-            #           use_event_summary=True),
+            TestConfig(name="事件概要", 
+                      enable_memory_recall=False,
+                      use_memory_queue=False,
+                      use_combined_query=False, 
+                      use_event_summary=True),
 
             # TestConfig(name="事件概要-记忆召回", 
             #           enable_memory_recall=True,

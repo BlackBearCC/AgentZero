@@ -123,9 +123,10 @@ class ComparisonTester:
             rows = []
             columns = ['用户输入'] + [c.name for c in self.test_configs]
             
-            # 添加表头（只在第一次写入）
-            if not Path(self.comparison_table).exists():
-                rows.append(columns)
+            # 检查文件是否存在以确定是否需要添加表头
+            file_exists = Path(self.comparison_table).exists()
+            if not file_exists:
+                rows.append(columns)  # 添加表头
             
             # 按测试用例分组结果
             grouped_results = {}
@@ -161,16 +162,16 @@ class ComparisonTester:
                 rows.append([''] * (len(self.test_configs) + 1))
 
             # 转换为DataFrame
-            df = pd.DataFrame(rows[1:], columns=columns if not Path(self.comparison_table).exists() else None)
+            df = pd.DataFrame(rows, columns=columns if not file_exists else None)
 
             # 写入Excel
             with pd.ExcelWriter(
                 self.comparison_table, 
                 engine='openpyxl', 
-                mode='a' if Path(self.comparison_table).exists() else 'w',
+                mode='a' if file_exists else 'w',
                 if_sheet_exists='overlay'
             ) as writer:
-                df.to_excel(writer, sheet_name='对比结果', index=False, header=not Path(self.comparison_table).exists())
+                df.to_excel(writer, sheet_name='对比结果', index=False, header=not file_exists)
                 
                 # 设置样式
                 worksheet = writer.sheets['对比结果']

@@ -66,14 +66,14 @@ class ComparisonTester:
                       use_memory_queue=False,
                       use_combined_query=False,
                       use_event_summary=False,),
-            TestConfig(name="记忆召回-队列", 
-                      enable_memory_recall=True,
-                      use_memory_queue=True,
-                      use_combined_query=False,
-                      use_event_summary=False),
             TestConfig(name="记忆召回-无队列", 
                       enable_memory_recall=True,
                       use_memory_queue=False,
+                      use_combined_query=False,
+                      use_event_summary=False),
+            TestConfig(name="记忆召回-有队列", 
+                      enable_memory_recall=True,
+                      use_memory_queue=True,
                       use_combined_query=False,
                       use_event_summary=False),
 
@@ -204,18 +204,9 @@ class ComparisonTester:
             request_data = {
                 "message": message,
                 "user_id": f"test_user_{config.name}",  # 为每个测试配置生成唯一的用户ID
-                "remark": f"配置测试: {config.name}"
+                "remark": f"配置测试: {config.name}",
+                "config": config.to_dict()  # 直接添加配置，不做默认值判断
             }
-            
-            # 只有当配置与默认值不同时才添加配置
-            if (config.use_memory_queue != True or 
-                config.use_combined_query != False or 
-                config.enable_memory_recall != True or 
-                config.memory_queue_limit != 15 or 
-                config.llm_model != "doubao" or 
-                config.llm_temperature != 0.7):
-                request_data["config"] = config.to_dict()
-
             
             async with session.post(url, json=request_data) as response:
                 if response.status != 200:

@@ -18,7 +18,7 @@ class Memory:
         self.min_recent = min_recent
         self.llm = llm
         self._logger = Logger()
-        self.entity_api_url = "http://192.168.52.114:8014/query"
+        self.entity_api_url = "http://192.168.52.114:8015/query"
         self.entity_api_headers = {"Content-Type": "application/json"}
         
         # 新增：异步任务相关 - 按用户ID隔离

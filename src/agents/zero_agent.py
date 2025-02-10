@@ -24,14 +24,14 @@ class ZeroAgent(BaseAgent):
         """
         super().__init__(config, llm, memory_llm, tools)
         # 初始化配置
-        self.use_memory_queue = config.get("use_memory_queue", True)  # 是否使用记忆队列
+        self.use_memory_queue = config.get("use_memory_queue", False)  # 是否使用记忆队列
         self.use_combined_query = config.get("use_combined_query", False)  # 是否使用组合查询
         self.memory_queue_limit = config.get("memory_queue_limit", 15)  # 默认队列长度为15
         self.event_queue = []    # 存储历史事件
         self.entity_queue = []   # 存储相关记忆
         self.max_memory_length = 1000  # 每类记忆的最大长度
-        self.use_event_summary = config.get("use_event_summary", True)  # 新增配置项
-        self.enable_memory_recall = config.get("enable_memory_recall", True)  # 新增
+        self.use_event_summary = config.get("use_event_summary", False)  # 新增配置项
+        self.enable_memory_recall = config.get("enable_memory_recall", False)  # 新增
         self._logger.debug(f"[ZeroAgent] 初始化完成，角色ID: {self.role_id}, 名称: {config.get('name')}")
         # 初始化系统提示词
         if config.get("system_prompt"):
@@ -129,14 +129,31 @@ class ZeroAgent(BaseAgent):
             处理后的记忆列表
         """
         try:
+            if not new_memories:
+                return queue if self.use_memory_queue else []
+            
+            # 对新召回的记忆进行排序和去重
+            unique_new_memories = []
+            seen_descriptions = set()
+            for memory in new_memories:
+                desc = memory.get('description', '')
+                if desc and desc not in seen_descriptions:
+                    seen_descriptions.add(desc)
+                    unique_new_memories.append(memory)
+                
+            # 按时间排序
+            sorted_new_memories = sorted(unique_new_memories, 
+                                       key=lambda x: x.get(time_key, ''), 
+                                       reverse=False)
+            
             if not self.use_memory_queue:
-                # 无队列模式：直接使用本次召回的记忆，但仍需排序
-                return sorted(new_memories, key=lambda x: x.get(time_key, ''), reverse=False)
+                # 无队列模式：只返回本次召回的记忆
+                return sorted_new_memories
             
-            # 队列模式：合并新旧记忆并处理
-            all_memories = queue + new_memories
+            # 队列模式：合并新旧记忆
+            all_memories = queue + sorted_new_memories
             
-            # 去重（基于description字段）
+            # 对合并后的记忆进行去重
             unique_memories = []
             seen_descriptions = set()
             for memory in all_memories:
@@ -145,17 +162,21 @@ class ZeroAgent(BaseAgent):
                     seen_descriptions.add(desc)
                     unique_memories.append(memory)
             
-            # 如果超出队列长度限制，保留最新的N条
-            if len(unique_memories) > self.memory_queue_limit:
-                unique_memories = unique_memories[-self.memory_queue_limit:]
-            
             # 按时间排序
-            return sorted(unique_memories, key=lambda x: x.get(time_key, ''), reverse=False)
+            sorted_memories = sorted(unique_memories, 
+                                   key=lambda x: x.get(time_key, ''), 
+                                   reverse=False)
+            
+            # 应用队列长度限制
+            if len(sorted_memories) > self.memory_queue_limit:
+                sorted_memories = sorted_memories[-self.memory_queue_limit:]
+            
+            return sorted_memories
             
         except Exception as e:
             self._logger.error(f"[ZeroAgent] 处理记忆失败: {str(e)}")
-            # 发生错误时，根据模式返回排序后的新记忆或现有队列
-            return sorted(new_memories, key=lambda x: x.get(time_key, ''), reverse=False) if not self.use_memory_queue else queue
+            # 发生错误时，根据模式返回现有队列或空列表
+            return queue if self.use_memory_queue else []
 
     def _format_memory_content(self, content: str) -> str:
         """格式化记忆内容，确保不超过最大长度"""
@@ -173,19 +194,15 @@ class ZeroAgent(BaseAgent):
         # 获取对话记忆
         self._logger.debug("[ZeroAgent] 正在获取对话记忆...")
         recent_messages = await self.memory.get_recent_messages(
-            user_id=self.current_user_id,  # 添加user_id
+            user_id=self.current_user_id,
             limit=20
         )
-        
-        # 获取实体记忆
-        self._logger.debug("[ZeroAgent] 正在获取实体记忆...")
-        entity_memories = await self.memory.get_entity_memory(self.current_user_id)  # 添加user_id
         
         # 获取场景信息
         scence_info = self._build_scene_info()
         
         # 获取对话概要
-        summary = await self.memory.get_processed_memory(self.current_user_id)  # 添加user_id
+        summary = await self.memory.get_processed_memory(self.current_user_id)
         
         # 构建查询文本
         query_text = input_text
@@ -200,15 +217,16 @@ class ZeroAgent(BaseAgent):
         
         self._logger.debug(f"[ZeroAgent] 实体记忆查询文本: {query_text}")
         
-        # 修改实体记忆查询部分
+        # 获取实体记忆
+        entity_memories = {}
         if self.enable_memory_recall:
             self._logger.debug("[ZeroAgent] 正在查询实体记忆...")
             entity_memories = await self.memory.query_entity_memory(query_text)
+            self._logger.debug(f"[ZeroAgent] 获取到实体记忆: {json.dumps(entity_memories, ensure_ascii=False)}")
         else:
             self._logger.debug("[ZeroAgent] 记忆召回已禁用")
-            entity_memories = {}
         
-        self._logger.debug(f"[ZeroAgent] 获取到实体记忆: {json.dumps(entity_memories, ensure_ascii=False)}")
+
 
         # 处理实体记忆
         event_memory = ""
@@ -221,15 +239,15 @@ class ZeroAgent(BaseAgent):
             if self.use_event_summary and 'memory_events' in entity_memories:
                 processed_events = self._process_memories(
                     entity_memories['memory_events'], 
-                    self.event_queue,
+                    self.event_queue if self.use_memory_queue else [],
                     'updatetime'
                 )
                 if self.use_memory_queue:
-                    self.event_queue = processed_events
+                    self.event_queue = processed_events[:self.memory_queue_limit]  # 应用队列长度限制
                 
                 self._logger.debug(f"[ZeroAgent] 事件处理完成，数量: {len(processed_events)}")
                 
-                # 格式化事件记忆（仅在启用时处理）
+                # 格式化事件记忆
                 event_lines = []
                 for event in processed_events:
                     event_time = event['updatetime'].split('T')[0] if event.get('updatetime') else ''
@@ -248,11 +266,11 @@ class ZeroAgent(BaseAgent):
                 if entity_memories['memory_entities']:
                     processed_entities = self._process_memories(
                         entity_memories['memory_entities'],
-                        self.entity_queue,
+                        self.entity_queue if self.use_memory_queue else [],
                         'updatetime'
                     )
                     if self.use_memory_queue:
-                        self.entity_queue = processed_entities
+                        self.entity_queue = processed_entities[:self.memory_queue_limit]  # 应用队列长度限制
                     
                     self._logger.debug(f"[ZeroAgent] 实体处理完成，数量: {len(processed_entities)}")
                     
@@ -266,14 +284,7 @@ class ZeroAgent(BaseAgent):
                     entity_memory = "\n".join(entity_lines)
                     entity_memory = self._format_memory_content(entity_memory)
         
-        summary = ""
-        # event_memory = ""
-        # entity_memory = ""
-        self._logger.debug(f"[ZeroAgent] 处理后的历史事件: {event_memory}")
-        self._logger.debug(f"[ZeroAgent] 处理后的相关记忆: {entity_memory}")
-                    
         # 更新提示词
-
         self._logger.debug("[ZeroAgent] 正在更新系统提示词...")
         sys_prompt = self.config["system_prompt"]
         sys_prompt = sys_prompt.replace("{{chat_summary}}", summary or "无")
@@ -302,7 +313,9 @@ class ZeroAgent(BaseAgent):
             "max_tokens": getattr(self.llm, "max_tokens", 4096),
             "use_memory_queue": self.use_memory_queue,
             "memory_queue_limit": self.memory_queue_limit,
-            "use_combined_query": self.use_combined_query
+            "use_combined_query": self.use_combined_query,
+            "use_event_summary": self.use_event_summary,
+            "enable_memory_recall": self.enable_memory_recall
         }
         
         context = {

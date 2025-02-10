@@ -233,24 +233,47 @@ class ComparisonTester:
             self._logger.error(f"聊天请求失败: {str(e)}")
             return ""
 
-    async def _process_batch(self, session, test_case):
-        """处理单个测试用例的所有配置"""
-        async with self.semaphore:
-            tasks = []
-            for config in self.test_configs:
-                task = asyncio.create_task(
-                    self._execute_test(session, test_case, config)
-                )
-                tasks.append(task)
-            return await asyncio.gather(*tasks)
+    async def run_comparison_tests(self):
+        """运行对比测试"""
+        self._logger.info("开始执行对比测试...")
+        test_cases = await self.load_test_cases()
+        
+        async with aiohttp.ClientSession() as session:
+            # 按批次处理测试用例
+            batch_size = 3  # 每批处理3个测试用例
+            for i in range(0, len(test_cases), batch_size):
+                batch = test_cases[i:i+batch_size]
+                self._logger.info(f"\n=== 开始处理第 {i//batch_size + 1} 批测试用例 ===")
+                
+                # 处理这一批次的所有测试用例
+                for test_case in batch:
+                    self._logger.info(f"\n--- 测试用例: {test_case['topic']} ---")
+                    
+                    # 为每个配置创建一个测试任务
+                    for config in self.test_configs:
+                        async with self.semaphore:  # 使用信号量控制并发
+                            self._logger.info(f"\n配置: {config.name}")
+                            print(f"\n用户: {test_case['input']}")
+                            print(f"[{config.name}] 回复: ", end='', flush=True)
+                            
+                            result = await self._execute_test(session, test_case, config)
+                            self.results.append(result)
+                    
+                    # 每个测试用例完成后保存结果
+                    self.save_comparison_results()
+                    
+                    # 测试用例之间添加短暂延迟
+                    await asyncio.sleep(1)
+                
+                # 批次之间添加较长延迟
+                self._logger.info(f"\n=== 第 {i//batch_size + 1} 批测试用例完成 ===")
+                await asyncio.sleep(5)
+
+            self._logger.info("\n=== 对比测试完成 ===")
 
     async def _execute_test(self, session, test_case, config):
         """执行单个配置的测试"""
         try:
-            self._logger.info(f"\n--- 使用配置: {config.name} ---")
-            print(f"\n用户: {test_case['input']}")
-            print(f"[{config.name}] 回复: ", end='', flush=True)
-            
             response_text = await self.stream_chat(session, test_case['input'], config)
             return {
                 'test_id': f"{test_case['test_type']}_{hash(test_case['input'])}",
@@ -273,33 +296,11 @@ class ComparisonTester:
                 'timestamp': datetime.now().isoformat()
             }
 
-    async def run_comparison_tests(self):
-        """运行对比测试"""
-        self._logger.info("开始执行对比测试...")
-        test_cases = await self.load_test_cases()
-        
-        async with aiohttp.ClientSession() as session:
-            # 按批次处理测试用例
-            batch_size = 3  # 每批处理3个测试用例
-            for i in range(0, len(test_cases), batch_size):
-                batch = test_cases[i:i+batch_size]
-                batch_tasks = [self._process_batch(session, tc) for tc in batch]
-                
-                for batch_result in await asyncio.gather(*batch_tasks):
-                    for result in batch_result:
-                        self.results.append(result)
-                    # 每批处理完成后保存
-                    self.save_comparison_results()
-                
-                await asyncio.sleep(5)  # 批次间隔
-
-        self._logger.info("\n=== 对比测试完成 ===")
-
 async def main():
     """主函数"""
     # 调整并行参数
     tester = ComparisonTester()
-    tester.semaphore = asyncio.Semaphore(2)  # 设置最大并行数
+    tester.semaphore = asyncio.Semaphore(3)  # 设置最大并行数
     await tester.run_comparison_tests()
 
 if __name__ == "__main__":

@@ -442,6 +442,7 @@ class ZeroAgent(BaseAgent):
                 response += chunk
                 yield chunk
             
+            # 只在流式响应完成后保存一次交互记录
             await self.memory.add_message("user", input_text, user_id)
             await self.memory.add_message("assistant", response, user_id)
             await self._save_interaction(input_text, response, context)

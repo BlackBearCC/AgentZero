@@ -42,30 +42,32 @@ class ChatService:
         self,
         agent_id: str,
         message: str,
+        user_id: str,
         context: Optional[Dict[str, Any]] = None
     ) -> str:
         """处理聊天消息"""
         try:
             # 获取 agent 实例
-            agent = await self.agent_service.get_agent(agent_id)
+            config = context.get("config") if context else None
+            agent = await self.agent_service.get_agent(
+                agent_id=agent_id,
+                user_id=user_id,
+                config=config
+            )
             if not agent:
                 raise ValueError(f"Agent {agent_id} not found")
 
             # 确保 context 存在
             context = context or {}
             remark = context.get("remark", "")
-            config = context.get("config")
             
-            # 应用临时配置
-            original_config = await self._apply_temp_config(agent, config)
-            
-            try:
-                # 生成回复
-                response = await agent.generate_response(message, remark=remark)
-                return response
-            finally:
-                # 恢复原始配置
-                await self._restore_config(agent, original_config)
+            # 生成回复
+            response = await agent.generate_response(
+                message, 
+                user_id=user_id,
+                remark=remark
+            )
+            return response
 
         except Exception as e:
             self.logger.error(f"Error processing message: {str(e)}")
@@ -76,39 +78,28 @@ class ChatService:
         agent_id: str,
         user_id: str,
         message: str,
-        context: Optional[Dict[str, Any]] = None
+        remark: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None
     ) -> AsyncIterator[str]:
         """流式处理聊天消息"""
         try:
             # 获取 agent 实例
             agent = await self.agent_service.get_agent(
                 agent_id=agent_id,
-                user_id=user_id  # 确保传递user_id
+                user_id=user_id,
+                config=config
             )
             if not agent:
                 raise ValueError(f"Agent {agent_id} not found")
-
-            # 确保 context 存在
-            context = context or {}
-            context["user_id"] = user_id  # 添加user_id到上下文
-            remark = context.get("remark", "")
-            config = context.get("config")
             
-            # 应用临时配置
-            original_config = await self._apply_temp_config(agent, config)
-            
-            try:
-                # 生成流式回复
-                async for chunk in agent.astream_response(
-                    message, 
-                    user_id=user_id,
-                    remark=remark,
-                    context=context
-                ):
-                    yield chunk
-            finally:
-                # 恢复原始配置
-                await self._restore_config(agent, original_config)
+            # 生成流式回复
+            async for chunk in agent.astream_response(
+                input_text=message,
+                user_id=user_id,
+                remark=remark or "",
+                config=config
+            ):
+                yield chunk
 
         except Exception as e:
             self.logger.error(f"Error streaming message: {str(e)}")

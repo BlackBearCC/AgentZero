@@ -14,16 +14,16 @@ async def chat(
 ):
     """处理聊天请求"""
     try:
-        # 只有当 remark 有值时才创建 context
-        context = None
-        if request.remark:
-            context = {
-                "remark": request.remark
-            }
+        # 构建 context
+        context = {
+            "remark": request.remark,
+            "config": request.config.dict() if request.config else None
+        } if request.remark or request.config else None
         
         response = await chat_service.process_message(
             agent_id=agent_id,
             message=request.message,
+            user_id=request.user_id,  # 传递 user_id
             context=context
         )
         return ChatResponse(response=response)
@@ -40,18 +40,16 @@ async def stream_chat(
 ) -> StreamingResponse:
     """流式聊天接口"""
     try:
-        # 构建上下文
-        context = {
-            "remark": request.remark,
-            "config": request.config.dict() if request.config else None
-        }
+        # 获取配置
+        config = request.config.dict() if request.config else None
         
         # 调用服务层处理消息
         message_stream = chat_service.stream_message(
             agent_id=agent_id,
             user_id=request.user_id,
             message=request.message,
-            context=context
+            remark=request.remark,
+            config=config
         )
         
         return StreamingResponse(

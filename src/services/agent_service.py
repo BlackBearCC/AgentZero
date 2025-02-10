@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Union
 from fastapi import Depends
 from src.agents.base_agent import BaseAgent
 from src.agents.zero_agent import ZeroAgent
@@ -188,12 +188,19 @@ class AgentService:
             self.logger.error(f"Failed to create agent: {str(e)}")
             raise
 
-    async def _get_llm_for_config(self, agent: BaseAgent, config: Optional[AgentConfig]) -> Optional[Any]:
+    async def _get_llm_for_config(self, agent: BaseAgent, config: Union[Dict[str, Any], AgentConfig]) -> Optional[Any]:
         """根据配置获取临时 LLM 实例"""
-        if not config or not config.llm_model:
+        if not config:
             return None
             
+        # 如果是字典，转换为 AgentConfig
+        if isinstance(config, dict):
+            config = AgentConfig(**config)
+            
         try:
+            if not config.llm_model:
+                return None
+                
             llm_config = LLMConfig(
                 model_type=config.llm_model,
                 temperature=config.llm_temperature
@@ -206,8 +213,8 @@ class AgentService:
     async def get_agent(
         self, 
         agent_id: str,
-        user_id: str,  # 添加user_id参数
-        config: Optional[AgentConfig] = None
+        user_id: str,
+        config: Optional[Union[Dict[str, Any], AgentConfig]] = None
     ) -> Optional[BaseAgent]:
         """获取指定的 Agent 实例"""
         agent = self.agents.get(agent_id)
@@ -219,6 +226,18 @@ class AgentService:
             
         # 如果需要临时切换 LLM
         if config:
+            # 如果是字典，转换为 AgentConfig
+            if isinstance(config, dict):
+                config = AgentConfig(**config)
+                
+            # 更新 agent 配置
+            agent.use_memory_queue = config.use_memory_queue
+            agent.use_combined_query = config.use_combined_query
+            agent.enable_memory_recall = config.enable_memory_recall
+            agent.memory_queue_limit = config.memory_queue_limit
+            agent.use_event_summary = config.use_event_summary
+            
+            # 如果需要切换 LLM
             temp_llm = await self._get_llm_for_config(agent, config)
             if temp_llm:
                 agent.llm = temp_llm

@@ -5,9 +5,11 @@ class AgentConfig(BaseModel):
     """Agent配置模型"""
     use_memory_queue: bool = Field(default=True, description="是否使用记忆队列")
     use_combined_query: bool = Field(default=False, description="是否使用组合查询")
+    enable_memory_recall: bool = Field(default=True, description="是否启用记忆 Recall")
     memory_queue_limit: int = Field(default=15, description="记忆队列长度限制")
     llm_model: str = Field(default="doubao", description="LLM模型选择")
     llm_temperature: float = Field(default=0.7, description="温度参数")
+    use_event_summary: bool = Field(default=True, description="是否启用事件概要")
 
 class ChatRequest(BaseModel):
     message: str

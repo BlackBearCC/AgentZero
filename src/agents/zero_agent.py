@@ -419,12 +419,19 @@ class ZeroAgent(BaseAgent):
             self._logger.error(f"[ZeroAgent] 生成回复时出错: {str(e)}")
             raise
 
-    async def astream_response(self, input_text: str, user_id: str, remark: str = '', context: Dict[str, Any] = None) -> AsyncIterator[str]:
+    async def astream_response(self, input_text: str, user_id: str, remark: str = '', config: Optional[Dict[str, Any]] = None) -> AsyncIterator[str]:
         """流式生成回复"""
         try:
             self.current_user_id = user_id
             self.chat_id = str(uuid.uuid4())
             
+            # 如果有新的配置，更新 agent 配置
+            if config:
+                self.use_memory_queue = config.get("use_memory_queue", self.use_memory_queue)
+                self.use_combined_query = config.get("use_combined_query", self.use_combined_query)
+                self.enable_memory_recall = config.get("enable_memory_recall", self.enable_memory_recall)
+                self.memory_queue_limit = config.get("memory_queue_limit", self.memory_queue_limit)
+                self.use_event_summary = config.get("use_event_summary", self.use_event_summary)
             
             # 构建上下文
             context = await self._build_context(input_text, remark)

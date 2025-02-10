@@ -64,22 +64,24 @@ class ComparisonTester:
             TestConfig(name="无记忆聊天", 
                       enable_memory_recall=False,
                       use_memory_queue=False,
-                      use_combined_query=False),
-            TestConfig(name="记忆召回-队列", 
-                      enable_memory_recall=True,
-                      use_memory_queue=True,
-                      use_combined_query=False),
+                      use_combined_query=False,
+                      use_event_summary=False,),
+            # TestConfig(name="记忆召回-队列", 
+            #           enable_memory_recall=True,
+            #           use_memory_queue=True,
+            #           use_combined_query=False),
             TestConfig(name="记忆召回-无队列", 
                       enable_memory_recall=True,
-                      use_memory_queue=True,
-                      use_combined_query=False),
-            TestConfig(name="事件概要", 
-                      use_memory_queue=False, 
-                      use_event_summary=True),
-            TestConfig(name="事件概要-记忆召回", 
-                      enable_memory_recall=True,
                       use_memory_queue=False,
-                      use_event_summary=True),
+                      use_combined_query=False,
+                      use_event_summary=False),
+            # TestConfig(name="事件概要", 
+            #           use_memory_queue=False, 
+            #           use_event_summary=True),
+            # TestConfig(name="事件概要-记忆召回", 
+            #           enable_memory_recall=True,
+            #           use_memory_queue=False,
+            #           use_event_summary=True),
         ]
         
         # 保存配置信息
@@ -202,6 +204,7 @@ class ComparisonTester:
             # 只有当配置与默认值不同时才添加配置
             if (config.use_memory_queue != True or 
                 config.use_combined_query != False or 
+                config.enable_memory_recall != True or 
                 config.memory_queue_limit != 15 or 
                 config.llm_model != "doubao" or 
                 config.llm_temperature != 0.7):

@@ -225,7 +225,17 @@ class ZeroAgent(BaseAgent):
         if self.enable_memory_recall:
             self._logger.debug("[ZeroAgent] 正在查询实体记忆...")
             entity_memories = await self.memory.query_entity_memory(query_text)
-            self._logger.debug(f"[ZeroAgent] 获取到实体记忆: {json.dumps(entity_memories, ensure_ascii=False)}")
+            
+            # 新增检索耗时日志
+            if additional_info := entity_memories.get('additional_info'):
+                time_cost = additional_info.get('检索耗时', {})
+                cost_log = " | ".join([
+                    f"MySQL检索: {time_cost.get('mysql检索', 'N/A')}",
+                    f"扩词算法: {time_cost.get('扩词算法', 'N/A')}",
+                    f"重排算法: {time_cost.get('重排算法', 'N/A')}",
+                    f"向量检索: {time_cost.get('向量+embedding检索', 'N/A')}"
+                ])
+                self._logger.debug(f"[ZeroAgent] 记忆检索耗时: {cost_log}")
         else:
             self._logger.debug("[ZeroAgent] 记忆召回已禁用")
         
@@ -242,28 +252,39 @@ class ZeroAgent(BaseAgent):
             self._logger.debug(f"[ZeroAgent] 当前事件队列长度: {len(self.event_queue)}")
             self._logger.debug(f"[ZeroAgent] 当前实体队列长度: {len(self.entity_queue)}")
             
-            # 事件记忆处理
-            if self.use_event_summary and 'memory_events' in entity_memories:
+            # 事件记忆处理（与enable_memory_recall绑定）
+            if self.enable_memory_recall and 'memory_events' in entity_memories:
+                # 提取 memory_events 列表
+                events = entity_memories['memory_events']
+                # 转换为标准格式
+                formatted_events = [{
+                    'description': e.get('description', ''),
+                    'updatetime': e.get('updatetime', ''),
+                    'deepinsight': e.get('deepinsight', '')
+                } for e in events]
+                
+                # 关键修改：即使没有新事件也进行队列处理
                 processed_events = self._process_memories(
-                    entity_memories['memory_events'], 
+                    formatted_events, 
                     self.event_queue,
                     'updatetime'
                 )
-                # 修复：无论是否有新记忆，在队列模式下都更新队列
                 if self.use_memory_queue:
-                    self.event_queue = processed_events
+                    self.event_queue = processed_events.copy()
                 
-                self._logger.debug(f"[ZeroAgent] 事件处理完成，数量: {len(processed_events)}")
-                
-                # 格式化事件记忆
+                # 格式化事件记忆（use_event_summary仅控制是否显示另一种类型的概要记忆）
                 event_lines = []
                 for event in processed_events:
                     event_time = event['updatetime'].split('T')[0] if event.get('updatetime') else ''
                     description = event.get('description', '')
-                    deepinsight = event.get('deepinsight', '')
                     memory_line = f"- {event_time}：{description}"
-                    if deepinsight:
-                        memory_line += f" ({deepinsight})"
+                    
+                    # 根据use_event_summary决定是否添加深层见解
+                    if self.use_event_summary:
+                        deepinsight = event.get('deepinsight', '')
+                        if deepinsight:
+                            memory_line += f" ({deepinsight})"
+                    
                     event_lines.append(memory_line)
                 
                 event_memory = "\n".join(event_lines)
@@ -271,16 +292,21 @@ class ZeroAgent(BaseAgent):
             
             # 处理记忆实体
             if 'memory_entities' in entity_memories:
+                # 提取 memory_entities 列表
+                entities = entity_memories['memory_entities']
+                # 转换为标准格式
+                formatted_entities = [{
+                    'description': e.get('description', ''),
+                    'updatetime': e.get('updatetime', '')
+                } for e in entities]
+                
                 processed_entities = self._process_memories(
-                    entity_memories['memory_entities'],
+                    formatted_entities,
                     self.entity_queue,
                     'updatetime'
                 )
-                # 修复：同上
                 if self.use_memory_queue:
-                    self.entity_queue = processed_entities
-                
-                self._logger.debug(f"[ZeroAgent] 实体处理完成，数量: {len(processed_entities)}")
+                    self.entity_queue = processed_entities.copy()
                 
                 # 格式化实体记忆
                 entity_lines = []

@@ -119,79 +119,78 @@ class ComparisonTester:
             return
 
         try:
-            # 在结果中添加配置状态
-            for result in self.results:
-                config = next(c for c in self.test_configs if c.name == result['config_name'])
-                result['use_event_summary'] = config.use_event_summary
-                result['enable_memory_recall'] = config.enable_memory_recall
-                # 添加元数据列
-                if result.get('metadata'):
-                    result['processed_entity_memory'] = result['metadata'].get('processed_entity_memory', '')
-                    result['raw_entity_memory'] = json.dumps(result['metadata'].get('raw_entity_memory', {}), ensure_ascii=False)
-                else:
-                    result['processed_entity_memory'] = ''
-                    result['raw_entity_memory'] = '{}'
-
-            # 生成合并单元格的对比表格
-            comparison_data = {}
+            # 构建表格行
+            rows = []
+            columns = ['用户输入'] + [c.name for c in self.test_configs]
+            
+            # 添加表头（只在第一次写入）
+            if not Path(self.comparison_table).exists():
+                rows.append(columns)
+            
+            # 按测试用例分组结果
+            grouped_results = {}
             for result in self.results:
                 key = (result['test_id'], result['topic'], result['input'])
-                if key not in comparison_data:
-                    comparison_data[key] = {
-                        'test_id': result['test_id'],
-                        'topic': result['topic'],
-                        'input': result['input'],
-                        'timestamp': result['timestamp']
-                    }
-                # 添加响应和元数据列
-                config_name = result['config_name']
-                comparison_data[key][f"{config_name}_response"] = result.get('response') or result.get('error', 'ERROR')
-                comparison_data[key][f"{config_name}_memory"] = result.get('processed_entity_memory', '')
-                comparison_data[key][f"{config_name}_raw_memory"] = result.get('raw_entity_memory', '{}')
+                if key not in grouped_results:
+                    grouped_results[key] = []
+                grouped_results[key].append(result)
+
+            # 添加数据行
+            for key in grouped_results:
+                test_case = grouped_results[key]
+                input_text = test_case[0]['input']
+                
+                # 用户输入行
+                rows.append([input_text] + [''] * len(self.test_configs))
+                
+                # 回复内容行
+                response_row = ['→ 回复']
+                for config in self.test_configs:
+                    response = next((r['response'] for r in test_case if r['config_name'] == config.name), '')
+                    response_row.append(response)
+                rows.append(response_row)
+                
+                # 实体记忆行
+                memory_row = ['→ 记忆']
+                for config in self.test_configs:
+                    memory = next((r['metadata'] for r in test_case if r['config_name'] == config.name), '')
+                    memory_row.append(memory)
+                rows.append(memory_row)
+                
+                # 添加空行分隔
+                rows.append([''] * (len(self.test_configs) + 1))
 
             # 转换为DataFrame
-            df = pd.DataFrame(comparison_data.values())
-            
-            # 构建列名列表
-            base_columns = ['test_id', 'topic', 'input', 'timestamp']
-            config_columns = []
-            for config in self.test_configs:
-                config_columns.extend([
-                    f"{config.name}_response",
-                    f"{config.name}_memory",
-                    f"{config.name}_raw_memory"
-                ])
-            columns = base_columns + config_columns
-            df = df.reindex(columns=columns)
+            df = pd.DataFrame(rows[1:], columns=columns if not Path(self.comparison_table).exists() else None)
 
-            # 使用正确的文件写入模式
-            if Path(self.comparison_table).exists():
-                mode = 'a'
-                if_sheet_exists = 'overlay'
-            else:
-                mode = 'w'
-                if_sheet_exists = None
-
+            # 写入Excel
             with pd.ExcelWriter(
                 self.comparison_table, 
                 engine='openpyxl', 
-                mode=mode, 
-                if_sheet_exists=if_sheet_exists
+                mode='a' if Path(self.comparison_table).exists() else 'w',
+                if_sheet_exists='overlay'
             ) as writer:
-                df.to_excel(writer, sheet_name='对比结果', index=False, header=not writer.sheets)
+                df.to_excel(writer, sheet_name='对比结果', index=False, header=not Path(self.comparison_table).exists())
                 
                 # 设置样式
                 worksheet = writer.sheets['对比结果']
-                for row in worksheet.iter_rows(min_row=2):
-                    # 基础信息列（前4列）
-                    for cell in row[:4]:
+                
+                # 设置列宽
+                worksheet.column_dimensions['A'].width = 30  # 用户输入列
+                for col in range(1, len(self.test_configs)+1):
+                    col_letter = chr(ord('B') + col - 1)
+                    worksheet.column_dimensions[col_letter].width = 50
+                    
+                # 设置单元格样式
+                for row in worksheet.iter_rows():
+                    for cell in row:
                         cell.alignment = Alignment(vertical='top', wrap_text=True)
-                    # 响应和记忆列
-                    for cell in row[4:]:
-                        cell.alignment = Alignment(vertical='top', wrap_text=True)
-                        cell.font = Font(color='000000')
+                        if cell.row == 1:  # 表头行
+                            cell.font = Font(bold=True)
+                        elif cell.value and cell.value.startswith('→'):
+                            cell.font = Font(color='666666')  # 灰色
 
-            self._logger.info(f"增量保存结果到: {self.comparison_table}")
+            self._logger.info(f"保存结果到: {self.comparison_table}")
 
         except Exception as e:
             self._logger.error(f"保存结果失败: {str(e)}")
@@ -268,15 +267,15 @@ class ComparisonTester:
                 print()  # 空行
                 
                 return {
-                    "response": response_text,
-                    "metadata": metadata
+                    "response": response_text.strip(),  # 直接保存纯文本内容
+                    "metadata": metadata.get('processed_entity_memory', '') if metadata else ''
                 }
                             
         except Exception as e:
             self._logger.error(f"聊天请求失败: {str(e)}")
             return {
                 "response": "",
-                "metadata": None,
+                "metadata": "",
                 "error": str(e)
             }
 
@@ -321,13 +320,14 @@ class ComparisonTester:
     async def _execute_test(self, session, test_case, config):
         """执行单个配置的测试"""
         try:
-            response_text = await self.stream_chat(session, test_case['input'], config)
+            result = await self.stream_chat(session, test_case['input'], config)
             return {
                 'test_id': f"{test_case['test_type']}_{hash(test_case['input'])}",
                 'topic': test_case['topic'],
                 'input': test_case['input'],
                 'config_name': config.name,
-                'response': response_text,
+                'response': result["response"],  # 纯文本内容
+                'metadata': result["metadata"],  # 处理后的实体记忆
                 'error': '',
                 'timestamp': datetime.now().isoformat()
             }
@@ -339,6 +339,7 @@ class ComparisonTester:
                 'input': test_case['input'],
                 'config_name': config.name,
                 'response': '',
+                'metadata': '',
                 'error': str(e),
                 'timestamp': datetime.now().isoformat()
             }

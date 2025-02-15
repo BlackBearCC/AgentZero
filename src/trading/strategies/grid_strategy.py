@@ -19,6 +19,8 @@ class GridStrategy(BacktestEngine):
         position_ratio: float = 0.8,
         long_pos_limit: float = 0.8,
         short_pos_limit: float = 0.8,
+        min_price_precision: float = 0.0001,
+        min_qty_precision: float = 0.001,
         **kwargs
     ):
         super().__init__(
@@ -26,6 +28,8 @@ class GridStrategy(BacktestEngine):
             initial_capital=initial_capital,
             commission_rate=commission_rate,
             leverage=leverage,
+            min_price_precision=min_price_precision,
+            min_qty_precision=min_qty_precision,
             **kwargs
         )
         
@@ -36,6 +40,11 @@ class GridStrategy(BacktestEngine):
         self.long_pos_limit = long_pos_limit
         self.short_pos_limit = short_pos_limit
         
+        # 精度参数（从父类继承）
+        self.price_precision = self._get_precision(min_price_precision)
+        self.qty_precision = self._get_precision(min_qty_precision)
+        self.min_order_qty = min_qty_precision
+        
         # 网格状态
         self.center_price = None
         self.grid_orders = {}  # price -> order
@@ -44,46 +53,73 @@ class GridStrategy(BacktestEngine):
         self.symbol = 'GRID'  # 使用固定symbol
         
     def _check_position_limits(self, side: str, new_size: float) -> bool:
-        """检查是否超出仓位限制"""
-        # 计算新订单的保证金占用（考虑杠杆）
-        new_margin = (new_size * self.center_price) / self.leverage
+        """检查是否超出仓位限制（修复保证金计算）"""
+        # 使用当前价格而不是中心价格
+        current_price = self.data.iloc[-1]['close']
+        new_margin = (new_size * current_price) / self.leverage
         
-        # 计算当前持仓的保证金占用
-        current_long_margin = sum((p.quantity * self.center_price) / self.leverage 
-                                for p in self.grid_positions.values() 
-                                if isinstance(p, Position) and p.side == 'LONG')
-        current_short_margin = sum((p.quantity * self.center_price) / self.leverage 
-                                 for p in self.grid_positions.values() 
-                                 if isinstance(p, Position) and p.side == 'SHORT')
+        # 计算当前保证金占用
+        current_long = sum(
+            (p.quantity * p.entry_price) / self.leverage 
+            for p in self.positions.values() 
+            if p.side == 'LONG'
+        )
+        current_short = sum(
+            (p.quantity * p.entry_price) / self.leverage 
+            for p in self.positions.values() 
+            if p.side == 'SHORT'
+        )
+        
+        # 计算总保证金占用比例
+        total_margin_ratio = (current_long + current_short) / self.initial_capital
+        if total_margin_ratio >= 1.0:
+            self.logger.warning("总保证金占用已达100%")
+            return False
         
         # 基于保证金计算仓位比例
         if side == 'BUY':
-            new_long_ratio = (current_long_margin + new_margin) / self.initial_capital
-            self.logger.info(f"多头仓位检查 - 当前: {current_long_margin:.2f}, 新增: {new_margin:.2f}, 比例: {new_long_ratio:.2%}")
+            new_long_ratio = (current_long + new_margin) / self.initial_capital
+            self.logger.info(f"多头仓位检查 - 当前: {current_long:.2f}, 新增: {new_margin:.2f}, 比例: {new_long_ratio:.2%}")
             return new_long_ratio <= self.long_pos_limit
         else:
-            new_short_ratio = (current_short_margin + new_margin) / self.initial_capital
-            self.logger.info(f"空头仓位检查 - 当前: {current_short_margin:.2f}, 新增: {new_margin:.2f}, 比例: {new_short_ratio:.2%}")
+            new_short_ratio = (current_short + new_margin) / self.initial_capital
+            self.logger.info(f"空头仓位检查 - 当前: {current_short:.2f}, 新增: {new_margin:.2f}, 比例: {new_short_ratio:.2%}")
             return new_short_ratio <= self.short_pos_limit
 
     def calculate_position_size(self, price: float) -> float:
-        """计算单个网格仓位大小"""
-        # 考虑杠杆的可用保证金
-        available_margin = self._calculate_equity(self.data.iloc[-1])
+        """计算仓位大小（添加风险控制）"""
+        # 计算可用保证金（考虑未实现盈亏）
+        equity = self._calculate_equity(self.data.iloc[-1])
+        available = equity * self.position_ratio - sum(
+            (p.quantity * p.entry_price) / self.leverage 
+            for p in self.positions.values()
+        )
         
-        # 单个网格的保证金使用比例
-        max_margin_per_grid = available_margin * self.position_ratio / self.grid_num
+        # 确保可用保证金为正
+        available = max(available, 0)
         
-        # 考虑杠杆的仓位大小
-        position_size = (max_margin_per_grid * self.leverage) / price
+        # 计算单个网格仓位
+        size = (available / self.grid_num) * self.leverage / price
         
-        # 考虑手续费和滑点
-        position_size = position_size * 0.98
-        
-        return round(position_size, 2)
+        # 应用数量精度
+        size = round(size // self.min_order_qty * self.min_order_qty, self.qty_precision)
+        return size
 
     def _place_grid_order(self, price: float, side: str, quantity: float):
         """放置网格订单"""
+        # 添加价格精度处理
+        price = round(price, self.price_precision)
+        
+        # 检查是否已存在相同价格的订单
+        if price in self.grid_orders:
+            self.logger.debug(f"已存在相同价格的订单: {price}")
+            return
+        
+        # 检查最小下单量
+        if quantity < self.min_order_qty:
+            self.logger.debug(f"订单数量小于最小值: {quantity} < {self.min_order_qty}")
+            return
+        
         # 检查仓位限制
         if not self._check_position_limits(side, quantity):
             self.logger.warning(f"超出仓位限制 - {side} {quantity}@{price}")
@@ -126,7 +162,21 @@ class GridStrategy(BacktestEngine):
 
     def on_order_filled(self, order):
         """订单成交回调"""
-        price = float(order.price)  # 确保价格是浮点数
+        # 添加价格精度处理
+        price = round(float(order.price), self.price_precision)
+        
+        # 在生成新订单前检查网格边界
+        grid_step = self.center_price * (self.price_range / self.grid_num)
+        upper_bound = self.center_price * (1 + self.price_range)
+        lower_bound = self.center_price * (1 - self.price_range)
+        
+        new_price = price + grid_step if order.side == 'BUY' else price - grid_step
+        new_price = round(new_price, self.price_precision)
+        
+        # 检查新价格是否超出网格范围
+        if new_price > upper_bound or new_price < lower_bound:
+            self.logger.debug(f"超出网格范围不生成新订单: {new_price}")
+            return
         
         # 检查是否是网格订单
         if price not in self.grid_orders:
@@ -177,8 +227,6 @@ class GridStrategy(BacktestEngine):
         del self.grid_orders[price]
         
         # 在相反方向放置新的网格订单
-        grid_step = self.center_price * (self.price_range / self.grid_num)
-        new_price = price + grid_step if order.side == 'BUY' else price - grid_step
         new_side = 'SELL' if order.side == 'BUY' else 'BUY'
         
         self._place_grid_order(new_price, new_side, order.quantity)
@@ -387,4 +435,8 @@ class GridStrategy(BacktestEngine):
         ax3.grid(True)
         
         plt.tight_layout()
-        plt.show() 
+        plt.show()
+
+    def _get_precision(self, value: float) -> int:
+        """计算精度位数"""
+        return int(round(-np.log10(value))) 

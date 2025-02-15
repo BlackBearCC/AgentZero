@@ -8,6 +8,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 from src.trading.feeds.crypto_feed import DataManager
+import os
 
 class MarketMicrostructureDataset(Dataset):
     """市场微观结构数据集"""
@@ -95,26 +96,79 @@ class AlphaTransformer(nn.Module):
 class DeepTradingStrategy:
     """深度学习交易策略"""
     def __init__(self, model_path=None):
+        """初始化策略"""
+        # 检查CUDA可用性
+        print(f"""
+        ====== CUDA 信息 ======
+        PyTorch版本: {torch.__version__}
+        CUDA是否可用: {torch.cuda.is_available()}
+        GPU数量: {torch.cuda.device_count() if torch.cuda.is_available() else 0}
+        当前GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'None'}
+        ===================
+        """)
+        
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"使用设备: {self.device}")
+        
         self.model = self._build_model().to(self.device)
-        self.scaler = None  # 将在训练时设置
+        self.scaler = None
         
         if model_path:
             self.load_model(model_path)
     
     def _build_model(self):
         return AlphaTransformer(
-            input_dim=9,  # 修改为实际特征数量
+            input_dim=9,
             num_heads=8,
             num_layers=6,
-            d_model=64
+            d_model=64,
+            pred_len=10
         )
     
-    def train(self, train_data, epochs=1):
+    def save_model(self, path='models/alpha_transformer.pth'):
+        """保存模型和scaler"""
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        
+        # 保存模型状态和scaler
+        torch.save({
+            'model_state_dict': self.model.state_dict(),
+            'scaler_state': self.scaler,
+            'model_config': {
+                'input_dim': 9,
+                'num_heads': 8,
+                'num_layers': 6,
+                'd_model': 64,
+                'pred_len': 10
+            }
+        }, path)
+        print(f"模型已保存到: {path}")
+    
+    def load_model(self, path):
+        """加载模型和scaler"""
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"找不到模型文件: {path}")
+        
+        checkpoint = torch.load(path, map_location=self.device)
+        
+        # 加载模型配置和状态
+        self.model = AlphaTransformer(**checkpoint['model_config']).to(self.device)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.scaler = checkpoint['scaler_state']
+        
+        print(f"模型已从 {path} 加载")
+    
+    def train(self, train_data, epochs=100, save_path='models/alpha_transformer.pth'):
         self.model.train()
         dataset = MarketMicrostructureDataset(train_data)
-        self.scaler = dataset.scaler  # 保存训练好的scaler
-        loader = DataLoader(dataset, batch_size=256, shuffle=True)
+        self.scaler = dataset.scaler
+        
+        loader = DataLoader(
+            dataset, 
+            batch_size=256, 
+            shuffle=True,
+            num_workers=4 if self.device.type == 'cuda' else 0,
+            pin_memory=True if self.device.type == 'cuda' else False
+        )
         
         criterion = nn.MSELoss()
         optimizer = optim.AdamW(self.model.parameters(), lr=1e-4, weight_decay=1e-5)
@@ -124,9 +178,13 @@ class DeepTradingStrategy:
             epochs=epochs
         )
         
+        best_loss = float('inf')
+        
         for epoch in range(epochs):
             total_loss = 0
-            for x, y in tqdm(loader, desc=f'Epoch {epoch+1}'):
+            self.model.train()
+            
+            for x, y in tqdm(loader, desc=f'Epoch {epoch+1}/{epochs}'):
                 x, y = x.to(self.device), y.to(self.device)
                 
                 pred = self.model(x)
@@ -140,7 +198,16 @@ class DeepTradingStrategy:
                 
                 total_loss += loss.item()
             
-            print(f"Epoch {epoch+1} Loss: {total_loss/len(loader):.4f}")
+            avg_loss = total_loss / len(loader)
+            print(f"Epoch {epoch+1}/{epochs} Loss: {avg_loss:.4f}")
+            
+            # 保存最佳模型
+            if avg_loss < best_loss:
+                best_loss = avg_loss
+                self.save_model(save_path)
+                print(f"发现更好的模型，已保存 (Loss: {best_loss:.4f})")
+        
+        print(f"训练完成！最佳Loss: {best_loss:.4f}")
     
     def predict_signal(self, market_state):
         """生成交易信号"""
@@ -244,7 +311,7 @@ def prepare_ai_data(symbol: str, start: str, end: str, timeframe: str = '1m'):
 
 # 使用示例
 if __name__ == "__main__":
-    # 获取BTC/USDT数据
+    # 获取数据
     data = prepare_ai_data(
         symbol='BTC/USDT',
         start='2024-01-01',
@@ -252,18 +319,19 @@ if __name__ == "__main__":
         timeframe='5m'
     )
     
-    # 初始化策略
-    strategy = DeepTradingStrategy()
-    
-    # 划分训练/测试集
+    # 划分训练集和测试集
     train_size = int(len(data) * 0.8)
     train_data = data.iloc[:train_size]
     test_data = data.iloc[train_size:]
     
-    # 训练模型
-    strategy.train(train_data)
+    # 初始化策略
+    strategy = DeepTradingStrategy()
     
-    # 回测
+    # 训练模型（会自动保存最佳模型）
+    strategy.train(train_data, epochs=100)
+    
+    # 加载最佳模型进行回测
+    strategy = DeepTradingStrategy(model_path='models/alpha_transformer.pth')
     backtester = AITradingBacktest(strategy, test_data)
     backtester.run_backtest()
     

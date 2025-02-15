@@ -85,6 +85,18 @@ class CCXTFeed:
             current_since = since
             
             while True:
+                
+                # 测试代码
+                exchange = ccxt.binance()
+                orderbook = exchange.fetch_order_book('BTC/USDT')
+                print(orderbook)
+                # 输出示例：
+                # {
+                #     'bids': [[price, amount], ...],  # 买单
+                #     'asks': [[price, amount], ...],  # 卖单
+                #     'timestamp': 1234567890,
+                #     'datetime': '2020-01-01T00:00:00.000Z'
+                # } 
                 # 获取数据
                 self.logger.info(f"获取数据片段 - since: {current_since}")
                 ohlcv = self.exchange.fetch_ohlcv(
@@ -145,7 +157,107 @@ class CCXTFeed:
             self.logger.error(f"获取数据失败: {str(e)}")
             raise
 
-    def _get_data(self, symbol: str, timeframe: str, 
+    def _fetch_orderbook_data(self, 
+                             symbol: str,
+                             timeframe: str,
+                             start: Optional[datetime] = None,
+                             end: Optional[datetime] = None) -> pd.DataFrame:
+        """获取订单簿历史数据"""
+        try:
+            # 获取K线数据作为时间基准
+            ohlcv_df = self._fetch_data(symbol, timeframe, start, end)
+            
+            # 初始化订单簿数据列
+            orderbook_data = []
+            
+            # 对每个时间点获取订单簿数据
+            for timestamp in ohlcv_df.index:
+                try:
+                    orderbook = self.exchange.fetch_order_book(symbol)
+                    
+                    # 确保有买卖盘数据
+                    if not orderbook['bids'] or not orderbook['asks']:
+                        raise ValueError("Empty orderbook")
+                    
+                    # 提取最优买卖价格和数量（前5档）
+                    best_bids = orderbook['bids'][:5]  # 取前5档买单
+                    best_asks = orderbook['asks'][:5]  # 取前5档卖单
+                    
+                    data = {
+                        'timestamp': timestamp,
+                        'bid1': best_bids[0][0],
+                        'bid_size1': best_bids[0][1],
+                        'ask1': best_asks[0][0],
+                        'ask_size1': best_asks[0][1],
+                    }
+                    
+                    # 添加更多档位（如果存在）
+                    for i in range(1, 5):
+                        if i < len(best_bids):
+                            data[f'bid{i+1}'] = best_bids[i][0]
+                            data[f'bid_size{i+1}'] = best_bids[i][1]
+                        if i < len(best_asks):
+                            data[f'ask{i+1}'] = best_asks[i][0]
+                            data[f'ask_size{i+1}'] = best_asks[i][1]
+                    
+                    # 计算订单簿指标
+                    data['spread'] = data['ask1'] - data['bid1']
+                    data['mid_price'] = (data['ask1'] + data['bid1']) / 2
+                    data['bid_depth'] = sum(bid[1] for bid in best_bids)
+                    data['ask_depth'] = sum(ask[1] for ask in best_asks)
+                    data['imbalance'] = (data['bid_depth'] - data['ask_depth']) / (data['bid_depth'] + data['ask_depth'])
+                    
+                    orderbook_data.append(data)
+                    
+                    # 添加延时避免超过API限制
+                    time.sleep(self.exchange.rateLimit / 1000)
+                    
+                except Exception as e:
+                    self.logger.warning(f"获取订单簿数据失败: {str(e)}")
+                    # 使用None填充基本字段
+                    orderbook_data.append({
+                        'timestamp': timestamp,
+                        'bid1': None,
+                        'bid_size1': None,
+                        'ask1': None,
+                        'ask_size1': None,
+                        'spread': None,
+                        'mid_price': None,
+                        'imbalance': None
+                    })
+            
+            # 转换为DataFrame
+            orderbook_df = pd.DataFrame(orderbook_data)
+            orderbook_df.set_index('timestamp', inplace=True)
+            
+            # 合并K线和订单簿数据
+            merged_df = pd.concat([ohlcv_df, orderbook_df], axis=1)
+            
+            # 填充缺失值
+            merged_df['mid_price'].fillna(merged_df['close'], inplace=True)
+            merged_df['spread'].fillna(merged_df['high'] - merged_df['low'], inplace=True)
+            merged_df['imbalance'].fillna(0, inplace=True)
+            
+            # 添加日志记录
+            self.logger.info(f"""
+            ====== 数据获取完成 ======
+            时间范围: {merged_df.index.min()} - {merged_df.index.max()}
+            数据点数: {len(merged_df)}
+            订单簿深度: 5档
+            特征数量: {len(merged_df.columns)}
+            缺失值比例: {merged_df.isnull().mean().mean():.2%}
+            ========================
+            """)
+            
+            return merged_df
+            
+        except Exception as e:
+            self.logger.error(f"获取订单簿历史数据失败: {str(e)}")
+            raise
+
+    def _get_data(self, 
+                  symbol: str, 
+                  timeframe: str,
                   start: Optional[datetime] = None,
                   end: Optional[datetime] = None) -> pd.DataFrame:
         """获取数据，优先使用缓存"""
@@ -192,7 +304,8 @@ class CCXTFeed:
             
             # 如果没有缓存或缓存无效，获取新数据
             self.logger.info("开始获取新数据")
-            df = self._fetch_data(symbol, timeframe, start, end)
+            # 修改：同时获取K线和订单簿数据
+            df = self._fetch_orderbook_data(symbol, timeframe, start, end)
             
             # 检查获取的数据
             if df.empty:

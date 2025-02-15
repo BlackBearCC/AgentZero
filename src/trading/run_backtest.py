@@ -112,19 +112,6 @@ class BacktestRunner:
         
     def plot_results(self, results: Dict, price_data: pd.DataFrame):
         """绘制回测结果"""
-        # 添加空数据检查
-        if price_data.empty or results['equity_curve'].empty:
-            self.logger.warning("无法绘制图表：数据为空")
-            return
-        
-        # 转换时间戳格式
-        price_data['timestamp'] = pd.to_datetime(price_data['timestamp'])
-        results['equity_curve']['timestamp'] = pd.to_datetime(results['equity_curve']['timestamp'])
-        
-        # 设置matplotlib后端
-        import matplotlib
-        matplotlib.use('TkAgg')  # 对于Windows/Mac使用TkAgg后端
-        
         plt.style.use('seaborn')
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 12), height_ratios=[2, 1, 1])
         
@@ -167,7 +154,7 @@ class BacktestRunner:
         ax3.grid(True)
         
         plt.tight_layout()
-        plt.show(block=True)  # 添加block=True防止图表闪退
+        plt.show()
 
 def main():
     # 创建回测运行器
@@ -176,8 +163,8 @@ def main():
     # 设置回测参数
     symbol = 'DOGE/USDT'
     timeframe = '1m'
-    start = datetime(2025, 2,10)
-    end = datetime(2025, 2, 14)
+    start = datetime(2024, 12,7)
+    end = datetime(2025, 2, 7)
     
     # 调整策略参数
     strategy_params = {

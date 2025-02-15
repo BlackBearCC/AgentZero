@@ -21,6 +21,14 @@ class GridStrategy(BacktestEngine):
         short_pos_limit: float = 0.8,
         min_price_precision: float = 0.0001,
         min_qty_precision: float = 0.001,
+        dynamic_grid: bool = True,  # 是否启用动态网格
+        ma_window: int = 50,       # 移动平均窗口
+        vol_window: int = 30,      # 波动率计算窗口
+        adjust_threshold: float = 0.03,  # 调整阈值
+        vol_multiplier: float = 3.0,     # 波动率乘数
+        min_grid: int = 20,        # 最小网格数
+        max_grid: int = 100,       # 最大网格数
+        base_vol: float = 0.01,    # 基准波动率
         **kwargs
     ):
         super().__init__(
@@ -44,6 +52,16 @@ class GridStrategy(BacktestEngine):
         self.price_precision = self._get_precision(min_price_precision)
         self.qty_precision = self._get_precision(min_qty_precision)
         self.min_order_qty = min_qty_precision
+        
+        # 动态网格参数
+        self.dynamic_grid = dynamic_grid
+        self.ma_window = ma_window
+        self.vol_window = vol_window
+        self.adjust_threshold = adjust_threshold
+        self.vol_multiplier = vol_multiplier
+        self.min_grid = min_grid
+        self.max_grid = max_grid
+        self.base_vol = base_vol
         
         # 网格状态
         self.center_price = None
@@ -162,39 +180,21 @@ class GridStrategy(BacktestEngine):
 
     def on_order_filled(self, order):
         """订单成交回调"""
-        # 添加价格精度处理
+        # 修正后的平仓逻辑
         price = round(float(order.price), self.price_precision)
         
-        # 在生成新订单前检查网格边界
-        grid_step = self.center_price * (self.price_range / self.grid_num)
-        upper_bound = self.center_price * (1 + self.price_range)
-        lower_bound = self.center_price * (1 - self.price_range)
-        
-        new_price = price + grid_step if order.side == 'BUY' else price - grid_step
-        new_price = round(new_price, self.price_precision)
-        
-        # 检查新价格是否超出网格范围
-        if new_price > upper_bound or new_price < lower_bound:
-            self.logger.debug(f"超出网格范围不生成新订单: {new_price}")
-            return
-        
-        # 检查是否是网格订单
-        if price not in self.grid_orders:
-            return  # 不是网格订单，直接返回
-        
-        self.logger.info(f"订单成交 - {order.side} {order.quantity}@{price}")
-        
-        # 记录交易
         if order.side == 'BUY':
-            if self._is_closing_short(price):  # 如果是平空单
-                # 找到对应的空头持仓
-                for pos_price, pos in self.grid_positions.items():
-                    pos_price = float(pos_price)  # 转换为浮点数
-                    if pos.side == 'SHORT' and pos_price < price:  # 找到对应的空头持仓
-                        profit = (pos.entry_price - price) * order.quantity
-                        self._record_trade(pos, order, profit)
-                        del self.grid_positions[str(pos_price)]
-                        break
+            if self._is_closing_short(price):
+                # 精确匹配最接近的持仓
+                short_positions = [(float(p_price), p) for p_price, p in self.grid_positions.items() 
+                                 if p.side == 'SHORT' and float(p_price) > price]
+                if short_positions:
+                    # 找到价格最接近的持仓
+                    closest = min(short_positions, key=lambda x: abs(x[0] - price))
+                    pos_price, pos = closest
+                    profit = (pos.entry_price - price) * order.quantity
+                    self._record_trade(pos, order, profit)
+                    del self.grid_positions[str(pos_price)]
             else:  # 开多单
                 self.grid_positions[str(price)] = Position(
                     symbol=order.symbol,
@@ -207,13 +207,15 @@ class GridStrategy(BacktestEngine):
         else:  # 'SELL'
             if self._is_closing_long(price):  # 如果是平多单
                 # 找到对应的多头持仓
-                for pos_price, pos in self.grid_positions.items():
-                    pos_price = float(pos_price)  # 转换为浮点数
-                    if pos.side == 'LONG' and pos_price < price:  # 找到对应的多头持仓
-                        profit = (price - pos.entry_price) * order.quantity
-                        self._record_trade(pos, order, profit)
-                        del self.grid_positions[str(pos_price)]
-                        break
+                long_positions = [(float(p_price), p) for p_price, p in self.grid_positions.items() 
+                                if p.side == 'LONG' and float(p_price) < price]
+                if long_positions:
+                    # 找到价格最接近的持仓
+                    closest = min(long_positions, key=lambda x: abs(x[0] - price))
+                    pos_price, pos = closest
+                    profit = (price - pos.entry_price) * order.quantity
+                    self._record_trade(pos, order, profit)
+                    del self.grid_positions[str(pos_price)]
             else:  # 开空单
                 self.grid_positions[str(price)] = Position(
                     symbol=order.symbol,
@@ -224,12 +226,21 @@ class GridStrategy(BacktestEngine):
                 )
         
         # 移除已触发的订单
-        del self.grid_orders[price]
+        if price in self.grid_orders:
+            del self.grid_orders[price]
         
         # 在相反方向放置新的网格订单
-        new_side = 'SELL' if order.side == 'BUY' else 'BUY'
+        grid_step = self.center_price * (self.price_range / self.grid_num)
+        new_price = price + grid_step if order.side == 'BUY' else price - grid_step
+        new_price = round(new_price, self.price_precision)
         
-        self._place_grid_order(new_price, new_side, order.quantity)
+        # 检查新价格是否在网格范围内
+        upper_bound = self.center_price * (1 + self.price_range)
+        lower_bound = self.center_price * (1 - self.price_range)
+        
+        if lower_bound <= new_price <= upper_bound:
+            new_side = 'SELL' if order.side == 'BUY' else 'BUY'
+            self._place_grid_order(new_price, new_side, order.quantity)
 
     def _is_closing_long(self, price: float) -> bool:
         """检查是否是平多单"""
@@ -306,6 +317,27 @@ class GridStrategy(BacktestEngine):
         for order in self.pending_orders[:]:
             if order.status == 'FILLED':
                 self.on_order_filled(order)
+
+        # 动态调整网格中心价格（新增）
+        if self.dynamic_grid and len(self.data) >= self.ma_window:
+            # 使用移动平均线作为新的中心价格
+            new_center = self.data['close'].rolling(self.ma_window).mean().iloc[-1]
+            if abs(new_center - self.center_price) > self.center_price * self.adjust_threshold:
+                self.logger.info(f"动态调整网格中心价格 {self.center_price} -> {new_center}")
+                self.center_price = new_center
+                self.initialize_grid(new_center)
+        
+        # 新增波动率适应逻辑
+        if len(self.data) >= self.vol_window:
+            returns = self.data['close'].pct_change().dropna()
+            current_vol = returns[-self.vol_window:].std()
+            new_grid_num = int(self.grid_num * (current_vol / self.base_vol))
+            new_grid_num = max(min(new_grid_num, self.max_grid), self.min_grid)
+            
+            if new_grid_num != self.grid_num:
+                self.logger.info(f"调整网格数量 {self.grid_num} -> {new_grid_num} (波动率: {current_vol:.4f})")
+                self.grid_num = new_grid_num
+                self.initialize_grid(self.center_price)
 
     def plot_results(self, results: Dict, price_data: pd.DataFrame):
         """绘制回测结果"""

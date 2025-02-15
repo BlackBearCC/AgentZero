@@ -97,11 +97,11 @@ class DeepTradingStrategy:
     def __init__(self, model_path=None):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = self._build_model().to(self.device)
-        self.scaler = StandardScaler()
+        self.scaler = None  # 将在训练时设置
         
         if model_path:
             self.load_model(model_path)
-            
+    
     def _build_model(self):
         return AlphaTransformer(
             input_dim=9,  # 修改为实际特征数量
@@ -110,12 +110,13 @@ class DeepTradingStrategy:
             d_model=64
         )
     
-    def train(self, train_data, epochs=100):
+    def train(self, train_data, epochs=1):
         self.model.train()
         dataset = MarketMicrostructureDataset(train_data)
+        self.scaler = dataset.scaler  # 保存训练好的scaler
         loader = DataLoader(dataset, batch_size=256, shuffle=True)
         
-        criterion = nn.MSELoss()  # 改用MSE损失
+        criterion = nn.MSELoss()
         optimizer = optim.AdamW(self.model.parameters(), lr=1e-4, weight_decay=1e-5)
         scheduler = optim.lr_scheduler.OneCycleLR(
             optimizer, max_lr=1e-3, 
@@ -128,7 +129,7 @@ class DeepTradingStrategy:
             for x, y in tqdm(loader, desc=f'Epoch {epoch+1}'):
                 x, y = x.to(self.device), y.to(self.device)
                 
-                pred = self.model(x)  # (batch_size, pred_len)
+                pred = self.model(x)
                 loss = criterion(pred, y)
                 
                 optimizer.zero_grad()
@@ -145,17 +146,20 @@ class DeepTradingStrategy:
         """生成交易信号"""
         self.model.eval()
         with torch.no_grad():
-            features = self.scaler.transform(market_state)
-            seq = torch.FloatTensor(features).unsqueeze(1).to(self.device)
-            pred = self.model(seq.permute(1,0,2))
+            # 使用与训练时相同的特征处理
+            dataset = MarketMicrostructureDataset(market_state, sequence_length=60, pred_length=10)
+            features = dataset.features  # 已经标准化的特征
             
-        # 计算预期收益和风险
-        expected_return = pred[:, -1].mean().item()
-        risk = pred[:, -1].std().item()
-        
-        # 生成动态仓位
-        position = self._calculate_position(expected_return, risk)
-        return position
+            seq = torch.FloatTensor(features).unsqueeze(0).to(self.device)  # 添加batch维度
+            pred = self.model(seq)
+            
+            # 计算预期收益和风险
+            expected_return = pred[0, -1].item()  # 使用最后一个预测值
+            risk = pred[0].std().item()
+            
+            # 生成动态仓位
+            position = self._calculate_position(expected_return, risk)
+            return position
     
     def _calculate_position(self, mu, sigma):
         """凯利公式动态仓位管理"""

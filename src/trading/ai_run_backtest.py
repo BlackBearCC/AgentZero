@@ -12,69 +12,85 @@ from src.trading.feeds.crypto_feed import DataManager
 class MarketMicrostructureDataset(Dataset):
     """市场微观结构数据集"""
     def __init__(self, data, sequence_length=60, pred_length=10):
-        self.data = data
+        self.data = data.copy()
         self.seq_len = sequence_length
         self.pred_len = pred_length
         self.scaler = StandardScaler()
         
         # 生成高级特征
-        data = self._create_features(data)
+        data = self._create_features(self.data)
+        
+        # 打印特征信息，帮助调试
+        print(f"""
+        ====== 特征信息 ======
+        原始特征数: {len(self.data.columns)}
+        处理后特征数: {len(data.columns)}
+        特征列表: {data.columns.tolist()}
+        ==================
+        """)
+        
         self.features = self.scaler.fit_transform(data)
         
     def _create_features(self, df):
         """生成微观结构特征"""
+        feature_df = pd.DataFrame()
+        
+        # 价格特征
+        feature_df['close'] = df['close']
+        feature_df['return'] = df['return']
+        feature_df['volatility'] = df['volatility']
+        
         # 订单簿特征
-        df['bid_ask_spread'] = df['ask1'] - df['bid1']
-        df['mid_price'] = (df['ask1'] + df['bid1'])/2
-        df['order_imbalance'] = (df['bid_size1'] - df['ask_size1'])/(df['bid_size1'] + df['ask_size1'])
+        feature_df['spread'] = df['spread']
+        feature_df['mid_price'] = df['mid_price']
+        feature_df['imbalance'] = df['imbalance']
+        feature_df['weighted_depth'] = (df['vwap_bid'] * df['bid_depth'] + df['vwap_ask'] * df['ask_depth'])/(df['bid_depth'] + df['ask_depth'])
         
-        # 流动性特征
-        df['weighted_depth'] = (df['bid_size1']*df['bid1'] + df['ask_size1']*df['ask1'])/(df['bid_size1'] + df['ask_size1'])
+        # 交易量特征
+        feature_df['volume'] = df['volume']
+        feature_df['volume_imbalance'] = df['volume'] * df['return']
         
-        # 波动率特征
-        df['volatility'] = df['mid_price'].pct_change().rolling(20).std()
-        
-        # 量价特征
-        df['volume_imbalance'] = df['volume'] * df['return']
-        
-        return df.dropna().values
+        return feature_df.dropna()
     
     def __len__(self):
         return len(self.data) - self.seq_len - self.pred_len
     
     def __getitem__(self, idx):
         seq_x = self.features[idx:idx+self.seq_len]
-        seq_y = self.features[idx+self.seq_len:idx+self.seq_len+self.pred_len, 3]  # 预测mid_price变化
+        seq_y = self.features[idx+self.seq_len:idx+self.seq_len+self.pred_len, 0]  # 使用close价格作为预测目标
         return torch.FloatTensor(seq_x), torch.FloatTensor(seq_y)
 
 class AlphaTransformer(nn.Module):
     """基于Transformer的Alpha因子生成器"""
-    def __init__(self, input_dim, num_heads=8, num_layers=6, d_model=64):
+    def __init__(self, input_dim=9, num_heads=8, num_layers=6, d_model=64, pred_len=10):
         super().__init__()
+        self.pred_len = pred_len
         self.embedding = nn.Linear(input_dim, d_model)
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=d_model, nhead=num_heads, 
-            dim_feedforward=d_model*4, dropout=0.1
+            d_model=d_model, 
+            nhead=num_heads,
+            dim_feedforward=d_model*4,
+            dropout=0.1,
+            batch_first=True
         )
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-        self.temporal_attn = nn.MultiheadAttention(d_model, num_heads)
+        self.temporal_attn = nn.MultiheadAttention(d_model, num_heads, batch_first=True)
         self.proj = nn.Sequential(
-            nn.Linear(d_model*2, d_model),
+            nn.Linear(d_model, d_model//2),
             nn.GELU(),
-            nn.Linear(d_model, 1)
+            nn.Linear(d_model//2, pred_len)
         )
         
     def forward(self, x):
-        # x shape: (seq_len, batch, input_dim)
-        x = self.embedding(x)
-        memory = self.transformer(x)
+        # x shape: (batch_size, seq_len, input_dim)
+        x = self.embedding(x)  # (batch_size, seq_len, d_model)
+        memory = self.transformer(x)  # (batch_size, seq_len, d_model)
         
-        # 时间序列注意力
-        attn_out, _ = self.temporal_attn(memory, memory, memory)
-        combined = torch.cat([memory, attn_out], dim=-1)
+        # 使用最后一个时间步的特征进行预测
+        last_hidden = memory[:, -1]  # (batch_size, d_model)
+        pred = self.proj(last_hidden)  # (batch_size, pred_len)
         
-        # 多尺度特征融合
-        return self.proj(combined)
+        return pred
 
 class DeepTradingStrategy:
     """深度学习交易策略"""
@@ -88,7 +104,7 @@ class DeepTradingStrategy:
             
     def _build_model(self):
         return AlphaTransformer(
-            input_dim=15,  # 根据特征数量调整
+            input_dim=9,  # 修改为实际特征数量
             num_heads=8,
             num_layers=6,
             d_model=64
@@ -99,7 +115,7 @@ class DeepTradingStrategy:
         dataset = MarketMicrostructureDataset(train_data)
         loader = DataLoader(dataset, batch_size=256, shuffle=True)
         
-        criterion = nn.HuberLoss()
+        criterion = nn.MSELoss()  # 改用MSE损失
         optimizer = optim.AdamW(self.model.parameters(), lr=1e-4, weight_decay=1e-5)
         scheduler = optim.lr_scheduler.OneCycleLR(
             optimizer, max_lr=1e-3, 
@@ -112,9 +128,8 @@ class DeepTradingStrategy:
             for x, y in tqdm(loader, desc=f'Epoch {epoch+1}'):
                 x, y = x.to(self.device), y.to(self.device)
                 
-                # 多任务学习：预测价格变化和波动率
-                pred = self.model(x.permute(1,0,2))
-                loss = criterion(pred, y.unsqueeze(-1))
+                pred = self.model(x)  # (batch_size, pred_len)
+                loss = criterion(pred, y)
                 
                 optimizer.zero_grad()
                 loss.backward()
@@ -186,7 +201,7 @@ def prepare_ai_data(symbol: str, start: str, end: str, timeframe: str = '1m'):
     data_mgr = DataManager()
     
     try:
-        # 获取原始数据
+        # 获取原始数据（包含K线和订单簿数据）
         feeds = data_mgr.get_feed(
             symbol=symbol,
             timeframe=timeframe,
@@ -194,19 +209,28 @@ def prepare_ai_data(symbol: str, start: str, end: str, timeframe: str = '1m'):
             end=pd.Timestamp(end)
         )
         
-        # 合并两个数据源
-        df = pd.concat([feeds['indicator'].dataname, feeds['execution'].dataname], axis=1)
-        df.columns = ['ind_open', 'ind_high', 'ind_low', 'ind_close', 'ind_volume',
-                     'exe_open', 'exe_high', 'exe_low', 'exe_close', 'exe_volume']
+        # 直接使用DataFrame
+        df = feeds['indicator']  # 不再需要.dataname
         
         # 生成特征
-        df['return'] = np.log(df['exe_close'] / df['exe_close'].shift(1))
-        df['spread'] = df['exe_high'] - df['exe_low']
-        df['volume_imbalance'] = df['exe_volume'] * df['return']
+        df['return'] = np.log(df['close'] / df['close'].shift(1))
         
-        # 添加市场微观结构特征
-        df['order_flow'] = (df['exe_volume'] * df['return']).rolling(10).mean()
+        # 使用已有的订单簿特征
+        # spread, mid_price, bid_depth, ask_depth, imbalance 已在_fetch_data中计算
+        
+        # 添加额外的市场微观结构特征
+        df['order_flow'] = (df['volume'] * df['return']).rolling(10).mean()
         df['volatility'] = df['return'].rolling(20).std()
+        
+        print(f"""
+        ====== 数据准备完成 ======
+        数据范围: {df.index.min()} - {df.index.max()}
+        数据点数: {len(df)}
+        特征列表: {df.columns.tolist()}
+        缺失值统计:
+        {df.isnull().sum()}
+        ========================
+        """)
         
         return df.dropna()
     

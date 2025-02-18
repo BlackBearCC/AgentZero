@@ -161,9 +161,9 @@ def main():
     runner = BacktestRunner()
     
     # 设置回测参数
-    symbol = 'DOGE/USDT'
+    symbol = 'BTC/USDT'
     timeframe = '1m'
-    start = datetime(2024, 12,7)
+    start = datetime(2025, 1,7)
     end = datetime(2025, 2, 7)
     
     # 调整策略参数

@@ -131,27 +131,31 @@ class CCXTFeed:
                     bids = pd.DataFrame(orderbook['bids'], columns=['price', 'volume'])
                     asks = pd.DataFrame(orderbook['asks'], columns=['price', 'volume'])
                     
-                    # 计算订单簿特征
+                    # 统一字段名称
                     df['bid1'] = bids['price'].iloc[0]
+                    df['bid_size1'] = bids['volume'].iloc[0]
                     df['ask1'] = asks['price'].iloc[0]
+                    df['ask_size1'] = asks['volume'].iloc[0]
+                    
+                    # 计算订单簿特征
                     df['spread'] = df['ask1'] - df['bid1']
                     df['mid_price'] = (df['ask1'] + df['bid1']) / 2
-                    
-                    # 计算累计深度
-                    df['bid_depth'] = bids['volume'].sum()
-                    df['ask_depth'] = asks['volume'].sum()
-                    df['imbalance'] = (df['bid_depth'] - df['ask_depth']) / (df['bid_depth'] + df['ask_depth'])
+                    df['depth_imbalance'] = (df['bid_size1'] - df['ask_size1']) / (df['bid_size1'] + df['ask_size1'])
                     
                     # 计算加权平均价格
-                    df['vwap_bid'] = (bids['price'] * bids['volume']).sum() / bids['volume'].sum()
-                    df['vwap_ask'] = (asks['price'] * asks['volume']).sum() / asks['volume'].sum()
-                
+                    df['vwap'] = (df['volume'] * df['close']).rolling(20).sum() / df['volume'].rolling(20).sum()
+                    
+                    # 显示获取到的订单簿强5和后5打印
+                    self.logger.info("前5个买盘订单:")
+                    self.logger.info(bids.head())
+                    self.logger.info("后5个卖盘订单:")
+                    self.logger.info(asks.tail())
             except Exception as e:
                 self.logger.warning(f"获取订单簿数据失败: {str(e)}")
                 # 使用K线数据计算替代指标
                 df['spread'] = df['high'] - df['low']
                 df['mid_price'] = (df['high'] + df['low']) / 2
-                df['imbalance'] = ((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low'])
+                df['depth_imbalance'] = ((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low'])
             
             self.logger.info(f"""
             ====== 数据获取完成 ======

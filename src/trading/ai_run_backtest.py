@@ -34,8 +34,8 @@ class TransformerBacktester:
                     stop_loss: float = 0.02, 
                     take_profit: float = 0.03,
                     position_limit: float = 0.5,
-                    volatility_threshold: float = 0.02,
-                    signal_threshold: float = 0.5,
+                    volatility_threshold: float = 0.015,  # 降低波动率阈值
+                    signal_threshold: float = 0.3,        # 降低信号阈值
                     smoothing_factor: float = 0.7,
                     prediction_horizon: int = 14,
                     verbose: bool = True
@@ -69,35 +69,34 @@ class TransformerBacktester:
             
             future_returns = pred[0].cpu().numpy()
             
-            # 信号生成优化
-            short_term = np.median(future_returns[0:3])    # 短期信号
-            medium_term = np.median(future_returns[3:8])   # 中期信号
-            long_term = np.median(future_returns[8:14])    # 长期信号
+            # 信号生成优化 - 放宽条件
+            short_term = np.mean(future_returns[0:3])     # 改用均值
+            medium_term = np.mean(future_returns[3:8])    # 改用均值
+            long_term = np.mean(future_returns[8:14])     # 改用均值
             
-            # 计算波动率
-            volatility = np.percentile(future_returns, 75) - np.percentile(future_returns, 25)
-            
-            # 信号平滑处理
+            # 计算波动率 - 使用更简单的方法
+            volatility = np.std(future_returns)  # 改用标准差
+                        # 信号平滑处理
             if len(signal_records) > 0:
                 last_medium_term = signal_records[-1].get('medium_term', medium_term)
                 medium_term = smoothing_factor * last_medium_term + \
                              (1 - smoothing_factor) * medium_term
             
-            # 开仓和调仓逻辑
-            target_position = current_position  # 默认保持当前仓位
+            # 开仓和调仓逻辑 - 放宽条件
+            target_position = current_position
             
             if current_position == 0:
-                # 趋势一致性检查
-                trend_aligned = (np.sign(medium_term) == np.sign(long_term))
-                # 信号强度检查
-                signal_strong = abs(medium_term/volatility) > signal_threshold
+                # 放宽趋势一致性检查
+                trend_aligned = (np.sign(medium_term + long_term) != 0)  # 只要不是反向
+                # 放宽信号强度检查
+                signal_strong = abs(medium_term) > volatility * signal_threshold
                 
-                if trend_aligned and signal_strong:
+                if signal_strong:  # 移除trend_aligned条件
                     target_position = np.sign(medium_term) * position_limit
             else:
-                # 持仓调整
-                if np.sign(short_term) != np.sign(current_position):
-                    # 考虑平仓
+                # 持仓调整 - 更保守的平仓
+                if (np.sign(short_term) != np.sign(current_position) and 
+                    np.sign(medium_term) != np.sign(current_position)):
                     target_position = 0
             
             # 记录信号
@@ -116,18 +115,23 @@ class TransformerBacktester:
             
             # 执行交易
             position_change = target_position - current_position
-            if abs(position_change) > 0.1:  # 最小交易阈值
-                # 计算交易成本
+            if abs(position_change) > 0.05:  # 降低最小交易阈值
+                # 计算交易成本和PNL
                 transaction_fee = abs(position_change) * transaction_cost * equity[-1]
                 
-                # 执行交易
+                # 计算当前交易的PNL
+                if current_position != 0:  # 如果是平仓或调仓
+                    pnl = (current_price/entry_price - 1) * current_position * equity[-1]
+                else:
+                    pnl = 0
+                
                 trades.append({
                     'time': current_time,
                     'type': 'signal',
                     'price': current_price,
                     'size': position_change,
                     'cost': transaction_fee,
-                    'pnl': 0  # 在交易时刻的收益为0
+                    'pnl': pnl
                 })
                 
                 current_position = target_position
@@ -137,18 +141,37 @@ class TransformerBacktester:
             positions.append(current_position)
             
             # 更新权益
-            price_change = data['close'].iloc[i] / data['close'].iloc[i-1] - 1
-            equity_change = price_change * current_position * equity[-1]
-            
-            # 扣除交易成本
-            if len(trades) > 0 and trades[-1]['time'] == current_time:
-                equity_change -= trades[-1]['cost']
+            if current_position != 0:
+                price_change = data['close'].iloc[i] / data['close'].iloc[i-1] - 1
+                equity_change = price_change * current_position * equity[-1]
                 
-            equity.append(equity[-1] + equity_change)
+                # 扣除交易成本
+                if len(trades) > 0 and trades[-1]['time'] == current_time:
+                    equity_change -= trades[-1]['cost']
+                    
+                equity.append(equity[-1] + equity_change)
+            else:
+                equity.append(equity[-1])
             
-            # 打印进度
+                        # 打印进度
             if i % 100 == 0:
                 print(f"进度: {i}/{len(features)}, 当前权益: {equity[-1]:,.2f}")
+            
+            # 打印详细信息
+            if verbose and i % 100 == 0:
+                print(f"""
+时间: {current_time}
+价格: {current_price:.2f}
+当前仓位: {current_position:.2f}
+目标仓位: {target_position:.2f}
+短期信号: {short_term*100:.2f}%
+中期信号: {medium_term*100:.2f}%
+长期信号: {long_term*100:.2f}%
+波动率: {volatility*100:.2f}%
+信号强度: {abs(medium_term/volatility):.2f}
+权益: {equity[-1]:.2f}
+交易次数: {len(trades)}
+                """)
         
         # 在回测循环结束后，创建返回数据结构
         dates = data.index[window_size:window_size+len(equity)]
@@ -404,8 +427,8 @@ if __name__ == "__main__":
         stop_loss=0.02,          # 2%止损
         take_profit=0.03,        # 3%止盈
         position_limit=0.5,      # 最大50%仓位
-        volatility_threshold=0.02,# 2%波动率阈值
-        signal_threshold=0.5,    # 信号阈值
+        volatility_threshold=0.015,# 1.5%波动率阈值
+        signal_threshold=0.3,    # 信号阈值
         smoothing_factor=0.7,     # 信号平滑因子
         prediction_horizon=14    # 预测周期
     )

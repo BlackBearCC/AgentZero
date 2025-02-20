@@ -120,7 +120,7 @@ class AgentService:
                 {
                     "role_id": "qiyu_001",
                     "name": "祁煜",
-                    "prompt_file": "qiyu-20250120",
+                    "prompt_file": "qiyu-20250120-def-v3",
                     "variables": {
                         "user": "木木",
                     },

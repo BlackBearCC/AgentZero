@@ -120,66 +120,59 @@ class ZeroAgent(BaseAgent):
                          time_key: str = 'updatetime') -> List[Dict[str, Any]]:
         """处理记忆
         
-        Args:
-            new_memories: 新召回的记忆列表
-            queue: 现有的记忆队列
-            time_key: 时间字段的键名
-            
-        Returns:
-            处理后的记忆列表
+        处理步骤：
+        1. 新召回的记忆去重后直接放在队列最前面
+        2. 保留剩余空间的旧记忆
+        3. 返回时再按时间排序展示
         """
         try:
             if not new_memories:
-                # 原代码直接返回队列，但需要确保在队列模式下才返回
-                return queue if self.use_memory_queue else []
+                return sorted(queue, key=lambda x: x.get(time_key, ''), reverse=False) if queue else []
             
-            # 对新召回的记忆进行排序和去重
-            unique_new_memories = []
-            seen_descriptions = set()
+            # 1. 对新召回的记忆去重
+            new_unique_memories = {}
             for memory in new_memories:
                 desc = memory.get('description', '')
-                if desc and desc not in seen_descriptions:
-                    seen_descriptions.add(desc)
-                    unique_new_memories.append(memory)
-                
-            # 按时间排序
-            sorted_new_memories = sorted(unique_new_memories, 
-                                       key=lambda x: x.get(time_key, ''), 
-                                       reverse=False)
+                if desc:
+                    new_unique_memories[desc] = memory
+            new_memories_list = list(new_unique_memories.values())
             
             if not self.use_memory_queue:
                 # 无队列模式：只返回本次召回的记忆
-                self._logger.debug(f"[ZeroAgent] 无队列模式，返回当前记忆数量: {len(sorted_new_memories)}")
-                return sorted_new_memories
+                return sorted(new_memories_list, key=lambda x: x.get(time_key, ''), reverse=False)
             
-            # 队列模式：合并新旧记忆
-            self._logger.debug(f"[ZeroAgent] 队列模式，当前队列长度: {len(queue)}, 新记忆数量: {len(sorted_new_memories)}")
-            all_memories = queue + sorted_new_memories
+            # 2. 从旧队列中选择不重复的记忆
+            old_memories = []
+            seen_descriptions = {mem.get('description', '') for mem in new_memories_list}
+            remaining_slots = max(0, self.memory_queue_limit - len(new_memories_list))
             
-            # 对合并后的记忆进行去重
-            unique_memories = []
-            seen_descriptions = set()
-            for memory in all_memories:
+            for memory in queue:  # 保持队列原有顺序
                 desc = memory.get('description', '')
                 if desc and desc not in seen_descriptions:
+                    old_memories.append(memory)
                     seen_descriptions.add(desc)
-                    unique_memories.append(memory)
+                    if len(old_memories) >= remaining_slots:
+                        break
             
-            # 按时间排序
-            sorted_memories = sorted(unique_memories, 
-                                   key=lambda x: x.get(time_key, ''), 
-                                   reverse=False)
+            # 3. 新记忆放在前面，旧记忆放在后面（维护召回顺序）
+            final_queue = new_memories_list + old_memories
             
-            # 应用队列长度限制
-            if len(sorted_memories) > self.memory_queue_limit:
-                sorted_memories = sorted_memories[-self.memory_queue_limit:]
+            # 4. 返回时按时间排序
+            sorted_memories = sorted(final_queue, key=lambda x: x.get(time_key, ''), reverse=False)
             
-            self._logger.debug(f"[ZeroAgent] 处理后的记忆数量: {len(sorted_memories)}")
+            self._logger.debug(f"[ZeroAgent] 新召回记忆数量: {len(new_memories_list)}, "
+                              f"保留旧记忆数量: {len(old_memories)}, "
+                              f"最终记忆数量: {len(sorted_memories)}")
+            
+            # 更新队列（保持召回顺序）
+            self.entity_queue = final_queue.copy()  # 或 self.event_queue，取决于调用位置
+            
+            # 返回排序后的结果（用于展示）
             return sorted_memories
             
         except Exception as e:
             self._logger.error(f"[ZeroAgent] 处理记忆失败: {str(e)}")
-            return queue if self.use_memory_queue else []
+            return sorted(queue, key=lambda x: x.get(time_key, ''), reverse=False) if queue else []
 
     def _format_memory_content(self, content: str) -> str:
         """格式化记忆内容，确保不超过最大长度"""
@@ -197,10 +190,10 @@ class ZeroAgent(BaseAgent):
         # 获取对话记忆
         self._logger.debug("[ZeroAgent] 正在获取对话记忆...")
         recent_messages = await self.memory.get_recent_messages(
-            user_id=self.current_user_id,
-            limit=20
+            user_id= self.current_user_id,
+            limit=10
         )
-        
+        # self._logger.debug(f"[ZeroAgent] 获取对话记忆: {recent_messages}")
         # 获取场景信息
         scence_info = self._build_scene_info()
         
@@ -449,8 +442,6 @@ class ZeroAgent(BaseAgent):
             self.current_user_id = user_id
             self.chat_id = str(uuid.uuid4())
             
-
-            
             # 构建上下文并生成回复
             context = await self._build_context(input_text, remark)
             response = await self.llm.agenerate(context["messages"])
@@ -506,6 +497,7 @@ class ZeroAgent(BaseAgent):
             # 保存交互记录
             await self.memory.add_message("user", input_text, user_id)
             await self.memory.add_message("assistant", response_text, user_id)
+            # self._logger.debug(f"[ZeroAgent] 保存交互记录: {input_text}, {response_text}")
             await self._save_interaction(input_text, response_text, context)
             
         except Exception as e:

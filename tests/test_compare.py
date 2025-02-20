@@ -61,12 +61,12 @@ class ComparisonTester:
         
         # 更新测试配置
         self.test_configs = [
-            TestConfig(name="无记忆聊天-v0220", 
+            TestConfig(name="无记忆聊天-v022013", 
                       enable_memory_recall=False,
                       use_memory_queue=False,
                       use_combined_query=False,
                       use_event_summary=False,),
-            TestConfig(name="记忆召回-无队列-v0220", 
+            TestConfig(name="记忆召回-无队列-v022013", 
                       enable_memory_recall=True,
                       use_memory_queue=False,
                       use_combined_query=False,
@@ -76,7 +76,7 @@ class ComparisonTester:
             #           use_memory_queue=True,
             #           use_combined_query=False,
             #           use_event_summary=False),
-            TestConfig(name="记忆召回-有队列-8-v0220", 
+            TestConfig(name="记忆召回-有队列-8-v022013", 
                       enable_memory_recall=True,
                       use_memory_queue=True,
                       use_combined_query=False,

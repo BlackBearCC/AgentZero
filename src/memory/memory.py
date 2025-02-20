@@ -47,8 +47,10 @@ class Memory:
         
         if role == "assistant":
             try:
-                response_json = json.loads(content)
-                content = response_json.get("content", content)
+                # response_json = json.loads(content)
+                # content = response_json.get("content", content)
+                content = content
+                self._logger.debug(f"[Memory] 添加消息: {content}")
             except json.JSONDecodeError:
                 pass
                 
@@ -181,7 +183,15 @@ class Memory:
     async def get_recent_messages(self, user_id: str, limit: int = 10) -> List[Message]:
         """获取指定用户的最近消息"""
         self._ensure_user_state(user_id)
+
         return self.chat_histories[user_id][-limit:]
+    # async def get_recent_messages_with_format(self, user_id: str, limit: int = 10) -> List[Message]:
+    #     """获取指定用户的最近消息(附带格式)"""
+    #     self._ensure_user_state(user_id)
+    #     normal_msg = self.chat_histories[user_id][-limit:]
+    #     format_masg = []
+    #     for msg in normal_msg
+    #     return 
         
     async def query_entity_memory(self, query: str, limit: int = 5) -> Optional[Dict[str, Any]]:
         """查询指定用户的实体记忆"""

@@ -120,9 +120,14 @@ class AgentService:
                 {
                     "role_id": "qiyu_001",
                     "name": "祁煜",
-                    "prompt_file": "qiyu-20250120-def-v3",
+                    "prompt_file": "qiyu-20250120-comm-v3",
                     "variables": {
+                        "character": "祁煜",
                         "user": "木木",
+                        "character_memory_attributes": "",
+                        "character_memory_event": "",
+                        "character_dialogue_examples": "",
+                        "think": ""
                     },
                     "llm_config": LLMConfig(
                         model_type="doubao-pro",

@@ -18,8 +18,8 @@ class TestConfig:
     use_memory_queue: bool = True  # 是否使用记忆队列
     use_combined_query: bool = False  # 是否使用组合查询
     use_event_summary: bool = True  # 新增事件概要开关
-    memory_queue_limit: int = 15  # 记忆队列长度
-    llm_model: str = "doubao"  # LLM模型选择
+    memory_queue_limit: int = 8  # 记忆队列长度
+    llm_model: str = "doubao-pro"  # LLM模型选择
     llm_temperature: float = 0.7  # 温度参数
     max_parallel: int = 3  # 新增最大并行数控制
     
@@ -61,12 +61,12 @@ class ComparisonTester:
         
         # 更新测试配置
         self.test_configs = [
-            TestConfig(name="无记忆聊天-v022013", 
+            TestConfig(name="无记忆聊天-v022114", 
                       enable_memory_recall=False,
                       use_memory_queue=False,
                       use_combined_query=False,
                       use_event_summary=False,),
-            TestConfig(name="记忆召回-无队列-v022013", 
+            TestConfig(name="记忆召回-无队列-v022114", 
                       enable_memory_recall=True,
                       use_memory_queue=False,
                       use_combined_query=False,
@@ -76,7 +76,22 @@ class ComparisonTester:
             #           use_memory_queue=True,
             #           use_combined_query=False,
             #           use_event_summary=False),
-            TestConfig(name="记忆召回-有队列-8-v022013", 
+            TestConfig(name="记忆召回-有队列-8-v022114", 
+                      enable_memory_recall=True,
+                      use_memory_queue=True,
+                      use_combined_query=False,
+                      use_event_summary=False,
+                      memory_queue_limit=8),
+            
+            TestConfig(name="记忆召回-有队列-8-lite-v022114", 
+                      llm_model="doubao-lite",
+                      enable_memory_recall=True,
+                      use_memory_queue=True,
+                      use_combined_query=False,
+                      use_event_summary=False,
+                      memory_queue_limit=8),
+            TestConfig(name="记忆召回-有队列-8-deepssek-v022114", 
+                      llm_model="deepssek-chat",
                       enable_memory_recall=True,
                       use_memory_queue=True,
                       use_combined_query=False,
@@ -310,15 +325,17 @@ class ComparisonTester:
                 for test_case in batch:
                     self._logger.info(f"\n--- 测试用例: {test_case['topic']} ---")
                     
-                    # 为每个配置创建一个测试任务
+                    # 创建所有配置的测试任务
+                    tasks = []
                     for config in self.test_configs:
-                        async with self.semaphore:  # 使用信号量控制并发
-                            self._logger.info(f"\n配置: {config.name}")
-                            print(f"\n用户: {test_case['input']}")
-                            print(f"[{config.name}] 回复: ", end='', flush=True)
-                            
-                            result = await self._execute_test(session, test_case, config)
-                            self.results.append(result)
+                        task = asyncio.create_task(self._execute_test_with_semaphore(
+                            session, test_case, config
+                        ))
+                        tasks.append(task)
+                    
+                    # 等待所有配置测试完成
+                    results = await asyncio.gather(*tasks)
+                    self.results.extend(results)
                     
                     # 每个测试用例完成后保存结果
                     self.save_comparison_results()
@@ -331,6 +348,15 @@ class ComparisonTester:
                 await asyncio.sleep(5)
 
             self._logger.info("\n=== 对比测试完成 ===")
+
+    async def _execute_test_with_semaphore(self, session, test_case, config):
+        """使用信号量执行单个测试"""
+        async with self.semaphore:  # 使用信号量控制并发
+            self._logger.info(f"\n配置: {config.name}")
+            print(f"\n用户: {test_case['input']}")
+            print(f"[{config.name}] 回复: ", end='', flush=True)
+            
+            return await self._execute_test(session, test_case, config)
 
     async def _execute_test(self, session, test_case, config):
         """执行单个配置的测试"""

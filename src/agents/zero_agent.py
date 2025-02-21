@@ -497,6 +497,9 @@ class ZeroAgent(BaseAgent):
             # 保存交互记录
             await self.memory.add_message("user", input_text, user_id)
             await self.memory.add_message("assistant", response_text, user_id)
+            self._logger.info(f"=======================================================")
+            self._logger.info(f"[ZeroAgent] 本次对话记录: \n{input_text}\n{response_text}")
+            self._logger.info(f"=======================================================")
             # self._logger.debug(f"[ZeroAgent] 保存交互记录: {input_text}, {response_text}")
             await self._save_interaction(input_text, response_text, context)
             

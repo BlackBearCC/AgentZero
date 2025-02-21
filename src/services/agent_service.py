@@ -77,9 +77,9 @@ class AgentService:
                 temperature=llm_config.temperature,
                 max_tokens=llm_config.max_tokens
             )
-        elif llm_config.model_type == "doubao":
+        elif llm_config.model_type == "doubao-lite":
             return DoubaoLLM(
-                model_name=os.getenv("DOUBAO_MODEL"),
+                model_name=os.getenv("DOUBAO_MODEL_LITE"),
                 temperature=llm_config.temperature,
                 max_tokens=llm_config.max_tokens
             )
@@ -120,7 +120,7 @@ class AgentService:
                 {
                     "role_id": "qiyu_001",
                     "name": "祁煜",
-                    "prompt_file": "qiyu-20250120-comm-v3",
+                    "prompt_file": "qiyu-20250120-f2f-v3",
                     "variables": {
                         "character": "祁煜",
                         "user": "木木",

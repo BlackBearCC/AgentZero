@@ -50,7 +50,7 @@ class Memory:
                 # response_json = json.loads(content)
                 # content = response_json.get("content", content)
                 content = content
-                self._logger.debug(f"[Memory] 添加消息: {content}")
+                # self._logger.debug(f"[Memory] 添加消息: {content}")
             except json.JSONDecodeError:
                 pass
                 

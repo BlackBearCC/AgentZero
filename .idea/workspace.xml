@@ -98,10 +98,10 @@
     <configuration name="test_api | 创建 Zero酱" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="2" requestIdentifier="创建 Zero酱" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
+    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
+    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
       <method v="2" />
     </configuration>
     <configuration name="AgentZero" type="Python.FastAPI">

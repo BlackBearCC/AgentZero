@@ -4,13 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="test: 添加正常聊天测试用例&#10;&#10;- 在 normal_chat_tests.csv 文件中添加了两条新的聊天测试用例&#10;- 新增的测试用例旨在检验 AI 的记忆功能和对话连贯性">
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/app.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/PRD/Agent记忆系统需求文档.md" beforeDir="false" afterPath="$PROJECT_DIR$/src/PRD/Agent记忆系统需求文档.md" afterDir="false" />
-    </list>
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="test: 添加正常聊天测试用例&#10;&#10;- 在 normal_chat_tests.csv 文件中添加了两条新的聊天测试用例&#10;- 新增的测试用例旨在检验 AI 的记忆功能和对话连贯性" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -171,6 +165,7 @@
       <workItem from="1739948271825" duration="6983000" />
       <workItem from="1739957259549" duration="19385000" />
       <workItem from="1740103565716" duration="5547000" />
+      <workItem from="1740362080597" duration="610000" />
     </task>
     <task id="LOCAL-00001" summary="feat:基础框架">
       <option name="closed" value="true" />

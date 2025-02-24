@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="test: 添加正常聊天测试用例&#10;&#10;- 在 normal_chat_tests.csv 文件中添加了两条新的聊天测试用例&#10;- 新增的测试用例旨在检验 AI 的记忆功能和对话连贯性" />
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat/vue-project: 实现前端流式接收评估结果并更新 UI- 修改 App.vue 中 EvaluationPanel组件的导入路径&#10;- 更新 docker-compose.yml，添加前端服务并配置 CORS&#10;- 重构 EvaluationPanel.vue 中的评估逻辑，支持流式接收结果&#10;- 新增 Dockerfile 和 nginx.conf，用于构建和运行前端服务&#10;- 添加 vue.config.js 配置前端开发服务器代理" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -165,7 +165,7 @@
       <workItem from="1739948271825" duration="6983000" />
       <workItem from="1739957259549" duration="19385000" />
       <workItem from="1740103565716" duration="5547000" />
-      <workItem from="1740362080597" duration="610000" />
+      <workItem from="1740362080597" duration="1295000" />
     </task>
     <task id="LOCAL-00001" summary="feat:基础框架">
       <option name="closed" value="true" />
@@ -519,7 +519,23 @@
       <option name="project" value="LOCAL" />
       <updated>1740124631556</updated>
     </task>
-    <option name="localTasksCounter" value="45" />
+    <task id="LOCAL-00045" summary="feat(评估系统): 增加对话和记忆评估功能&#10;&#10;- 新增评估 Agent 和相关组件- 实现对话质量和记忆相关性的评估指标&#10;- 添加批量数据处理能力&#10;- 开发前端评估界面&#10;- 更新 README 文档，增加核心功能和使用说明">
+      <option name="closed" value="true" />
+      <created>1740379203814</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1740379203814</updated>
+    </task>
+    <task id="LOCAL-00046" summary="feat/vue-project: 实现前端流式接收评估结果并更新 UI- 修改 App.vue 中 EvaluationPanel组件的导入路径&#10;- 更新 docker-compose.yml，添加前端服务并配置 CORS&#10;- 重构 EvaluationPanel.vue 中的评估逻辑，支持流式接收结果&#10;- 新增 Dockerfile 和 nginx.conf，用于构建和运行前端服务&#10;- 添加 vue.config.js 配置前端开发服务器代理">
+      <option name="closed" value="true" />
+      <created>1740379226486</created>
+      <option name="number" value="00046" />
+      <option name="presentableId" value="LOCAL-00046" />
+      <option name="project" value="LOCAL" />
+      <updated>1740379226486</updated>
+    </task>
+    <option name="localTasksCounter" value="47" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -549,8 +565,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="chore: 添加 .env 文件到 .gitignore&#10;&#10;- 新建 .gitignore 文件，避免环境变量配置文件被提交到仓库" />
-    <MESSAGE value="feat(env): 添加新的模型 ID并移除旧的日志文件- 在 .env 文件中添加新的 DOUBAO_MODEL_PRO 模型 ID&#10;- 删除了 agent_zero.log 文件中的所有错误日志&#10;- 移除了 .idea/AgentZero.iml 文件中的模板文件夹配置" />
     <MESSAGE value="refactor(agent): 重构 Agent 获取逻辑并支持临时配置&#10;&#10;- 修改 get_agent 函数以支持传入 user_id 和临时配置&#10;-重构 chat_service 层，直接使用新配置而不是上下文&#10;- 更新 API 路由和模型以适应新逻辑&#10;- 调整 test_compare.py 中的测试配置&#10;- 优化 ZeroAgent 中的流式回复生成" />
     <MESSAGE value="refactor(test): 重构对比测试流程并调整 ZeroAgent 的流式响应处理&#10;&#10;- 重构了 ComparisonTester 类的 run_comparison_tests 方法，改为单个测试用例的处理流程&#10;- 调整了测试用例的批量处理逻辑，每批处理 3 个用例&#10;- 增加了测试用例之间和批次之间的延迟&#10;- 修改了结果保存的时机，每个测试用例完成后立即保存&#10;- 调整了 ZeroAgent 中的流式响应处理，只在流式响应完成后保存交互记录" />
     <MESSAGE value="refactor(memory): 优化记忆处理逻辑和配置&#10;&#10;- 修改实体记忆 API URL&#10;- 新增异步任务相关逻辑&#10;- 更新测试配置&#10;- 调整记忆处理顺序和去重逻辑&#10;-增加队列长度限制- 优化系统提示词更新逻辑" />
@@ -574,6 +588,8 @@
     <MESSAGE value="test(zero): 更新测试配置并优化测试流程&#10;&#10;- 调整记忆队列长度为 8&#10;- 更新 LLM 模型选择为 &quot;doubao-pro&quot;- 新增测试配置，包括 &quot;doubao-lite&quot; 和 &quot;deepssek-chat&quot; 模型- 优化测试执行流程，使用 asyncio.gather 提高并发效率- 在 ZeroAgent 中添加对话记录日志输出" />
     <MESSAGE value="refactor(prompts): 优化记忆搜索触发条件和对话输出格式- 修改 search 指令为 search_memory，明确记忆搜索用途- 统一 output_format 中的 content 字段为 reply，简化输出格式&#10;- 更新多句回复的适用场景，增强对话层次感和自然过渡&#10;- 明确 JSON 输出格式要求，确保数据结构一致性&#10;- 增加 search_memory 指令的触发条件，提高记忆利用率" />
     <MESSAGE value="test: 添加正常聊天测试用例&#10;&#10;- 在 normal_chat_tests.csv 文件中添加了两条新的聊天测试用例&#10;- 新增的测试用例旨在检验 AI 的记忆功能和对话连贯性" />
-    <option name="LAST_COMMIT_MESSAGE" value="test: 添加正常聊天测试用例&#10;&#10;- 在 normal_chat_tests.csv 文件中添加了两条新的聊天测试用例&#10;- 新增的测试用例旨在检验 AI 的记忆功能和对话连贯性" />
+    <MESSAGE value="feat(评估系统): 增加对话和记忆评估功能&#10;&#10;- 新增评估 Agent 和相关组件- 实现对话质量和记忆相关性的评估指标&#10;- 添加批量数据处理能力&#10;- 开发前端评估界面&#10;- 更新 README 文档，增加核心功能和使用说明" />
+    <MESSAGE value="feat/vue-project: 实现前端流式接收评估结果并更新 UI- 修改 App.vue 中 EvaluationPanel组件的导入路径&#10;- 更新 docker-compose.yml，添加前端服务并配置 CORS&#10;- 重构 EvaluationPanel.vue 中的评估逻辑，支持流式接收结果&#10;- 新增 Dockerfile 和 nginx.conf，用于构建和运行前端服务&#10;- 添加 vue.config.js 配置前端开发服务器代理" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat/vue-project: 实现前端流式接收评估结果并更新 UI- 修改 App.vue 中 EvaluationPanel组件的导入路径&#10;- 更新 docker-compose.yml，添加前端服务并配置 CORS&#10;- 重构 EvaluationPanel.vue 中的评估逻辑，支持流式接收结果&#10;- 新增 Dockerfile 和 nginx.conf，用于构建和运行前端服务&#10;- 添加 vue.config.js 配置前端开发服务器代理" />
   </component>
 </project>

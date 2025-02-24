@@ -1,6 +1,6 @@
 from string import Template
 from src.agents.base_agent import BaseAgent
-from typing import AsyncIterator, Dict, Any, List
+from typing import AsyncIterator, Dict, Any, List, Optional
 import json
 
 class EvaluationAgent(BaseAgent):
@@ -27,6 +27,37 @@ class EvaluationAgent(BaseAgent):
             "suggestions": ["改进建议1", "改进建议2"]
         }
         """)
+
+    # 实现BaseAgent的抽象方法
+    async def load_prompt(self) -> None:
+        """加载提示词"""
+        self._load_eval_prompt()
+
+    async def update_prompt(self, prompt: str) -> None:
+        """更新提示词"""
+        pass  # 评估Agent不需要更新提示词
+
+    async def think(self, input_text: str) -> str:
+        """思考处理"""
+        return input_text  # 评估Agent不需要思考处理
+
+    async def generate_response(self, input_text: str, user_id: str, remark: str = '') -> str:
+        """生成回复"""
+        try:
+            data = json.loads(input_text)
+            result = await self._evaluate_single(data)
+            return json.dumps(result, ensure_ascii=False)
+        except Exception as e:
+            return json.dumps({"error": str(e)}, ensure_ascii=False)
+
+    async def astream_response(self, input_text: str, user_id: str, remark: str = '', context: Dict[str, Any] = None) -> AsyncIterator[str]:
+        """流式生成回复"""
+        try:
+            data = json.loads(input_text)
+            result = await self._evaluate_single(data)
+            yield json.dumps(result, ensure_ascii=False)
+        except Exception as e:
+            yield json.dumps({"error": str(e)}, ensure_ascii=False)
 
     async def update_eval_criteria(self, criteria: str):
         """更新评估标准"""

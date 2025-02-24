@@ -14,3 +14,5 @@ cryptography
 redis==5.2.1
 aiomysql
 openpyxl
+pandas
+python-multipart

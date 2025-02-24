@@ -1,0 +1,47 @@
+[
+  {
+    "enable_memory_recall": false,
+    "use_memory_queue": false,
+    "use_combined_query": false,
+    "use_event_summary": false,
+    "memory_queue_limit": 8,
+    "llm_model": "doubao-pro",
+    "llm_temperature": 0.7
+  },
+  {
+    "enable_memory_recall": true,
+    "use_memory_queue": false,
+    "use_combined_query": false,
+    "use_event_summary": false,
+    "memory_queue_limit": 8,
+    "llm_model": "doubao-pro",
+    "llm_temperature": 0.7
+  },
+  {
+    "enable_memory_recall": true,
+    "use_memory_queue": true,
+    "use_combined_query": false,
+    "use_event_summary": false,
+    "memory_queue_limit": 8,
+    "llm_model": "doubao-pro",
+    "llm_temperature": 0.7
+  },
+  {
+    "enable_memory_recall": true,
+    "use_memory_queue": true,
+    "use_combined_query": false,
+    "use_event_summary": false,
+    "memory_queue_limit": 8,
+    "llm_model": "doubao-lite",
+    "llm_temperature": 0.7
+  },
+  {
+    "enable_memory_recall": true,
+    "use_memory_queue": true,
+    "use_combined_query": false,
+    "use_event_summary": false,
+    "memory_queue_limit": 8,
+    "llm_model": "deepssek-chat",
+    "llm_temperature": 0.7
+  }
+]

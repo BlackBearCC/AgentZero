@@ -65,8 +65,8 @@ const startEvaluation = async () => {
     results.value = []
     processed.value = 0
     
-    // 创建 EventSource 进行流式接收
-    const response = await fetch(`${API_BASE_URL}/api/evaluate`, {
+    // 修改API路径，添加 v1 前缀
+    const response = await fetch(`${API_BASE_URL}/api/v1/evaluate`, {
       method: 'POST',
       body: formData
     })

@@ -36,6 +36,8 @@
 import { ref, computed } from 'vue'
 import axios from 'axios'
 
+const API_BASE_URL = 'http://localhost:8000' // 修改为你的后端地址
+
 const selectedFile = ref(null)
 const selectedEvalType = ref('dialogue')
 const isEvaluating = ref(false)
@@ -60,13 +62,37 @@ const startEvaluation = async () => {
 
   try {
     isEvaluating.value = true
-    const response = await axios.post('/api/evaluate', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    results.value = []
+    processed.value = 0
     
-    results.value = response.data.results
-    total.value = results.value.length
-    processed.value = total.value
+    // 创建 EventSource 进行流式接收
+    const response = await fetch(`${API_BASE_URL}/api/evaluate`, {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value)
+      try {
+        const result = JSON.parse(chunk)
+        results.value.push(result)
+        processed.value = results.value.length
+        total.value = results.value.length
+      } catch (e) {
+        console.error('Error parsing chunk:', e)
+      }
+    }
+
   } catch (error) {
     console.error('评估失败:', error)
   } finally {

@@ -1,6 +1,15 @@
 version: '3.8'
 
 services:
+  frontend:
+    build:
+      context: ./vue-project
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - app
+
   app:
     build: .
     ports:
@@ -18,6 +27,7 @@ services:
       - MYSQL_USER=root
       - MYSQL_PASSWORD=Jing91101
       - MYSQL_DATABASE=agent_zero
+      - CORS_ORIGINS=http://localhost:8080,http://frontend:80
     volumes:
       - .:/app
     depends_on:

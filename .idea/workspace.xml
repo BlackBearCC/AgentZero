@@ -4,7 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat/vue-project: 实现前端流式接收评估结果并更新 UI- 修改 App.vue 中 EvaluationPanel组件的导入路径&#10;- 更新 docker-compose.yml，添加前端服务并配置 CORS&#10;- 重构 EvaluationPanel.vue 中的评估逻辑，支持流式接收结果&#10;- 新增 Dockerfile 和 nginx.conf，用于构建和运行前端服务&#10;- 添加 vue.config.js 配置前端开发服务器代理" />
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat(评估系统): 增加对话和记忆评估功能&#10;&#10;- 新增评估 Agent 和相关组件- 实现对话质量和记忆相关性的评估指标&#10;- 添加批量数据处理能力&#10;- 开发前端评估界面&#10;- 更新 README 文档，增加核心功能和使用说明">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/app.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/agents/eval_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/eval_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/routes/eval.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/routes/eval.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/schemas/chat.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/schemas/chat.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vue-project/src/components/EvaluationPanel.vue" beforeDir="false" afterPath="$PROJECT_DIR$/vue-project/src/components/EvaluationPanel.vue" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -92,10 +99,10 @@
     <configuration name="test_api | 创建 Zero酱" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="2" requestIdentifier="创建 Zero酱" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
+    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
+    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
       <method v="2" />
     </configuration>
     <configuration name="AgentZero" type="Python.FastAPI">
@@ -165,7 +172,7 @@
       <workItem from="1739948271825" duration="6983000" />
       <workItem from="1739957259549" duration="19385000" />
       <workItem from="1740103565716" duration="5547000" />
-      <workItem from="1740362080597" duration="1295000" />
+      <workItem from="1740362080597" duration="3473000" />
     </task>
     <task id="LOCAL-00001" summary="feat:基础框架">
       <option name="closed" value="true" />
@@ -535,7 +542,15 @@
       <option name="project" value="LOCAL" />
       <updated>1740379226486</updated>
     </task>
-    <option name="localTasksCounter" value="47" />
+    <task id="LOCAL-00047" summary="feat(评估系统): 增加对话和记忆评估功能&#10;&#10;- 新增评估 Agent 和相关组件- 实现对话质量和记忆相关性的评估指标&#10;- 添加批量数据处理能力&#10;- 开发前端评估界面&#10;- 更新 README 文档，增加核心功能和使用说明">
+      <option name="closed" value="true" />
+      <created>1740380555656</created>
+      <option name="number" value="00047" />
+      <option name="presentableId" value="LOCAL-00047" />
+      <option name="project" value="LOCAL" />
+      <updated>1740380555656</updated>
+    </task>
+    <option name="localTasksCounter" value="48" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -588,8 +603,8 @@
     <MESSAGE value="test(zero): 更新测试配置并优化测试流程&#10;&#10;- 调整记忆队列长度为 8&#10;- 更新 LLM 模型选择为 &quot;doubao-pro&quot;- 新增测试配置，包括 &quot;doubao-lite&quot; 和 &quot;deepssek-chat&quot; 模型- 优化测试执行流程，使用 asyncio.gather 提高并发效率- 在 ZeroAgent 中添加对话记录日志输出" />
     <MESSAGE value="refactor(prompts): 优化记忆搜索触发条件和对话输出格式- 修改 search 指令为 search_memory，明确记忆搜索用途- 统一 output_format 中的 content 字段为 reply，简化输出格式&#10;- 更新多句回复的适用场景，增强对话层次感和自然过渡&#10;- 明确 JSON 输出格式要求，确保数据结构一致性&#10;- 增加 search_memory 指令的触发条件，提高记忆利用率" />
     <MESSAGE value="test: 添加正常聊天测试用例&#10;&#10;- 在 normal_chat_tests.csv 文件中添加了两条新的聊天测试用例&#10;- 新增的测试用例旨在检验 AI 的记忆功能和对话连贯性" />
-    <MESSAGE value="feat(评估系统): 增加对话和记忆评估功能&#10;&#10;- 新增评估 Agent 和相关组件- 实现对话质量和记忆相关性的评估指标&#10;- 添加批量数据处理能力&#10;- 开发前端评估界面&#10;- 更新 README 文档，增加核心功能和使用说明" />
     <MESSAGE value="feat/vue-project: 实现前端流式接收评估结果并更新 UI- 修改 App.vue 中 EvaluationPanel组件的导入路径&#10;- 更新 docker-compose.yml，添加前端服务并配置 CORS&#10;- 重构 EvaluationPanel.vue 中的评估逻辑，支持流式接收结果&#10;- 新增 Dockerfile 和 nginx.conf，用于构建和运行前端服务&#10;- 添加 vue.config.js 配置前端开发服务器代理" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat/vue-project: 实现前端流式接收评估结果并更新 UI- 修改 App.vue 中 EvaluationPanel组件的导入路径&#10;- 更新 docker-compose.yml，添加前端服务并配置 CORS&#10;- 重构 EvaluationPanel.vue 中的评估逻辑，支持流式接收结果&#10;- 新增 Dockerfile 和 nginx.conf，用于构建和运行前端服务&#10;- 添加 vue.config.js 配置前端开发服务器代理" />
+    <MESSAGE value="feat(评估系统): 增加对话和记忆评估功能&#10;&#10;- 新增评估 Agent 和相关组件- 实现对话质量和记忆相关性的评估指标&#10;- 添加批量数据处理能力&#10;- 开发前端评估界面&#10;- 更新 README 文档，增加核心功能和使用说明" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(评估系统): 增加对话和记忆评估功能&#10;&#10;- 新增评估 Agent 和相关组件- 实现对话质量和记忆相关性的评估指标&#10;- 添加批量数据处理能力&#10;- 开发前端评估界面&#10;- 更新 README 文档，增加核心功能和使用说明" />
   </component>
 </project>

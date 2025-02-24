@@ -1,36 +1,36 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from src.agents.eval_agent import EvaluationAgent
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
+from src.services.eval_service import EvalService, get_eval_service
 from src.utils.file_utils import read_data_file
 from typing import List, Dict, Any
+from fastapi.responses import StreamingResponse
+import json
+from src.api.schemas.chat import EvalRequest
 
 router = APIRouter()
 
-eval_agent = EvaluationAgent({
-    "name": "质量评估Agent",
-    "eval_type": "dialogue",
-    "criteria": "基础对话质量评估标准"
-})
-
-@router.post("/evaluate")
-async def evaluate_data(
+@router.post("/evaluate/stream")
+async def stream_evaluate(
     file: UploadFile = File(...),
-    eval_type: str = "dialogue"
-):
+    eval_type: str = Form(...),
+    user_id: str = Form(...),
+    eval_service: EvalService = Depends(get_eval_service)
+) -> StreamingResponse:
+    """流式评估接口"""
     try:
-        # 读取上传文件
         data = await read_data_file(file)
         
-        # 配置评估类型
-        eval_agent.eval_type = eval_type
-        if eval_type == "memory":
-            await eval_agent.update_eval_criteria("记忆相关性评估标准")
-        
-        # 执行评估
-        results = []
-        async for result in eval_agent.astream_evaluate(data):
-            results.append(result)
-        
-        return {"status": "completed", "results": results}
+
+        message_stream = eval_service.evaluate_data(
+            data=data,
+            eval_type=eval_type,
+            user_id=user_id
+        )
+
+
+        return StreamingResponse(
+            message_stream,
+            media_type="text/event-stream"
+        )
         
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

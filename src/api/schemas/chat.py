@@ -1,4 +1,5 @@
 from typing import Dict, Any, Optional
+from fastapi import UploadFile
 from pydantic import BaseModel, Field
 
 class AgentConfig(BaseModel):
@@ -27,4 +28,16 @@ class StreamChatResponse(BaseModel):
 
 class AgentResponse(BaseModel):
     agent_id: str
-    status: str 
+    status: str
+
+class EvalRequest(BaseModel):
+    """评估请求模型"""
+    file: UploadFile = Field(..., description="待评估的文件")
+    eval_type: str = Field(..., description="评估类型")
+    user_id: str = Field(..., description="用户ID")
+    config: Optional[AgentConfig] = None
+
+class EvalResponse(BaseModel):
+    """评估响应模型"""
+    content: str
+    metadata: Optional[Dict[str, Any]] = Field(None, description="评估元数据") 

@@ -4,17 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="feat: 添加祁煜角色设定及对话示例&#10;&#10;- 新增祁煜角色的详细设定，包括外貌、性格、能力等&#10;- 添加多个对话示例，展现祁煜与用户的互动方式&#10;-制定对话规则和输出格式，确保角色扮演的一致性和连贯性">
+    <list default="true" id="91de6e61-8947-4179-82cf-33adf1f591b6" name="更改" comment="test: 添加正常聊天测试用例&#10;&#10;- 在 normal_chat_tests.csv 文件中添加了两条新的聊天测试用例&#10;- 新增的测试用例旨在检验 AI 的记忆功能和对话连贯性">
+      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/app.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/PRD/Agent记忆系统需求文档.md" beforeDir="false" afterPath="$PROJECT_DIR$/src/PRD/Agent记忆系统需求文档.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/agents/zero_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/agents/zero_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/memory/memory.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/memory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/prompts/system/qiyu-20250120-def copy.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/prompts/system/qiyu-20250120-def.txt" beforeDir="false" afterPath="$PROJECT_DIR$/src/prompts/system/qiyu-20250120-def.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/agent_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/agent_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_client.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_compare.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_compare.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -75,8 +70,8 @@
     &quot;HTTP 请求.test_main | #1.executor&quot;: &quot;Run&quot;,
     &quot;HTTP 请求.test_main | #2.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;database.data.extractors.current.export.id&quot;: &quot;HTML-Groovy.html.groovy&quot;,
-    &quot;database.data.extractors.current.id&quot;: &quot;HTML-Groovy.html.groovy&quot;,
+    &quot;database.data.extractors.current.export.id&quot;: &quot;CSV-Groovy.csv.groovy&quot;,
+    &quot;database.data.extractors.current.id&quot;: &quot;CSV-Groovy.csv.groovy&quot;,
     &quot;git-widget-placeholder&quot;: &quot;chat&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
@@ -103,10 +98,10 @@
     <configuration name="test_api | 创建 Zero酱" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="2" requestIdentifier="创建 Zero酱" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
+    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
       <method v="2" />
     </configuration>
-    <configuration name="test_api | 健康检查" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" requestIdentifier="健康检查" runType="运行单个请求">
+    <configuration name="test_api | 和祁煜对话" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/tests/test_api.http" index="8" requestIdentifier="和祁煜对话" runType="运行单个请求">
       <method v="2" />
     </configuration>
     <configuration name="AgentZero" type="Python.FastAPI">
@@ -174,7 +169,8 @@
       <workItem from="1739151035454" duration="22864000" />
       <workItem from="1739928913545" duration="3873000" />
       <workItem from="1739948271825" duration="6983000" />
-      <workItem from="1739957259549" duration="9987000" />
+      <workItem from="1739957259549" duration="19385000" />
+      <workItem from="1740103565716" duration="5547000" />
     </task>
     <task id="LOCAL-00001" summary="feat:基础框架">
       <option name="closed" value="true" />
@@ -432,7 +428,103 @@
       <option name="project" value="LOCAL" />
       <updated>1739935689046</updated>
     </task>
-    <option name="localTasksCounter" value="33" />
+    <task id="LOCAL-00033" summary="refactor(memory): 重构记忆模块以支持消息格式保留&#10;&#10;- 注释掉解析 JSON 响应的代码，直接使用原始内容&#10;- 添加调试日志以记录添加的消息内容&#10;- 保留 get_recent_messages 函数的原始逻辑&#10;- 注释掉未完成的 get_recent_messages_with_format 函数">
+      <option name="closed" value="true" />
+      <created>1740030492272</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1740030492272</updated>
+    </task>
+    <task id="LOCAL-00034" summary="refactor(agent): 优化记忆处理和对话管理&#10;&#10;- 更新了祁煜角色的提示文件&#10;-重构了记忆处理逻辑，提高了效率和可读性&#10;-调整了测试配置，以适应新的记忆处理策略&#10;- 优化了对话记忆获取的限制&#10;- 添加了日志记录，以便调试和监控">
+      <option name="closed" value="true" />
+      <created>1740030529508</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1740030529508</updated>
+    </task>
+    <task id="LOCAL-00035" summary="feat: 添加祁煜角色设定及对话示例&#10;&#10;- 新增祁煜角色的详细设定，包括外貌、性格、能力等&#10;- 添加多个对话示例，展现祁煜与用户的互动方式&#10;-制定对话规则和输出格式，确保角色扮演的一致性和连贯性">
+      <option name="closed" value="true" />
+      <created>1740030566457</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1740030566457</updated>
+    </task>
+    <task id="LOCAL-00036" summary="refactor(test): 更新测试用例并添加新的角色扮演配置&#10;&#10;- 移除了娱乐八卦相关的测试用例&#10;- 更新了测试配置名称，增加了版本号&#10;- 添加了祁煜角色的系统配置文件，包括角色属性、对话风格和记忆规则等">
+      <option name="closed" value="true" />
+      <created>1740033250261</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1740033250261</updated>
+    </task>
+    <task id="LOCAL-00037" summary="refactor(src): 优化多句回复的逻辑和结构&#10;&#10;-精简了多句回复的类型，从原来的4种减少到3种&#10;- 调整了每种类型的结构，使其更加清晰和灵活&#10;-增加了特殊情况下使用三句回复的说明，提高了回复的多样性&#10;- 优化了语言表达，使其更加符合角色性格和沟通风格">
+      <option name="closed" value="true" />
+      <created>1740034385781</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1740034385781</updated>
+    </task>
+    <task id="LOCAL-00038" summary="refactor(dialog): 调整对话内容长度限制和回复策略- 在 qiyu-20250120-def.txt 中将对话内容长度限制从150 字以内调整为80 字以内&#10;- 在 qiyu-20250120-def-v3.txt 中：&#10;  - 强调大多数时候擅长调侃吐槽，幽默风趣  - 在对话停滞时提出新的活动建议&#10;  - 增加对对话氛围变化时使用 think 指令的触发条件  - 移除制造悬念、调侃逗弄等多句回复的具体组合方式&#10;  - 要求每句话保持简短自然，符合口语表达习惯&#10;- 在 normal_chat_tests.csv 中添加了一个空行，可能为后续测试用例预留位置">
+      <option name="closed" value="true" />
+      <created>1740040446189</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1740040446189</updated>
+    </task>
+    <task id="LOCAL-00039" summary="refactor(dialog): 调整对话内容长度限制和回复策略- 在 qiyu-20250120-def.txt 中将对话内容长度限制从150 字以内调整为80 字以内&#10;- 在 qiyu-20250120-def-v3.txt 中：&#10;  - 强调大多数时候擅长调侃吐槽，幽默风趣  - 在对话停滞时提出新的活动建议&#10;  - 增加对对话氛围变化时使用 think 指令的触发条件  - 移除制造悬念、调侃逗弄等多句回复的具体组合方式&#10;  - 要求每句话保持简短自然，符合口语表达习惯&#10;- 在 normal_chat_tests.csv 中添加了一个空行，可能为后续测试用例预留位置">
+      <option name="closed" value="true" />
+      <created>1740103914226</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1740103914226</updated>
+    </task>
+    <task id="LOCAL-00040" summary="config: 修改日志级别为 INFO&#10;&#10;- 将 docker-compose.yml 文件中的 LOG_LEVEL 环境变量从 DEBUG 改为 INFO&#10;- 此修改旨在减少开发环境中的日志输出量，提高可读性">
+      <option name="closed" value="true" />
+      <created>1740124393211</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1740124393211</updated>
+    </task>
+    <task id="LOCAL-00041" summary="feat(agent): 切换模型并优化记忆功能&#10;&#10;- 将 doubao 模型改为 doubao-lite，使用新的环境变量 DOUBAO_MODEL_LITE&#10;- 更新祁煜角色的 prompt 文件为 qiyu-20250120-f2f-v3&#10;- 注释掉记忆功能中的日志输出，以减少调试信息">
+      <option name="closed" value="true" />
+      <created>1740124428783</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1740124428783</updated>
+    </task>
+    <task id="LOCAL-00042" summary="test(zero): 更新测试配置并优化测试流程&#10;&#10;- 调整记忆队列长度为 8&#10;- 更新 LLM 模型选择为 &quot;doubao-pro&quot;- 新增测试配置，包括 &quot;doubao-lite&quot; 和 &quot;deepssek-chat&quot; 模型- 优化测试执行流程，使用 asyncio.gather 提高并发效率- 在 ZeroAgent 中添加对话记录日志输出">
+      <option name="closed" value="true" />
+      <created>1740124483949</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1740124483949</updated>
+    </task>
+    <task id="LOCAL-00043" summary="refactor(prompts): 优化记忆搜索触发条件和对话输出格式- 修改 search 指令为 search_memory，明确记忆搜索用途- 统一 output_format 中的 content 字段为 reply，简化输出格式&#10;- 更新多句回复的适用场景，增强对话层次感和自然过渡&#10;- 明确 JSON 输出格式要求，确保数据结构一致性&#10;- 增加 search_memory 指令的触发条件，提高记忆利用率">
+      <option name="closed" value="true" />
+      <created>1740124591020</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1740124591020</updated>
+    </task>
+    <task id="LOCAL-00044" summary="test: 添加正常聊天测试用例&#10;&#10;- 在 normal_chat_tests.csv 文件中添加了两条新的聊天测试用例&#10;- 新增的测试用例旨在检验 AI 的记忆功能和对话连贯性">
+      <option name="closed" value="true" />
+      <created>1740124631556</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1740124631556</updated>
+    </task>
+    <option name="localTasksCounter" value="45" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -462,16 +554,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="feat:简化roleconfig参数" />
-    <MESSAGE value="feat:通过配置文件创建agent实例" />
-    <MESSAGE value="feat:移除历史配置文件" />
-    <MESSAGE value="feat:添加占位符替换功能" />
-    <MESSAGE value="refactor:重新抽象agent基类" />
-    <MESSAGE value="feat:添加注释" />
-    <MESSAGE value="feat:添加多轮对话测试脚本/memory框架" />
-    <MESSAGE value="feat: 添加多轮对话测试脚本和 memory 框架- 在 qiyu-20250120.txt 中添加了多轮对话示例- 在 zero_agent.py 中实现了对话历史获取和打印功能&#10;- 新增了 qiyu-20250120-def.txt 文件，定义了更详细的角色属性和对话规则&#10;- 修改了 app.log，增加了多条日志记录" />
-    <MESSAGE value="feat(database): 添加 MySQL 数据库支持并保存聊天记录&#10;&#10;- 在 BaseAgent 中集成 MySQLClient&#10;- 在 ZeroAgent 中实现聊天记录保存到 MySQL&#10;- 更新 Docker Compose配置，添加 MySQL 服务- 更新 requirements.txt，添加 aiomysql 依赖" />
-    <MESSAGE value="feat(agent_service): 重构并添加数据库支持&#10;&#10;- 为 AgentService 类添加数据库服务属性&#10;-重构 get_instance 方法，确保单例模式正确实现&#10;- 添加 init 方法进行服务初始化&#10;- 更新 create_agent 方法，使用与默认 agents 相同的 LLM 配置- 确保每个 agent 的数据库服务正确初始化" />
     <MESSAGE value="chore: 添加 .env 文件到 .gitignore&#10;&#10;- 新建 .gitignore 文件，避免环境变量配置文件被提交到仓库" />
     <MESSAGE value="feat(env): 添加新的模型 ID并移除旧的日志文件- 在 .env 文件中添加新的 DOUBAO_MODEL_PRO 模型 ID&#10;- 删除了 agent_zero.log 文件中的所有错误日志&#10;- 移除了 .idea/AgentZero.iml 文件中的模板文件夹配置" />
     <MESSAGE value="refactor(agent): 重构 Agent 获取逻辑并支持临时配置&#10;&#10;- 修改 get_agent 函数以支持传入 user_id 和临时配置&#10;-重构 chat_service 层，直接使用新配置而不是上下文&#10;- 更新 API 路由和模型以适应新逻辑&#10;- 调整 test_compare.py 中的测试配置&#10;- 优化 ZeroAgent 中的流式回复生成" />
@@ -486,7 +568,17 @@
     <MESSAGE value="test(test_compare): 优化记忆召回测试并添加队列长度限制- 添加了记忆召回测试的变体，分别限制队列长度为 10 和 5&#10;- 优化了测试结果的整理和输出逻辑，提高了可读性- 修改了记忆行的格式，即使没有深层见解也添加括号" />
     <MESSAGE value="feat(prompts): 添加大量新的对话语料&#10;&#10;- 在语料.txt文件中添加了227条新的对话内容&#10;- 新增语料涵盖了多种情境和主题，丰富了对话数据集&#10;- 为模型训练提供了更多样化的输入样本" />
     <MESSAGE value="docs(PRD): 添加 Agent 记忆协同系统规范文档&#10;&#10;- 新增记忆系统需求文档，详细说明记忆类型、协同规则、更新机制和异常处理&#10;- 描述了固化记忆、动态记忆、短期记忆和长期记忆的特点和使用规则- 制定了记忆优先级机制和组合规则，确保有效协同- 设定了不同的更新触发条件，保证记忆内容的时效性&#10;- 提出了记忆冲突、过载和丢失的异常处理机制，提高系统稳定性" />
+    <MESSAGE value="refactor(memory): 重构记忆模块以支持消息格式保留&#10;&#10;- 注释掉解析 JSON 响应的代码，直接使用原始内容&#10;- 添加调试日志以记录添加的消息内容&#10;- 保留 get_recent_messages 函数的原始逻辑&#10;- 注释掉未完成的 get_recent_messages_with_format 函数" />
+    <MESSAGE value="refactor(agent): 优化记忆处理和对话管理&#10;&#10;- 更新了祁煜角色的提示文件&#10;-重构了记忆处理逻辑，提高了效率和可读性&#10;-调整了测试配置，以适应新的记忆处理策略&#10;- 优化了对话记忆获取的限制&#10;- 添加了日志记录，以便调试和监控" />
     <MESSAGE value="feat: 添加祁煜角色设定及对话示例&#10;&#10;- 新增祁煜角色的详细设定，包括外貌、性格、能力等&#10;- 添加多个对话示例，展现祁煜与用户的互动方式&#10;-制定对话规则和输出格式，确保角色扮演的一致性和连贯性" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: 添加祁煜角色设定及对话示例&#10;&#10;- 新增祁煜角色的详细设定，包括外貌、性格、能力等&#10;- 添加多个对话示例，展现祁煜与用户的互动方式&#10;-制定对话规则和输出格式，确保角色扮演的一致性和连贯性" />
+    <MESSAGE value="refactor(test): 更新测试用例并添加新的角色扮演配置&#10;&#10;- 移除了娱乐八卦相关的测试用例&#10;- 更新了测试配置名称，增加了版本号&#10;- 添加了祁煜角色的系统配置文件，包括角色属性、对话风格和记忆规则等" />
+    <MESSAGE value="refactor(src): 优化多句回复的逻辑和结构&#10;&#10;-精简了多句回复的类型，从原来的4种减少到3种&#10;- 调整了每种类型的结构，使其更加清晰和灵活&#10;-增加了特殊情况下使用三句回复的说明，提高了回复的多样性&#10;- 优化了语言表达，使其更加符合角色性格和沟通风格" />
+    <MESSAGE value="refactor(dialog): 调整对话内容长度限制和回复策略- 在 qiyu-20250120-def.txt 中将对话内容长度限制从150 字以内调整为80 字以内&#10;- 在 qiyu-20250120-def-v3.txt 中：&#10;  - 强调大多数时候擅长调侃吐槽，幽默风趣  - 在对话停滞时提出新的活动建议&#10;  - 增加对对话氛围变化时使用 think 指令的触发条件  - 移除制造悬念、调侃逗弄等多句回复的具体组合方式&#10;  - 要求每句话保持简短自然，符合口语表达习惯&#10;- 在 normal_chat_tests.csv 中添加了一个空行，可能为后续测试用例预留位置" />
+    <MESSAGE value="config: 修改日志级别为 INFO&#10;&#10;- 将 docker-compose.yml 文件中的 LOG_LEVEL 环境变量从 DEBUG 改为 INFO&#10;- 此修改旨在减少开发环境中的日志输出量，提高可读性" />
+    <MESSAGE value="feat(agent): 切换模型并优化记忆功能&#10;&#10;- 将 doubao 模型改为 doubao-lite，使用新的环境变量 DOUBAO_MODEL_LITE&#10;- 更新祁煜角色的 prompt 文件为 qiyu-20250120-f2f-v3&#10;- 注释掉记忆功能中的日志输出，以减少调试信息" />
+    <MESSAGE value="test(zero): 更新测试配置并优化测试流程&#10;&#10;- 调整记忆队列长度为 8&#10;- 更新 LLM 模型选择为 &quot;doubao-pro&quot;- 新增测试配置，包括 &quot;doubao-lite&quot; 和 &quot;deepssek-chat&quot; 模型- 优化测试执行流程，使用 asyncio.gather 提高并发效率- 在 ZeroAgent 中添加对话记录日志输出" />
+    <MESSAGE value="refactor(prompts): 优化记忆搜索触发条件和对话输出格式- 修改 search 指令为 search_memory，明确记忆搜索用途- 统一 output_format 中的 content 字段为 reply，简化输出格式&#10;- 更新多句回复的适用场景，增强对话层次感和自然过渡&#10;- 明确 JSON 输出格式要求，确保数据结构一致性&#10;- 增加 search_memory 指令的触发条件，提高记忆利用率" />
+    <MESSAGE value="test: 添加正常聊天测试用例&#10;&#10;- 在 normal_chat_tests.csv 文件中添加了两条新的聊天测试用例&#10;- 新增的测试用例旨在检验 AI 的记忆功能和对话连贯性" />
+    <option name="LAST_COMMIT_MESSAGE" value="test: 添加正常聊天测试用例&#10;&#10;- 在 normal_chat_tests.csv 文件中添加了两条新的聊天测试用例&#10;- 新增的测试用例旨在检验 AI 的记忆功能和对话连贯性" />
   </component>
 </project>

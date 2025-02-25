@@ -75,9 +75,9 @@ class EvaluationAgent(BaseAgent):
                 )
                 
                 context = await self._build_eval_context(prompt)
-                
+                original_data= json.dumps(data, ensure_ascii=False, indent=2)
                 # 发送评估项开始标记
-                yield f"data: {json.dumps({'index': idx + 1, 'type': 'start'}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'index': idx + 1, 'type': 'start', 'original_data': original_data}, ensure_ascii=False)}\n\n"
                 
                 # 流式返回每个chunk
                 async for chunk in self.llm.astream(context["messages"]):

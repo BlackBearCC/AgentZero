@@ -134,7 +134,8 @@ const startEvaluation = async () => {
 
     let currentEvaluation = {
       index: null,
-      content: ''
+      content: '',
+      originalData: ''
     }
 
     while (true) {
@@ -163,16 +164,17 @@ const startEvaluation = async () => {
               }
               currentEvaluation = {
                 index: data.index,
-                content: ''
+                content: '',
+                originalData: data.original_data
               }
-              evaluationText.value += `评估项 ${data.index}:\n`
+              evaluationText.value += `评估项 ${data.index}:\n原始数据:\n${data.original_data}\n\n评估结果:\n`
               break
 
             case 'chunk':
               isTyping.value = true
               currentEvaluation.content += data.content
               evaluationText.value = evaluationText.value.split(`评估项 ${data.index}:`)[0] + 
-                                   `评估项 ${data.index}:\n${currentEvaluation.content}`
+                                   `评估项 ${data.index}:\n原始数据:\n${currentEvaluation.originalData}\n\n评估结果:\n${currentEvaluation.content}`
               playTypeSound()
               scrollToBottom()
               
@@ -402,7 +404,16 @@ const startEvaluation = async () => {
   font-family: inherit;
   color: inherit;
   background: transparent;
-  display: inline;  /* 确保光标在文本后面 */
+  display: inline;
+}
+
+/* 添加原始数据的样式 */
+.typewriter-text pre {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 .typewriter-char {

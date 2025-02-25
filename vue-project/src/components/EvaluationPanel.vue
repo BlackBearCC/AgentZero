@@ -1,76 +1,89 @@
 <template>
-  <div class="page-background">
-    <div class="evaluation-container">
-      <div class="control-panel">
-        <div class="file-selector">
-          <label class="upload-btn">
-            <input type="file" @change="handleFileUpload" accept=".csv,.xlsx" />
-            <span>选择文件</span>
-          </label>
-          
-          <!-- 添加字段选择对话框 -->
-          <div v-if="showFieldSelector" class="field-selector-modal">
-            <div class="field-selector-content">
-              <h3>选择要评估的字段</h3>
-              <div class="field-list">
-                <label v-for="field in availableFields" :key="field" class="field-item">
-                  <input 
-                    type="checkbox" 
-                    v-model="selectedFields" 
-                    :value="field"
-                  >
-                  {{ field }}
-                </label>
+  <div class="tv-container">
+    <!-- 控制面板 -->
+    <div class="control-panel">
+      <div class="control-group">
+        <div class="control-label">INPUT</div>
+        <label class="control-button upload-btn">
+          <input type="file" @change="handleFileUpload" accept=".csv,.xlsx" />
+          <div class="button-face">
+            <span class="button-icon">📁</span>
+            <span class="button-text">SELECT FILE</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">MODE</div>
+        <select v-model="selectedEvalType" class="control-button mode-select">
+          <option value="dialogue">DIALOGUE</option>
+          <option value="memory">MEMORY</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">POWER</div>
+        <button 
+          @click="startEvaluation" 
+          :disabled="isEvaluating || !fieldsConfirmed" 
+          class="control-button power-btn"
+        >
+          <div class="button-face">
+            <div class="power-indicator" :class="{ 'active': isEvaluating }"></div>
+            <span class="button-text">{{ isEvaluating ? 'RUNNING' : 'START' }}</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- 预留其他功能的控制组 -->
+      <div class="control-group">
+        <div class="control-label">CHANNEL</div>
+        <div class="channel-buttons">
+          <button class="control-button channel-btn">1</button>
+          <button class="control-button channel-btn">2</button>
+          <button class="control-button channel-btn">3</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 电视屏幕 -->
+    <div class="tv-screen">
+      <div class="screen-frame">
+        <div class="screen-content">
+          <div class="chat-window" ref="chatWindow">
+            <div class="message system-message" v-if="systemMessage">
+              {{ systemMessage }}
+            </div>
+            <div class="message ai-message" v-if="evaluationText">
+              <div class="message-header">
+                <span class="ai-badge">AI</span>
+                <span>评估结果</span>
               </div>
-              <div class="field-selector-actions">
-                <button @click="confirmFields" class="confirm-btn">确认</button>
-                <button @click="selectAllFields" class="select-all-btn">全选</button>
+              <div class="message-content typewriter">
+                <pre class="typewriter-text">{{ evaluationText }}<span class="cursor" :class="{ 'blink': !isTyping }">|</span></pre>
               </div>
             </div>
-          </div>
-
-          <select v-model="selectedEvalType" class="eval-select">
-            <option value="dialogue">对话质量评估</option>
-            <option value="memory">记忆相关性评估</option>
-          </select>
-          <button @click="startEvaluation" :disabled="isEvaluating || !fieldsConfirmed" class="start-btn">
-            {{ isEvaluating ? '评估中...' : '开始评估' }}
-          </button>
-        </div>
-
-        <div class="progress" v-if="isEvaluating">
-          <div class="progress-text">进度: {{ processed }}/{{ total }}</div>
-          <div class="progress-bar">
-            <div :style="progressStyle"></div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- AI工作窗口 -->
-      <div class="chat-container">
-        <div class="chat-window" ref="chatWindow">
-          <!-- 系统消息 -->
-          <div class="message system-message" v-if="systemMessage">
-            {{ systemMessage }}
-          </div>
-          
-          <!-- 评估消息 -->
-          <div class="message ai-message" v-if="evaluationText">
-            <div class="message-header">
-              <span class="ai-badge">AI</span>
-              <span>评估结果</span>
-            </div>
-            <div class="message-content typewriter">
-              <pre class="typewriter-text">{{ evaluationText }}<span class="cursor" :class="{ 'blink': !isTyping }">|</span></pre>
-            </div>
-          </div>
-
-          <!-- 正在输入提示 -->
-          <div class="typing-indicator" v-if="isEvaluating">
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-          </div>
+    <!-- 字段选择模态框 -->
+    <div v-if="showFieldSelector" class="field-selector-modal">
+      <div class="field-selector-content">
+        <div class="modal-header">
+          <h3>SELECT FIELDS</h3>
+          <div class="field-count">{{ selectedFields.length }}/{{ availableFields.length }}</div>
+        </div>
+        <div class="field-list">
+          <label v-for="field in availableFields" :key="field" class="field-item">
+            <input type="checkbox" v-model="selectedFields" :value="field">
+            <span class="field-name">{{ field }}</span>
+          </label>
+        </div>
+        <div class="field-selector-actions">
+          <button @click="selectAllFields" class="control-button">SELECT ALL</button>
+          <button @click="confirmFields" class="control-button confirm-btn">CONFIRM</button>
         </div>
       </div>
     </div>
@@ -276,364 +289,161 @@ const startEvaluation = async () => {
 </script>
 
 <style scoped>
-.page-background {
+.tv-container {
+  display: flex;
+  gap: 2rem;
+  padding: 2rem;
+  min-height: 100vh;
+  width: 100vw;
+  background: #1a1a2e;
+  box-sizing: border-box;
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(to bottom, #1a1a2e, #16213e);
-  overflow-y: auto;
-  min-height: 100vh;
-}
-
-.evaluation-container {
-  width: 100%;
-  min-height: 100vh;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  color: #e6e6e6;
+  overflow: hidden;
 }
 
 .control-panel {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  width: 280px;
+  background: #2a2a3a;
   padding: 1.5rem;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.file-selector {
+  border-radius: 10px;
   display: flex;
-  gap: 1rem;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 2rem;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+  border: 2px solid #3a3a4a;
+  height: calc(100vh - 4rem);
+  overflow-y: auto;
 }
 
-.upload-btn {
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.control-label {
+  color: #8a8a9a;
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.control-button {
+  background: #3a3a4a;
+  border: none;
+  border-radius: 4px;
+  padding: 0.8rem;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
   position: relative;
-  background: linear-gradient(45deg, #2196f3, #00bcd4);
-  padding: 0.8rem 1.5rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-  color: white;
-  font-weight: 500;
+  overflow: hidden;
 }
 
-.upload-btn input[type="file"] {
-  position: absolute;
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
+.control-button:hover {
+  background: #4a4a5a;
 }
 
-.upload-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
-}
-
-.eval-select {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0.8rem 1.5rem;
-  border-radius: 8px;
-  color: white;
-  outline: none;
-}
-
-.start-btn {
-  background: linear-gradient(45deg, #7c4dff, #448aff);
-  padding: 0.8rem 1.5rem;
-  border-radius: 8px;
-  border: none;
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.start-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(124, 77, 255, 0.3);
-}
-
-.start-btn:disabled {
-  opacity: 0.6;
+.control-button:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.progress {
-  margin-top: 1rem;
-}
-
-.progress-text {
-  text-align: center;
-  margin-bottom: 0.5rem;
-  color: #a0a0a0;
-}
-
-.progress-bar {
-  height: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-bar div {
-  height: 100%;
-  background: linear-gradient(90deg, #00bcd4, #2196f3);
-  transition: width 0.3s ease;
-}
-
-.chat-container {
-  flex: 1;
+.button-face {
   display: flex;
+  align-items: center;
   justify-content: center;
-  align-items: center;
-  padding: 1rem;
-  width: 100%;
-}
-
-.chat-window {
-  width: 100%;
-  height: calc(100vh - 250px);
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 1.5rem;
-  overflow-y: auto;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.message {
-  padding: 1rem;
-  border-radius: 12px;
-  max-width: 100%;
-}
-
-.system-message {
-  background: rgba(255, 255, 255, 0.1);
-  text-align: center;
-  font-size: 0.9rem;
-  color: #a0a0a0;
-}
-
-.ai-message {
-  background: linear-gradient(135deg, rgba(124, 77, 255, 0.2), rgba(33, 150, 243, 0.2));
-  border: 1px solid rgba(124, 77, 255, 0.3);
-}
-
-.message-header {
-  display: flex;
-  align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.8rem;
-  font-weight: 500;
 }
 
-.ai-badge {
-  background: linear-gradient(45deg, #7c4dff, #448aff);
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
+.power-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff4444;
+  transition: all 0.3s ease;
 }
 
-.message-content {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 1.5rem;
-  border-radius: 8px;
-  margin-top: 0.5rem;
+.power-indicator.active {
+  background: #44ff44;
+  box-shadow: 0 0 10px #44ff44;
+}
+
+.tv-screen {
+  flex: 1;
+  background: #000;
+  border-radius: 20px;
+  padding: 20px;
   position: relative;
   overflow: hidden;
-  font-size: 14px;
+  height: calc(100vh - 4rem);
+  min-width: 0;
 }
 
-.typewriter {
-  font-family: 'Courier New', Courier, monospace;
-  line-height: 1.6;
+.screen-frame {
+  background: linear-gradient(45deg, #1a1a2e, #2a2a3a);
+  border-radius: 15px;
+  padding: 15px;
+  height: 100%;
+  box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
 }
 
-.typewriter-text {
-  white-space: pre-wrap;
-  word-break: break-word;
-  margin: 0;
-  font-family: inherit;
-  color: inherit;
-  background: transparent;
-  display: inline;
-}
-
-/* 添加原始数据的样式 */
-.typewriter-text pre {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 1rem;
-  border-radius: 4px;
-  margin: 0.5rem 0;
-  font-family: 'Courier New', Courier, monospace;
-}
-
-.typewriter-char {
-  display: inline-block;
-  opacity: 0;
-  animation: typeIn 0.01s ease-in-out forwards;
-  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
-}
-
-@keyframes typeIn {
-  from {
-    opacity: 0;
-    transform: translateY(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 添加打字声音效果的样式 */
-.typewriter-char.typed {
+.screen-content {
+  background: #000;
+  border-radius: 10px;
+  height: 100%;
+  overflow: hidden;
   position: relative;
 }
 
-.typewriter-char.typed::after {
+.screen-content::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    rgba(255,255,255,0.1) 50%,
+    rgba(0,0,0,0.1) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  animation: scanline 10s linear infinite;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
+/* 保留之前的消息样式，但调整以适应新的电视效果 */
+.chat-window {
   height: 100%;
-  background: rgba(255, 255, 255, 0.1);
-  animation: keyPress 0.1s ease-out;
-}
-
-@keyframes keyPress {
-  0% {
-    transform: scale(1.2);
-    opacity: 0.5;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0;
-  }
-}
-
-/* 添加打字机光标效果 */
-.message-content::after {
-  content: none;
-}
-
-.typing-indicator {
-  display: flex;
-  gap: 0.4rem;
-  justify-content: center;
   padding: 1rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #4a4a5a #2a2a3a;
 }
 
-.dot {
+/* 自定义滚动条样式 */
+.chat-window::-webkit-scrollbar {
   width: 8px;
-  height: 8px;
-  background: #a0a0a0;
-  border-radius: 50%;
-  animation: bounce 1.4s infinite ease-in-out;
 }
 
-.dot:nth-child(1) { animation-delay: -0.32s; }
-.dot:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes bounce {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); }
+.chat-window::-webkit-scrollbar-track {
+  background: #2a2a3a;
+  border-radius: 4px;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
+.chat-window::-webkit-scrollbar-thumb {
+  background: #4a4a5a;
+  border-radius: 4px;
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-@media (max-width: 768px) {
-  .evaluation-container {
-    padding: 1rem;
-  }
-
-  .file-selector {
-    flex-direction: column;
-    gap: 0.8rem;
-  }
-
-  .upload-btn, .eval-select, .start-btn {
-    width: 100%;
-  }
-
-  .chat-window {
-    height: calc(100vh - 300px);
-  }
-}
-
-/* 确保滚动条样式应用到背景容器 */
-.page-background::-webkit-scrollbar {
-  width: 6px;
-}
-
-.page-background::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-
-.page-background::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-.page-background::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.cursor {
-  display: inline-block;
-  color: rgba(255, 255, 255, 0.8);
-  font-weight: 100;
-  margin-left: 1px;
-  position: relative;
-  transform: translateY(-1px);
-}
-
-.cursor.blink {
-  animation: blink 1s infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-/* 移除之前的光标样式 */
-.message-content::after {
-  content: none;
-}
-
+/* 字段选择器样式调整 */
 .field-selector-modal {
   position: fixed;
   top: 0;
@@ -645,15 +455,28 @@ const startEvaluation = async () => {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  backdrop-filter: blur(10px);
 }
 
 .field-selector-content {
-  background: #1a1a2e;
+  background: #2a2a3a;
   padding: 2rem;
   border-radius: 16px;
   width: 90%;
   max-width: 500px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid #3a3a4a;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.field-count {
+  color: #8a8a9a;
+  font-size: 0.9rem;
 }
 
 .field-list {
@@ -682,21 +505,28 @@ const startEvaluation = async () => {
   margin-top: 1rem;
 }
 
-.confirm-btn, .select-all-btn {
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
 .confirm-btn {
   background: linear-gradient(45deg, #7c4dff, #448aff);
   color: white;
 }
 
-.select-all-btn {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+/* 响应式设计优化 */
+@media (max-width: 768px) {
+  .tv-container {
+    flex-direction: column;
+    padding: 1rem;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .control-panel {
+    width: 100%;
+    height: auto;
+    min-height: 200px;
+  }
+
+  .tv-screen {
+    height: calc(100vh - 250px);
+  }
 }
 </style> 

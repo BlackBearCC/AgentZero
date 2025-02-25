@@ -33,8 +33,33 @@
             <span>上传文件</span>
             <i class="upload-icon">↑</i>
           </div>
-          <input type="file" @change="handleFileUpload" accept=".json" class="hidden-file-input" />
+          <input type="file" @change="handleFileUpload" accept=".csv,.xls,.xlsx,.json" class="hidden-file-input" />
         </label>
+        <div class="file-info" v-if="selectedFile">
+          <div class="file-name">{{ selectedFile.name }}</div>
+          <div class="file-size">{{ formatFileSize(selectedFile.size) }}</div>
+        </div>
+      </div>
+      
+      <!-- 字段选择 - 仅在有可用字段时显示 -->
+      <div class="control-group field-selector" v-if="availableFields.length > 0">
+        <div class="control-label">FIELDS <span class="field-count">{{ selectedFields.length }}/{{ availableFields.length }}</span></div>
+        
+        <!-- 字段列表 - 垂直排列 -->
+        <div class="field-list">
+          <div v-for="field in availableFields" :key="field" class="field-item">
+            <label class="field-label">
+              <input type="checkbox" v-model="selectedFields" :value="field">
+              <span class="field-name">{{ field }}</span>
+            </label>
+          </div>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="field-actions">
+          <button @click="selectAllFields" class="control-button field-btn">全选</button>
+          <button @click="confirmFields" class="control-button field-btn confirm-btn">确认</button>
+        </div>
       </div>
       
       <!-- 评估类型选择 -->
@@ -42,16 +67,16 @@
         <div class="control-label">MODE</div>
         <div class="mode-selector">
           <button 
-            @click="evalType = 'dialogue'" 
+            @click="selectedEvalType = 'dialogue'" 
             class="control-button mode-btn" 
-            :class="{ 'active': evalType === 'dialogue' }"
+            :class="{ 'active': selectedEvalType === 'dialogue' }"
           >
             对话评估
           </button>
           <button 
-            @click="evalType = 'memory'" 
+            @click="selectedEvalType = 'memory'" 
             class="control-button mode-btn" 
-            :class="{ 'active': evalType === 'memory' }"
+            :class="{ 'active': selectedEvalType === 'memory' }"
           >
             记忆评估
           </button>
@@ -64,13 +89,22 @@
         <button 
           @click="startEvaluation" 
           class="control-button start-btn" 
-          :disabled="!fileData || isEvaluating"
+          :disabled="!selectedFile || !fieldsConfirmed || isEvaluating"
         >
           <div class="button-face">
             <span>{{ isEvaluating ? '评估中...' : '开始评估' }}</span>
             <div class="operation-indicator" :class="{ 'active': isEvaluating }"></div>
           </div>
         </button>
+      </div>
+      
+      <!-- 进度条 - 仅在评估过程中显示 -->
+      <div class="control-group" v-if="isEvaluating">
+        <div class="control-label">PROGRESS</div>
+        <div class="progress-bar">
+          <div class="progress-fill" :style="progressStyle"></div>
+        </div>
+        <div class="progress-text">{{ processed }}/{{ total }}</div>
       </div>
       
       <!-- 系统状态 -->
@@ -212,26 +246,6 @@
         </div>
       </div>
     </div>
-
-    <!-- 字段选择模态框 -->
-    <div v-if="showFieldSelector" class="field-selector-modal">
-      <div class="field-selector-content">
-        <div class="modal-header">
-          <h3>SELECT FIELDS</h3>
-          <div class="field-count">{{ selectedFields.length }}/{{ availableFields.length }}</div>
-        </div>
-        <div class="field-list">
-          <label v-for="field in availableFields" :key="field" class="field-item">
-            <input type="checkbox" v-model="selectedFields" :value="field">
-            <span class="field-name">{{ field }}</span>
-          </label>
-        </div>
-        <div class="field-selector-actions">
-          <button @click="selectAllFields" class="control-button">SELECT ALL</button>
-          <button @click="confirmFields" class="control-button confirm-btn">CONFIRM</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -306,12 +320,23 @@ const handleFileUpload = async (event) => {
     if (!response.ok) throw new Error('获取字段失败')
     
     const data = await response.json()
-    availableFields.value = data.columns
-    selectedFields.value = [...data.columns] // 默认全选
-    showFieldSelector.value = true
-    fieldsConfirmed.value = false
+    console.log('获取到的字段数据:', data) // 调试输出
+    
+    // 确保字段数据格式正确
+    if (data.columns && Array.isArray(data.columns)) {
+      availableFields.value = data.columns
+      selectedFields.value = [...data.columns] // 默认全选
+      fieldsConfirmed.value = false
+      
+      // 更新系统状态
+      systemStatus.value = `已加载 ${data.columns.length} 个字段`
+    } else {
+      throw new Error('字段数据格式不正确')
+    }
   } catch (error) {
+    console.error('获取字段失败:', error)
     systemMessage.value = `获取字段失败: ${error.message}`
+    systemStatus.value = '字段加载失败'
   }
 }
 
@@ -567,6 +592,15 @@ const togglePower = () => {
     systemStatus.value = '系统就绪'
   }
 }
+
+// 格式化文件大小
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
 </script>
 
 <style scoped>
@@ -1324,6 +1358,172 @@ const togglePower = () => {
   height: 100%;
   overflow-y: auto;
   padding: 1rem;
+}
+
+/* 文件信息 */
+.file-info {
+  margin-top: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.file-name {
+  color: #44ff44;
+  word-break: break-all;
+  margin-bottom: 0.3rem;
+}
+
+.file-size {
+  color: #8a8a9a;
+  font-size: 0.7rem;
+}
+
+/* 字段选择器 */
+.field-selector {
+  max-height: 300px;
+  animation: slideDown 0.3s ease-out;
+  background: rgba(30, 30, 40, 0.8);
+  border: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+}
+
+.field-count {
+  float: right;
+  background: rgba(68, 255, 68, 0.2);
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  color: #44ff44;
+}
+
+.field-list {
+  max-height: 150px;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(20, 20, 30, 0.5);
+  border-radius: 4px;
+  /* 自定义滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: #44ff44 #1a1a2e;
+}
+
+.field-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.field-list::-webkit-scrollbar-track {
+  background: #1a1a2e;
+  border-radius: 3px;
+}
+
+.field-list::-webkit-scrollbar-thumb {
+  background-color: #44ff44;
+  border-radius: 3px;
+}
+
+.field-item {
+  margin-bottom: 0.3rem;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem;
+  background: rgba(40, 40, 50, 0.8);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.field-label:hover {
+  background: rgba(50, 50, 60, 0.8);
+}
+
+.field-label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #2a2a3a;
+  border: 1px solid #44ff44;
+  border-radius: 3px;
+  margin-right: 0.5rem;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.field-label input[type="checkbox"]:checked {
+  background: #44ff44;
+}
+
+.field-label input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  color: #000;
+  font-size: 12px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.field-name {
+  color: #fff;
+  font-size: 0.85rem;
+  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.field-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.field-btn {
+  flex: 1;
+  font-size: 0.8rem;
+  padding: 0.5rem;
+  background: rgba(40, 40, 50, 0.8);
+}
+
+.confirm-btn {
+  background: rgba(0, 128, 0, 0.5);
+  border: 1px solid #008000;
+  color: #ffffff;
+}
+
+.confirm-btn:hover {
+  background: rgba(0, 128, 0, 0.7);
+}
+
+/* 进度条 */
+.progress-bar {
+  height: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #44ff44, #7cff7c);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #8a8a9a;
 }
 </style>
 

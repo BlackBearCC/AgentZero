@@ -3,14 +3,14 @@ from fastapi import UploadFile
 import io
 from typing import List, Dict, Any
 
-async def read_data_file(file: UploadFile) -> List[Dict[str, Any]]:
+async def read_data_file(file: UploadFile) -> Dict[str, Any]:
     """读取上传的CSV或Excel文件
     
     Args:
         file (UploadFile): 上传的文件对象
     
     Returns:
-        List[Dict[str, Any]]: 解析后的数据列表
+        Dict[str, Any]: 包含数据和字段信息的字典
     """
     try:
         content = await file.read()
@@ -22,15 +22,16 @@ async def read_data_file(file: UploadFile) -> List[Dict[str, Any]]:
         else:
             raise ValueError("不支持的文件格式，请上传CSV或Excel文件")
         
+        # 获取所有列名
+        columns = df.columns.tolist()
+        
         # 转换为字典列表
         data = df.to_dict('records')
         
-        # 验证数据格式
-        for item in data:
-            if 'input' not in item:
-                raise ValueError("数据格式错误：缺少'input'列")
-        
-        return data
+        return {
+            "columns": columns,
+            "data": data
+        }
         
     except Exception as e:
         raise ValueError(f"文件读取失败: {str(e)}") 

@@ -7,11 +7,33 @@
             <input type="file" @change="handleFileUpload" accept=".csv,.xlsx" />
             <span>选择文件</span>
           </label>
+          
+          <!-- 添加字段选择对话框 -->
+          <div v-if="showFieldSelector" class="field-selector-modal">
+            <div class="field-selector-content">
+              <h3>选择要评估的字段</h3>
+              <div class="field-list">
+                <label v-for="field in availableFields" :key="field" class="field-item">
+                  <input 
+                    type="checkbox" 
+                    v-model="selectedFields" 
+                    :value="field"
+                  >
+                  {{ field }}
+                </label>
+              </div>
+              <div class="field-selector-actions">
+                <button @click="confirmFields" class="confirm-btn">确认</button>
+                <button @click="selectAllFields" class="select-all-btn">全选</button>
+              </div>
+            </div>
+          </div>
+
           <select v-model="selectedEvalType" class="eval-select">
             <option value="dialogue">对话质量评估</option>
             <option value="memory">记忆相关性评估</option>
           </select>
-          <button @click="startEvaluation" :disabled="isEvaluating" class="start-btn">
+          <button @click="startEvaluation" :disabled="isEvaluating || !fieldsConfirmed" class="start-btn">
             {{ isEvaluating ? '评估中...' : '开始评估' }}
           </button>
         </div>
@@ -73,6 +95,11 @@ const evaluationText = ref('')
 const isTyping = ref(false)
 let typingTimeout
 
+const showFieldSelector = ref(false)
+const availableFields = ref([])
+const selectedFields = ref([])
+const fieldsConfirmed = ref(false)
+
 // 自动滚动到底部
 const scrollToBottom = () => {
   if (chatWindow.value) {
@@ -91,9 +118,47 @@ const progressStyle = computed(() => ({
   width: `${(processed.value / total.value) * 100}%`
 }))
 
-const handleFileUpload = (event) => {
-  selectedFile.value = event.target.files[0]
-  systemMessage.value = `已选择文件: ${selectedFile.value.name}`
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  selectedFile.value = file
+  systemMessage.value = `已选择文件: ${file.name}`
+  
+  // 获取文件字段
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/file/columns`, {
+      method: 'POST',
+      body: formData
+    })
+    
+    if (!response.ok) throw new Error('获取字段失败')
+    
+    const data = await response.json()
+    availableFields.value = data.columns
+    selectedFields.value = [...data.columns] // 默认全选
+    showFieldSelector.value = true
+    fieldsConfirmed.value = false
+  } catch (error) {
+    systemMessage.value = `获取字段失败: ${error.message}`
+  }
+}
+
+const confirmFields = () => {
+  if (selectedFields.value.length === 0) {
+    systemMessage.value = '请至少选择一个字段'
+    return
+  }
+  showFieldSelector.value = false
+  fieldsConfirmed.value = true
+  systemMessage.value = `已选择 ${selectedFields.value.length} 个字段，可以开始评估`
+}
+
+const selectAllFields = () => {
+  selectedFields.value = [...availableFields.value]
 }
 
 // 添加打字声音效果
@@ -105,12 +170,13 @@ const playTypeSound = () => {
 };
 
 const startEvaluation = async () => {
-  if (!selectedFile.value) return
+  if (!selectedFile.value || !fieldsConfirmed.value) return
   
   const formData = new FormData()
   formData.append('file', selectedFile.value)
   formData.append('eval_type', selectedEvalType.value)
   formData.append('user_id', 'default')
+  formData.append('selected_fields', JSON.stringify(selectedFields.value))
   
   try {
     isEvaluating.value = true
@@ -566,5 +632,71 @@ const startEvaluation = async () => {
 /* 移除之前的光标样式 */
 .message-content::after {
   content: none;
+}
+
+.field-selector-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.field-selector-content {
+  background: #1a1a2e;
+  padding: 2rem;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.field-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 1rem 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+}
+
+.field-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.field-selector-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.confirm-btn, .select-all-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.confirm-btn {
+  background: linear-gradient(45deg, #7c4dff, #448aff);
+  color: white;
+}
+
+.select-all-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
 }
 </style> 

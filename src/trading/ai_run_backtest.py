@@ -507,6 +507,264 @@ class FastHyperparameterOptimizer:
             'best_value': best_value,
             'final_results': final_results
         }
+    
+    def walk_forward_bayesian(self,
+                             param_ranges: Dict[str, Tuple[float, float]],
+                             window_size: int = 30,  # 窗口大小(天)
+                             step_size: int = 15,    # 步长(天)
+                             n_trials: int = 30,     # 每个窗口的优化尝试次数
+                             metric: str = 'sharpe') -> Dict:
+        """
+        前推式贝叶斯优化 - 量化机构标准方法
+        
+        参数:
+            param_ranges: 参数范围
+            window_size: 训练窗口大小(天)
+            step_size: 前进步长(天)
+            n_trials: 每个窗口的优化尝试次数
+            metric: 优化指标
+            
+        返回:
+            前推式优化结果
+        """
+        try:
+            import optuna
+        except ImportError:
+            print("请先安装optuna: pip install optuna")
+            return {}
+        
+        # 将数据按日期分割成多个窗口
+        dates = self.data.index
+        start_date = dates[0]
+        end_date = dates[-1]
+        
+        # 生成时间窗口
+        windows = []
+        current_start = start_date
+        while current_start < end_date:
+            train_end = current_start + pd.Timedelta(days=window_size)
+            test_end = train_end + pd.Timedelta(days=step_size)
+            
+            if test_end > end_date:
+                test_end = end_date
+                
+            if train_end > end_date:
+                break
+                
+            windows.append((current_start, train_end, test_end))
+            current_start = current_start + pd.Timedelta(days=step_size)
+        
+        print(f"前推式贝叶斯优化: 共{len(windows)}个时间窗口")
+        
+        # 存储每个窗口的最优参数和测试结果
+        window_results = []
+        all_test_equity = pd.Series(dtype=float)
+        
+        # 创建进度记录文件
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        progress_file = f"wf_bayesian_progress_{timestamp}.csv"
+        
+        with open(progress_file, 'w') as f:
+            header = ['window', 'train_start', 'train_end', 'test_end']
+            header.extend(list(param_ranges.keys()))
+            header.extend(['sharpe', 'return', 'drawdown', 'win_rate'])
+            f.write(','.join(header) + '\n')
+        
+        # 对每个窗口进行优化
+        for i, (train_start, train_end, test_end) in enumerate(windows):
+            print(f"\n窗口 {i+1}/{len(windows)}: 训练 {train_start.date()} 到 {train_end.date()}, 测试到 {test_end.date()}")
+            
+            # 提取训练数据
+            train_data = self.data[(self.data.index >= train_start) & (self.data.index < train_end)]
+            
+            # 提取测试数据
+            test_data = self.data[(self.data.index >= train_end) & (self.data.index < test_end)]
+            
+            if len(train_data) < 100 or len(test_data) < 20:  # 确保有足够的数据
+                print(f"  跳过窗口 {i+1}: 数据不足")
+                continue
+            
+            # 创建优化研究
+            study_name = f"wf_optimization_{i}_{int(time.time())}"
+            storage_name = f"sqlite:///{study_name}.db"
+            
+            # 定义目标函数
+            def objective(trial):
+                # 从参数范围中采样
+                params = {}
+                for param_name, (low, high) in param_ranges.items():
+                    params[param_name] = trial.suggest_float(param_name, low, high)
+                
+                # 在训练数据上运行回测
+                try:
+                    results = self.backtester.run_backtest(
+                        data=train_data,
+                        verbose=False,
+                        **params
+                    )
+                    
+                    metrics = results['metrics']
+                    
+                    # 根据优化指标返回值
+                    if metric == 'sharpe':
+                        return metrics['sharpe']
+                    elif metric == 'return':
+                        return metrics['annual_return']
+                    elif metric == 'drawdown':
+                        return -metrics['max_drawdown']
+                    elif metric == 'calmar':
+                        return metrics['annual_return'] / (metrics['max_drawdown']/100)
+                    else:
+                        return metrics['sharpe']
+                except Exception as e:
+                    print(f"  参数评估失败: {params}, 错误: {e}")
+                    return float('-inf')
+            
+            # 创建研究
+            study = optuna.create_study(
+                study_name=study_name,
+                storage=storage_name,
+                direction="maximize",
+                load_if_exists=True
+            )
+            
+            # 运行优化
+            print(f"  开始窗口 {i+1} 贝叶斯优化，计划{n_trials}次尝试...")
+            study.optimize(objective, n_trials=n_trials)
+            
+            # 获取最佳参数
+            best_params = study.best_params
+            best_value = study.best_value
+            
+            print(f"  窗口 {i+1} 优化完成！最佳{metric}值: {best_value:.4f}")
+            print("  最优参数组合:")
+            for param, value in best_params.items():
+                print(f"    {param}: {value:.4f}")
+            
+            # 在测试数据上验证
+            test_results = self.backtester.run_backtest(
+                data=test_data,
+                verbose=False,
+                **best_params
+            )
+            
+            test_metrics = test_results['metrics']
+            test_equity = test_results['equity']
+            
+            # 记录结果
+            result = {
+                'window': i+1,
+                'train_start': train_start,
+                'train_end': train_end,
+                'test_end': test_end,
+                'train_sharpe': best_value,
+                'test_sharpe': test_metrics['sharpe'],
+                'test_return': test_metrics['annual_return'],
+                'test_drawdown': test_metrics['max_drawdown'],
+                'test_win_rate': test_metrics['win_rate'],
+                'equity': test_equity
+            }
+            
+            # 添加最优参数
+            for param, value in best_params.items():
+                result[param] = value
+                
+            window_results.append(result)
+            
+            # 合并测试期权益曲线
+            if isinstance(test_equity, pd.Series):
+                all_test_equity = pd.concat([all_test_equity, test_equity])
+            
+            # 保存进度
+            with open(progress_file, 'a') as f:
+                values = [str(i+1), str(train_start.date()), str(train_end.date()), str(test_end.date())]
+                for param_name in param_ranges.keys():
+                    values.append(str(best_params.get(param_name, '')))
+                values.extend([
+                    str(best_value),
+                    str(test_metrics['annual_return']),
+                    str(test_metrics['max_drawdown']),
+                    str(test_metrics['win_rate'])
+                ])
+                f.write(','.join(values) + '\n')
+            
+            print(f"  测试期表现: 夏普比率={test_metrics['sharpe']:.2f}, 收益率={test_metrics['annual_return']*100:.2f}%, 最大回撤={test_metrics['max_drawdown']:.2f}%")
+        
+        # 创建结果DataFrame
+        results_df = pd.DataFrame(window_results)
+        
+        # 计算参数稳定性
+        param_stability = {}
+        for param in param_ranges.keys():
+            if param in results_df.columns:
+                param_stability[param] = {
+                    'mean': results_df[param].mean(),
+                    'std': results_df[param].std(),
+                    'cv': results_df[param].std() / results_df[param].mean() if results_df[param].mean() != 0 else float('inf')
+                }
+        
+        # 计算平均最优参数
+        avg_params = {}
+        for param in param_ranges.keys():
+            if param in results_df.columns:
+                avg_params[param] = results_df[param].mean()
+        
+        # 保存结果
+        results_file = f'wf_bayesian_results_{timestamp}.csv'
+        results_df.to_csv(results_file, index=False)
+        
+        # 保存平均最优参数
+        params_file = f'wf_bayesian_params_{timestamp}.json'
+        with open(params_file, 'w') as f:
+            json.dump({
+                'avg_params': avg_params,
+                'param_stability': param_stability,
+                'timestamp': timestamp
+            }, f, indent=4)
+        
+        print(f"\n前推式贝叶斯优化完成！")
+        print(f"结果已保存到 {results_file}")
+        print(f"平均最优参数已保存到 {params_file}")
+        
+        # 使用平均最优参数运行一次完整回测
+        print("\n使用平均最优参数运行完整回测...")
+        final_results = self.backtester.run_backtest(
+            data=self.data,
+            verbose=True,
+            **avg_params
+        )
+        
+        # 绘制参数稳定性图表
+        plt.figure(figsize=(12, 6))
+        for param in param_ranges.keys():
+            if param in results_df.columns:
+                plt.plot(results_df['window'], results_df[param], 'o-', label=param)
+        
+        plt.title('参数稳定性分析')
+        plt.xlabel('窗口')
+        plt.ylabel('参数值')
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(f'param_stability_{timestamp}.png')
+        
+        # 绘制测试期权益曲线
+        if not all_test_equity.empty:
+            plt.figure(figsize=(12, 6))
+            all_test_equity.plot()
+            plt.title('前推式优化测试期权益曲线')
+            plt.xlabel('日期')
+            plt.ylabel('权益')
+            plt.grid(True)
+            plt.tight_layout()
+            plt.savefig(f'wf_test_equity_{timestamp}.png')
+        
+        return {
+            'window_results': results_df,
+            'avg_params': avg_params,
+            'param_stability': param_stability,
+            'final_results': final_results
+        }
 
 def run_optimization_comparison(data_path: str = None):
     """运行优化方法对比"""
@@ -523,7 +781,7 @@ def run_optimization_comparison(data_path: str = None):
             symbol='BTC/USDT',
             timeframe='15m',
             start=datetime(2024, 1, 1),
-            end=datetime(2024, 2, 24)
+            end=datetime(2024, 5, 24)
         )['indicator']
         # 保存数据以便重用
         data.to_pickle('backtest_data.pkl')
@@ -546,8 +804,7 @@ def run_optimization_comparison(data_path: str = None):
         verbose=True
     )
     
-    # 贝叶斯优化
-    print("\n\n运行贝叶斯优化...")
+    # 创建优化器
     optimizer = FastHyperparameterOptimizer(model_path, data)
     
     # 定义参数范围
@@ -560,10 +817,21 @@ def run_optimization_comparison(data_path: str = None):
         'take_profit_pct': (0.03, 0.07)
     }
     
-    # 运行贝叶斯优化
+    # 运行标准贝叶斯优化
+    print("\n\n运行标准贝叶斯优化...")
     bayes_results = optimizer.bayesian_optimization(
         param_ranges=param_ranges,
-        n_trials=50,  # 减少尝试次数以提高速度
+        n_trials=50,
+        metric='sharpe'
+    )
+    
+    # 运行前推式贝叶斯优化
+    print("\n\n运行前推式贝叶斯优化...")
+    wf_bayes_results = optimizer.walk_forward_bayesian(
+        param_ranges=param_ranges,
+        window_size=30,  # 30天训练窗口
+        step_size=15,    # 15天测试窗口
+        n_trials=30,     # 每个窗口30次尝试
         metric='sharpe'
     )
     
@@ -571,8 +839,12 @@ def run_optimization_comparison(data_path: str = None):
     print("\n\n============= 优化方法对比报告 =============")
     
     # 提取各方法的关键指标
-    methods = ["默认参数", "贝叶斯优化"]
-    results_list = [default_results, bayes_results['final_results']]
+    methods = ["默认参数", "标准贝叶斯优化", "前推式贝叶斯优化"]
+    results_list = [
+        default_results, 
+        bayes_results['final_results'], 
+        wf_bayes_results['final_results']
+    ]
     
     # 创建对比表格
     comparison_data = []

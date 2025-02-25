@@ -52,23 +52,46 @@
         <div class="screen-content">
           <!-- 评估过程显示 - Channel 1 -->
           <div v-if="activeChannel === 1" class="chat-window" ref="chatWindow">
-            <div class="message system-message" v-if="systemMessage">
-              {{ systemMessage }}
+            <!-- 无数据时显示无信号 -->
+            <div v-if="!evaluationText && !systemMessage" class="no-signal">
+              <div class="static-effect"></div>
+              <div class="no-signal-text">NO SIGNAL</div>
             </div>
-            <div class="message ai-message" v-if="evaluationText">
-              <div class="message-header">
-                <span class="ai-badge">AI</span>
-                <span>评估结果</span>
+            
+            <!-- 有系统消息但无评估数据时显示待机画面 -->
+            <div v-else-if="systemMessage && !evaluationText" class="standby-screen">
+              <div class="tv-logo">AI EVALUATOR</div>
+              <div class="standby-message">{{ systemMessage }}</div>
+              <div class="standby-animation"></div>
+            </div>
+            
+            <!-- 有评估数据时显示内容 -->
+            <div v-else class="evaluation-content">
+              <div class="message system-message" v-if="systemMessage">
+                {{ systemMessage }}
               </div>
-              <div class="message-content typewriter">
-                <pre class="typewriter-text">{{ evaluationText }}<span class="cursor" :class="{ 'blink': !isScanning }">|</span></pre>
+              <div class="message ai-message" v-if="evaluationText">
+                <div class="message-header">
+                  <span class="ai-badge">AI</span>
+                  <span>评估结果</span>
+                </div>
+                <div class="message-content typewriter">
+                  <pre class="typewriter-text">{{ evaluationText }}<span class="cursor" :class="{ 'blink': !isScanning }">|</span></pre>
+                </div>
               </div>
             </div>
           </div>
           
           <!-- 评估报告显示 - Channel 2 -->
           <div v-if="activeChannel === 2" class="chat-window report-view">
-            <div class="report-container" v-if="evaluationStats">
+            <!-- 无数据时显示无信号 -->
+            <div v-if="!evaluationStats" class="no-signal">
+              <div class="static-effect"></div>
+              <div class="no-signal-text">NO SIGNAL</div>
+            </div>
+            
+            <!-- 有数据时显示报告 -->
+            <div v-else class="report-container">
               <h2 class="report-title">评估报告</h2>
               
               <!-- 总体评分 -->
@@ -413,18 +436,9 @@ const changeChannel = (channel) => {
   setTimeout(() => {
     activeChannel.value = channel
     
-    // 如果切换到报告频道但没有数据
-    if (channel === 2 && !evaluationStats.value) {
-      systemMessage.value = '没有评估报告可以显示'
-      activeChannel.value = 1 // 切回评估频道
-    }
-    
-    // 如果切换到频道3，显示无信号
-    if (channel === 3) {
-      // 导出评估数据
-      if (evaluationStats.value) {
-        exportEvaluationReport()
-      }
+    // 如果切换到频道3，导出评估数据
+    if (channel === 3 && evaluationStats.value) {
+      exportEvaluationReport()
     }
     
     // 结束换台效果
@@ -1011,5 +1025,100 @@ const showEvaluationReport = (stats) => {
   .tv-screen {
     transform: none;
   }
+}
+
+/* 待机画面样式 */
+.standby-screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  background: #000;
+  color: #44ff44;
+  text-shadow: 0 0 10px rgba(68, 255, 68, 0.7);
+  overflow: hidden;
+}
+
+.standby-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.15) 0px,
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tv-logo {
+  font-size: 3rem;
+  font-weight: bold;
+  letter-spacing: 5px;
+  margin-bottom: 2rem;
+  position: relative;
+  z-index: 2;
+  animation: pulse 2s infinite alternate;
+}
+
+.standby-message {
+  font-size: 1.2rem;
+  max-width: 80%;
+  text-align: center;
+  line-height: 1.6;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  position: relative;
+  z-index: 2;
+}
+
+.standby-animation {
+  position: absolute;
+  bottom: 10%;
+  width: 60%;
+  height: 4px;
+  background: rgba(68, 255, 68, 0.5);
+  border-radius: 2px;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.standby-animation::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 50%;
+  height: 100%;
+  background: #44ff44;
+  animation: scanning-line 2s infinite linear;
+}
+
+@keyframes scanning-line {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* 评估内容容器 */
+.evaluation-content {
+  height: 100%;
+  overflow-y: auto;
+  padding: 1rem;
 }
 </style> 

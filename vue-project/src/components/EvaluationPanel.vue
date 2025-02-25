@@ -38,7 +38,9 @@
               <span class="ai-badge">AI</span>
               <span>评估结果</span>
             </div>
-            <div class="message-content">{{ evaluationText }}</div>
+            <div class="message-content typewriter">
+              <pre class="typewriter-text">{{ evaluationText }}<span class="cursor" :class="{ 'blink': !isTyping }">|</span></pre>
+            </div>
           </div>
 
           <!-- 正在输入提示 -->
@@ -68,6 +70,8 @@ const total = ref(0)
 const chatWindow = ref(null)
 const systemMessage = ref('我是评估助手，请上传文件开始评估。')
 const evaluationText = ref('')
+const isTyping = ref(false)
+let typingTimeout
 
 // 自动滚动到底部
 const scrollToBottom = () => {
@@ -91,6 +95,14 @@ const handleFileUpload = (event) => {
   selectedFile.value = event.target.files[0]
   systemMessage.value = `已选择文件: ${selectedFile.value.name}`
 }
+
+// 添加打字声音效果
+const playTypeSound = () => {
+  const audio = new Audio();
+  audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAABQADw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8VFRUVFRUVFRUVFRUVFRUVFRUVFRUVFR4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/wAARCAAIAAgDASIAAhEBAxEB/8QAWQABAQEAAAAAAAAAAAAAAAAAAAIEAQEBAQEAAAAAAAAAAAAAAAAAAgEF/8QAFwEBAQEBAAAAAAAAAAAAAAAAAAECA//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AKpRqNQBX//Z';
+  audio.volume = 0.05;
+  audio.play().catch(() => {});
+};
 
 const startEvaluation = async () => {
   if (!selectedFile.value) return
@@ -146,12 +158,8 @@ const startEvaluation = async () => {
 
           switch (data.type) {
             case 'start':
-              // 开始新的评估项
-              if (currentEvaluation.index !== null) {
-                // 如果有未完成的评估，先添加分隔符
-                if (evaluationText.value) {
-                  evaluationText.value += '\n---\n'
-                }
+              if (currentEvaluation.index !== null && evaluationText.value) {
+                evaluationText.value += '\n---\n'
               }
               currentEvaluation = {
                 index: data.index,
@@ -161,16 +169,21 @@ const startEvaluation = async () => {
               break
 
             case 'chunk':
-              // 累加内容
+              isTyping.value = true
               currentEvaluation.content += data.content
-              // 更新显示
               evaluationText.value = evaluationText.value.split(`评估项 ${data.index}:`)[0] + 
                                    `评估项 ${data.index}:\n${currentEvaluation.content}`
+              playTypeSound()
               scrollToBottom()
+              
+              // 重置打字状态的计时器
+              clearTimeout(typingTimeout)
+              typingTimeout = setTimeout(() => {
+                isTyping.value = false
+              }, 100)
               break
 
             case 'end':
-              // 评估项完成
               processed.value = data.index
               break
 
@@ -368,9 +381,78 @@ const startEvaluation = async () => {
 }
 
 .message-content {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.typewriter {
+  font-family: 'Courier New', Courier, monospace;
   line-height: 1.6;
+}
+
+.typewriter-text {
   white-space: pre-wrap;
-  font-family: monospace;
+  word-break: break-word;
+  margin: 0;
+  font-family: inherit;
+  color: inherit;
+  background: transparent;
+  display: inline;  /* 确保光标在文本后面 */
+}
+
+.typewriter-char {
+  display: inline-block;
+  opacity: 0;
+  animation: typeIn 0.01s ease-in-out forwards;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes typeIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 添加打字声音效果的样式 */
+.typewriter-char.typed {
+  position: relative;
+}
+
+.typewriter-char.typed::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  animation: keyPress 0.1s ease-out;
+}
+
+@keyframes keyPress {
+  0% {
+    transform: scale(1.2);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* 添加打字机光标效果 */
+.message-content::after {
+  content: none;
 }
 
 .typing-indicator {
@@ -450,5 +532,28 @@ const startEvaluation = async () => {
 
 .page-background::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+.cursor {
+  display: inline-block;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 100;
+  margin-left: 1px;
+  position: relative;
+  transform: translateY(-1px);
+}
+
+.cursor.blink {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* 移除之前的光标样式 */
+.message-content::after {
+  content: none;
 }
 </style> 

@@ -48,7 +48,7 @@
 
     <!-- 电视屏幕 -->
     <div class="tv-screen">
-      <div class="screen-frame">
+      <div class="screen-frame" :class="{ 'scanning': isScanning }">
         <div class="screen-content">
           <div class="chat-window" ref="chatWindow">
             <div class="message system-message" v-if="systemMessage">
@@ -60,7 +60,7 @@
                 <span>评估结果</span>
               </div>
               <div class="message-content typewriter">
-                <pre class="typewriter-text">{{ evaluationText }}<span class="cursor" :class="{ 'blink': !isTyping }">|</span></pre>
+                <pre class="typewriter-text">{{ evaluationText }}<span class="cursor" :class="{ 'blink': !isScanning }">|</span></pre>
               </div>
             </div>
           </div>
@@ -105,8 +105,7 @@ const total = ref(0)
 const chatWindow = ref(null)
 const systemMessage = ref('我是评估助手，请上传文件开始评估。')
 const evaluationText = ref('')
-const isTyping = ref(false)
-let typingTimeout
+const isScanning = ref(false)
 
 const showFieldSelector = ref(false)
 const availableFields = ref([])
@@ -207,6 +206,9 @@ const startEvaluation = async () => {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
+    // 开始接收数据时启动扫描
+    isScanning.value = true
+
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
@@ -219,7 +221,11 @@ const startEvaluation = async () => {
 
     while (true) {
       const { done, value } = await reader.read()
-      if (done) break
+      if (done) {
+        // 数据接收完成，停止扫描
+        isScanning.value = false
+        break
+      }
 
       buffer += decoder.decode(value)
       const lines = buffer.split('\n')
@@ -250,7 +256,9 @@ const startEvaluation = async () => {
               break
 
             case 'chunk':
-              isTyping.value = true
+              if (!isScanning.value) {
+                isScanning.value = true
+              }
               currentEvaluation.content += data.content
               evaluationText.value = evaluationText.value.split(`评估项 ${data.index}:`)[0] + 
                                    `评估项 ${data.index}:\n原始数据:\n${currentEvaluation.originalData}\n\n评估结果:\n${currentEvaluation.content}`
@@ -260,7 +268,7 @@ const startEvaluation = async () => {
               // 重置打字状态的计时器
               clearTimeout(typingTimeout)
               typingTimeout = setTimeout(() => {
-                isTyping.value = false
+                isScanning.value = false
               }, 100)
               break
 
@@ -281,9 +289,11 @@ const startEvaluation = async () => {
   } catch (error) {
     console.error('评估失败:', error)
     systemMessage.value = `评估失败: ${error.message}`
+    isScanning.value = false
   } finally {
     isEvaluating.value = false
     systemMessage.value = '评估完成！'
+    isScanning.value = false  // 确保扫描停止
   }
 }
 </script>
@@ -380,6 +390,14 @@ const startEvaluation = async () => {
   overflow: hidden;
   height: calc(100vh - 4rem);
   min-width: 0;
+  /* 外壳立体效果 */
+  box-shadow: 
+    -5px -5px 15px rgba(255,255,255,0.1),
+    5px 5px 15px rgba(0,0,0,0.4);
+  border: 2px solid #2a2a3a;
+  background: 
+    linear-gradient(45deg, #1a1a2e, #2a2a3a) padding-box,
+    linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)) border-box;
 }
 
 .screen-frame {
@@ -387,7 +405,65 @@ const startEvaluation = async () => {
   border-radius: 15px;
   padding: 15px;
   height: 100%;
-  box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+  position: relative;
+  overflow: hidden;
+  /* 玻璃屏幕表面效果 */
+  box-shadow: 
+    inset 0 0 50px rgba(0,0,0,0.5),
+    inset 0 0 20px rgba(0,0,0,0.3);
+}
+
+/* 玻璃表面反光效果 */
+.screen-frame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,0) 0%,
+      rgba(255,255,255,0.03) 0.5%,
+      rgba(255,255,255,0) 1%
+    ),
+    radial-gradient(
+      circle at center,
+      rgba(255,255,255,0.1) 0%,
+      rgba(0,0,0,0.2) 100%
+    );
+  pointer-events: none;
+  animation: scanlines 8s linear infinite;
+  border-radius: 15px;
+  z-index: 2;
+  opacity: 0.6;
+}
+
+/* 移动扫描效果只在scanning时显示 */
+.screen-frame::after {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    0deg,
+    transparent 0%,
+    rgba(255,255,255,0.05) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  animation: scanning 3s linear infinite;
+  animation-play-state: paused;
+}
+
+.screen-frame.scanning::after {
+  opacity: 1;
+  animation-play-state: running;
 }
 
 .screen-content {
@@ -396,36 +472,53 @@ const startEvaluation = async () => {
   height: 100%;
   overflow: hidden;
   position: relative;
+  /* 内部显示效果 */
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
 }
 
-.screen-content::before {
+/* 内部微光效果 */
+.screen-content::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    rgba(255,255,255,0.1) 50%,
-    rgba(0,0,0,0.1) 50%
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255,255,255,0.05) 0%,
+    transparent 60%
   );
-  background-size: 100% 4px;
   pointer-events: none;
-  animation: scanline 10s linear infinite;
+  opacity: 0.8;
+  animation: glow 4s ease-in-out infinite;
+  z-index: 1;
 }
 
-@keyframes scanline {
+/* 调整扫描线动画速度和透明度 */
+@keyframes scanlines {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
+@keyframes scanning {
   0% { transform: translateY(0); }
-  100% { transform: translateY(100%); }
+  100% { transform: translateY(200%); }
 }
 
-/* 保留之前的消息样式，但调整以适应新的电视效果 */
+@keyframes glow {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0.6; }
+}
+
 .chat-window {
   height: 100%;
   padding: 1rem;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #4a4a5a #2a2a3a;
+  position: relative;
+  z-index: 1;
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 0 2px rgba(255,255,255,0.5);
 }
 
 /* 自定义滚动条样式 */
@@ -526,7 +619,7 @@ const startEvaluation = async () => {
   }
 
   .tv-screen {
-    height: calc(100vh - 250px);
+    transform: none;
   }
 }
 </style> 

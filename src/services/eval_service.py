@@ -63,8 +63,12 @@ class EvalService:
         try:
             self.eval_agent.eval_type = eval_type
             
-            async for evaluation in self.eval_agent.evaluate_batch(data):
-                yield evaluation
+            # 首先发送总数信息
+            yield f"data: {json.dumps({'total': len(data)}, ensure_ascii=False)}\n\n"
+            
+            # 使用evaluate_batch方法进行批量评估
+            async for result in self.eval_agent.evaluate_batch(data):
+                yield result + "\n\n"
                 
         except Exception as e:
             self.logger.error(f"评估失败: {str(e)}")

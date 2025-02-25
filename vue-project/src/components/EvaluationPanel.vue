@@ -104,6 +104,8 @@ const startEvaluation = async () => {
     isEvaluating.value = true
     evaluationText.value = ''
     systemMessage.value = '开始评估...'
+    processed.value = 0
+    total.value = 0
     
     const response = await fetch(`${API_BASE_URL}/api/v1/evaluate/stream`, {
       method: 'POST',
@@ -116,39 +118,61 @@ const startEvaluation = async () => {
 
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
+    let buffer = '' // 用于存储不完整的JSON数据
+
+    let currentEvaluation = {
+      index: null,
+      content: ''
+    }
 
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
 
-      const text = decoder.decode(value)
-      const lines = text.split('\n')
+      buffer += decoder.decode(value)
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
       
       for (const line of lines) {
-        if (!line.trim()) continue
+        if (!line.trim() || !line.startsWith('data: ')) continue
         
         try {
-          if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.slice(5))
-            
-            if (data.result) {
-              evaluationText.value += data.result 
-              scrollToBottom()
+          const data = JSON.parse(line.slice(5))
+          
+          if (data.total) {
+            total.value = data.total
+            continue
+          }
+
+          if (data.type === 'start') {
+            // 开始新的评估项
+            if (currentEvaluation.index !== null) {
+              // 如果有未完成的评估，先添加到结果中
+              if (evaluationText.value) {
+                evaluationText.value += '\n---\n'
+              }
+              evaluationText.value += `评估项 ${currentEvaluation.index}:\n${currentEvaluation.content}`
             }
-          } else if (line.startsWith('event: error')) {
-            const errorLine = lines[lines.indexOf(line) + 1]
-            if (errorLine && errorLine.startsWith('data: ')) {
-              const error = JSON.parse(errorLine.slice(5))
-              systemMessage.value = `评估错误: ${error.error}`
+            currentEvaluation = {
+              index: data.index,
+              content: ''
             }
+          } else if (data.type === 'content') {
+            // 添加评估内容
+            currentEvaluation.content = data.result
+            if (evaluationText.value) {
+              evaluationText.value += '\n---\n'
+            }
+            evaluationText.value += `评估项 ${currentEvaluation.index}:\n${currentEvaluation.content}`
+            processed.value = currentEvaluation.index
+            scrollToBottom()
+          } else if (data.type === 'error') {
+            systemMessage.value = `评估项 ${data.index} 错误: ${data.error}`
           }
         } catch (e) {
           console.error('解析SSE数据失败:', e)
         }
       }
-      
-      processed.value += 1
-      total.value = Math.max(total.value, processed.value)
     }
 
   } catch (error) {
@@ -337,6 +361,7 @@ const startEvaluation = async () => {
 .message-content {
   line-height: 1.6;
   white-space: pre-wrap;
+  font-family: monospace;
 }
 
 .typing-indicator {

@@ -39,9 +39,9 @@
       <div class="control-group">
         <div class="control-label">CHANNEL</div>
         <div class="channel-buttons">
-          <button class="control-button channel-btn">1</button>
-          <button class="control-button channel-btn">2</button>
-          <button class="control-button channel-btn">3</button>
+          <button @click="handleChannelClick(1)" class="control-button channel-btn" :class="{ 'active': !showReport.value }">1</button>
+          <button @click="handleChannelClick(2)" class="control-button channel-btn" :class="{ 'active': showReport.value }">2</button>
+          <button @click="handleChannelClick(3)" class="control-button channel-btn">3</button>
         </div>
       </div>
     </div>
@@ -50,7 +50,8 @@
     <div class="tv-screen">
       <div class="screen-frame" :class="{ 'scanning': isScanning }">
         <div class="screen-content">
-          <div class="chat-window" ref="chatWindow">
+          <!-- 评估过程显示 -->
+          <div v-if="!showReport" class="chat-window" ref="chatWindow">
             <div class="message system-message" v-if="systemMessage">
               {{ systemMessage }}
             </div>
@@ -62,6 +63,91 @@
               <div class="message-content typewriter">
                 <pre class="typewriter-text">{{ evaluationText }}<span class="cursor" :class="{ 'blink': !isScanning }">|</span></pre>
               </div>
+            </div>
+          </div>
+          
+          <!-- 评估报告显示 -->
+          <div v-if="showReport" class="report-view">
+            <div class="report-container" v-if="evaluationStats">
+              <h2 class="report-title">评估报告</h2>
+              
+              <!-- 总体评分 -->
+              <div class="score-overview">
+                <div class="score-card">
+                  <div class="score-value">{{ evaluationStats.overall_scores.final_score }}</div>
+                  <div class="score-label">总体评分</div>
+                </div>
+                <div class="score-card">
+                  <div class="score-value">{{ evaluationStats.overall_scores.role_score }}</div>
+                  <div class="score-label">角色评分</div>
+                </div>
+                <div class="score-card">
+                  <div class="score-value">{{ evaluationStats.overall_scores.dialogue_score }}</div>
+                  <div class="score-label">对话评分</div>
+                </div>
+              </div>
+              
+              <!-- 角色扮演评估 -->
+              <div class="assessment-section">
+                <h3>角色扮演评估</h3>
+                <div class="score-bars">
+                  <div class="score-bar-item" v-for="(item, key) in rolePlayItems" :key="key">
+                    <div class="score-bar-label">{{ item.label }}</div>
+                    <div class="score-bar-container">
+                      <div class="score-bar" :style="{ width: `${getScoreValue(key, 'role_play')}%` }"></div>
+                    </div>
+                    <div class="score-bar-value">{{ getScoreValue(key, 'role_play') }}</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 对话体验评估 -->
+              <div class="assessment-section">
+                <h3>对话体验评估</h3>
+                <div class="score-bars">
+                  <div class="score-bar-item" v-for="(item, key) in dialogueItems" :key="key">
+                    <div class="score-bar-label">{{ item.label }}</div>
+                    <div class="score-bar-container">
+                      <div class="score-bar" :style="{ width: `${getScoreValue(key, 'dialogue_experience')}%` }"></div>
+                    </div>
+                    <div class="score-bar-value">{{ getScoreValue(key, 'dialogue_experience') }}</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 优势和弱点 -->
+              <div class="strengths-weaknesses">
+                <div class="sw-column">
+                  <h3>优势</h3>
+                  <ul class="sw-list">
+                    <li v-for="(count, strength) in evaluationStats.common_strengths" :key="strength">
+                      {{ strength }}
+                    </li>
+                  </ul>
+                </div>
+                <div class="sw-column">
+                  <h3>弱点</h3>
+                  <ul class="sw-list">
+                    <li v-for="(count, weakness) in evaluationStats.common_weaknesses" :key="weakness">
+                      {{ weakness }}
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              
+              <!-- 建议 -->
+              <div class="suggestions-section">
+                <h3>改进建议</h3>
+                <ul class="suggestions-list">
+                  <li v-for="(count, suggestion) in evaluationStats.common_suggestions" :key="suggestion">
+                    {{ suggestion }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="report-controls">
+              <button @click="showReport = false" class="return-btn">返回</button>
             </div>
           </div>
         </div>
@@ -93,6 +179,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 
 const API_BASE_URL = 'http://localhost:8000' // 修改为你的后端地址
 
@@ -106,11 +193,19 @@ const chatWindow = ref(null)
 const systemMessage = ref('我是评估助手，请上传文件开始评估。')
 const evaluationText = ref('')
 const isScanning = ref(false)
+const typingTimeout = ref(null)
 
 const showFieldSelector = ref(false)
 const availableFields = ref([])
 const selectedFields = ref([])
 const fieldsConfirmed = ref(false)
+
+// 新增：控制是否显示报告
+const showReport = ref(false)
+// 新增：报告数据
+const evaluationStats = ref(null)
+
+const router = useRouter()
 
 // 自动滚动到底部
 const scrollToBottom = () => {
@@ -218,7 +313,7 @@ const startEvaluation = async () => {
       content: '',
       originalData: ''
     }
-
+    
     while (true) {
       const { done, value } = await reader.read()
       if (done) {
@@ -276,6 +371,11 @@ const startEvaluation = async () => {
               processed.value = data.index
               break
 
+            case 'complete':
+              // 处理评估统计数据
+              showEvaluationReport(data.stats)
+              break
+
             case 'error':
               systemMessage.value = `评估项 ${data.index} 错误: ${data.error}`
               break
@@ -295,6 +395,91 @@ const startEvaluation = async () => {
     systemMessage.value = '评估完成！'
     isScanning.value = false  // 确保扫描停止
   }
+}
+
+// 修改CHANNEL按钮处理函数，使用Vue Router导航到报告页面
+const handleChannelClick = (channel) => {
+  if (channel === 1) {
+    // 评估过程视图
+    showReport.value = false
+  } else if (channel === 2) {
+    // 报告视图 - 直接在当前页面显示
+    if (evaluationStats.value) {
+      showReport.value = true
+      console.log('显示报告，当前报告数据:', evaluationStats.value)
+    } else {
+      systemMessage.value = '没有评估报告可以显示'
+    }
+  } else if (channel === 3) {
+    // 导出评估数据
+    exportEvaluationReport()
+  }
+}
+
+// 导出评估报告函数
+const exportEvaluationReport = () => {
+  if (evaluationStats.value) {
+    const dataStr = JSON.stringify(evaluationStats.value, null, 2)
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
+    
+    const exportFileDefaultName = 'evaluation_report.json'
+    
+    const linkElement = document.createElement('a')
+    linkElement.setAttribute('href', dataUri)
+    linkElement.setAttribute('download', exportFileDefaultName)
+    linkElement.click()
+  } else {
+    systemMessage.value = '没有评估数据可以导出'
+  }
+}
+
+// 添加角色扮演评估项
+const rolePlayItems = {
+  consistency: { label: '角色一致性' },
+  knowledge: { label: '角色知识' },
+  language_style: { label: '语言风格' },
+  emotional_expression: { label: '情感表达' },
+  character_depth: { label: '角色深度' }
+}
+
+// 添加对话体验评估项
+const dialogueItems = {
+  response_quality: { label: '回应质量' },
+  interaction_fluency: { label: '交互流畅度' },
+  language_expression: { label: '语言表达' },
+  context_adaptation: { label: '情境适应性' },
+  personalization: { label: '个性化体验' }
+}
+
+// 获取评分值的辅助函数
+const getScoreValue = (key, category) => {
+  if (!evaluationStats.value || !evaluationStats.value[category] || !evaluationStats.value[category][key]) {
+    return 0
+  }
+  return evaluationStats.value[category][key].avg || 0
+}
+
+// 修改显示统计报告的方法，不再需要转换为其他组件的格式
+const showEvaluationReport = (stats) => {
+  if (!stats) {
+    console.error('没有收到统计数据')
+    systemMessage.value = '没有收到有效的统计数据，无法显示报告！'
+    return
+  }
+  
+  console.log('收到评估统计数据:', stats)
+  
+  // 直接使用统计数据
+  evaluationStats.value = stats
+  
+  // 显示成功消息
+  systemMessage.value = `评估完成！总体评分: ${stats.overall_scores?.final_score || 'N/A'}，角色评分: ${stats.overall_scores?.role_score || 'N/A'}，对话评分: ${stats.overall_scores?.dialogue_score || 'N/A'}`
+  
+  // 停止扫描效果
+  isScanning.value = false
+  
+  // 自动切换到报告视图
+  showReport.value = true
 }
 </script>
 
@@ -621,5 +806,174 @@ const startEvaluation = async () => {
   .tv-screen {
     transform: none;
   }
+}
+
+/* 添加报告视图相关样式 */
+.report-view {
+  height: 100%;
+  overflow-y: auto;
+  padding: 1.5rem;
+  color: #e0e0e0;
+}
+
+.report-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.report-title {
+  text-align: center;
+  color: #44ff44;
+  text-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+}
+
+.score-overview {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 2rem;
+}
+
+.score-card {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  border-radius: 10px;
+  padding: 1.5rem;
+  text-align: center;
+  width: 120px;
+}
+
+.score-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #44ff44;
+  text-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+}
+
+.score-label {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #a0a0a0;
+}
+
+.assessment-section {
+  margin-bottom: 2rem;
+}
+
+.assessment-section h3 {
+  margin-bottom: 1rem;
+  color: #44ff44;
+  text-shadow: 0 0 5px rgba(68, 255, 68, 0.3);
+  font-size: 1.3rem;
+}
+
+.score-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.score-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.score-bar-label {
+  width: 120px;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.score-bar-container {
+  flex: 1;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.score-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #44ff44, #7cff7c);
+  border-radius: 6px;
+  transition: width 1s ease-out;
+}
+
+.score-bar-value {
+  width: 40px;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.strengths-weaknesses {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.sw-column {
+  flex: 1;
+}
+
+.sw-column h3 {
+  margin-bottom: 1rem;
+  color: #44ff44;
+  text-shadow: 0 0 5px rgba(68, 255, 68, 0.3);
+  font-size: 1.3rem;
+}
+
+.sw-list, .suggestions-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sw-list li, .suggestions-list li {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.8rem;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+  border-left: 3px solid #44ff44;
+}
+
+.suggestions-section h3 {
+  margin-bottom: 1rem;
+  color: #44ff44;
+  text-shadow: 0 0 5px rgba(68, 255, 68, 0.3);
+  font-size: 1.3rem;
+}
+
+.report-controls {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10;
+}
+
+.return-btn {
+  background: rgba(68, 255, 68, 0.2);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+  text-shadow: 0 0 5px #44ff44;
+  transition: all 0.3s ease;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.return-btn:hover {
+  background: rgba(68, 255, 68, 0.3);
+  box-shadow: 0 0 10px #44ff44;
+}
+
+/* 在style部分添加 */
+.channel-btn.active {
+  background: rgba(68, 255, 68, 0.2);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+  text-shadow: 0 0 5px #44ff44;
 }
 </style> 

@@ -177,7 +177,7 @@ class CCXTFeed:
                   timeframe: str,
                   start: Optional[datetime] = None,
                   end: Optional[datetime] = None) -> pd.DataFrame:
-        """获取数据，优先使用缓存"""
+        """获取数据，优先使用缓存，支持增量更新"""
         try:
             # 生成缓存文件名
             cache_file = self.cache_dir / f"{symbol.replace('/', '_')}_{timeframe}.parquet"
@@ -214,13 +214,42 @@ class CCXTFeed:
                     if cache_start <= start and cache_end >= end:
                         self.logger.info("缓存数据完全覆盖所需范围，使用缓存数据")
                         return cached_df[(cached_df.index >= start) & (cached_df.index <= end)]
-                    else:
-                        self.logger.info("缓存数据不完全覆盖所需范围，需要重新获取数据")
-                        # 删除缓存文件
-                        cache_file.unlink()
+                    
+                    # 增量更新逻辑
+                    new_data = None
+                    
+                    # 如果需要更早的数据
+                    if start < cache_start:
+                        self.logger.info(f"获取早期缺失数据: {start} 到 {cache_start}")
+                        early_data = self._fetch_data(symbol, timeframe, start, cache_start)
+                        new_data = early_data
+                    
+                    # 如果需要更新的数据
+                    if end > cache_end:
+                        self.logger.info(f"获取最新缺失数据: {cache_end} 到 {end}")
+                        recent_data = self._fetch_data(symbol, timeframe, cache_end, end)
+                        if new_data is not None:
+                            new_data = pd.concat([new_data, cached_df, recent_data])
+                        else:
+                            new_data = pd.concat([cached_df, recent_data])
+                    
+                    # 如果只需要中间部分的数据
+                    if new_data is None:
+                        self.logger.info("使用缓存的部分数据")
+                        return cached_df[(cached_df.index >= start) & (cached_df.index <= end)]
+                    
+                    # 去除重复数据
+                    new_data = new_data[~new_data.index.duplicated(keep='first')]
+                    new_data = new_data.sort_index()
+                    
+                    # 保存更新后的数据
+                    self.logger.info("保存更新后的数据到缓存")
+                    new_data.to_parquet(cache_file)
+                    
+                    return new_data[(new_data.index >= start) & (new_data.index <= end)]
             
             # 如果没有缓存或缓存无效，获取新数据
-            self.logger.info("开始获取新数据")
+            self.logger.info("没有找到有效缓存，开始获取新数据")
             df = self._fetch_data(symbol, timeframe, start, end)
             
             # 检查获取的数据

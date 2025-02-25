@@ -31,14 +31,15 @@ class TransformerBacktester:
                     data: pd.DataFrame, 
                     initial_capital: float = 1_000_000,
                     transaction_cost: float = 0.0004,
-                    stop_loss: float = 0.02, 
-                    take_profit: float = 0.03,
-                    position_limit: float = 0.5,
-                    volatility_threshold: float = 0.015,  # 降低波动率阈值
-                    signal_threshold: float = 0.3,        # 降低信号阈值
-                    smoothing_factor: float = 0.7,
+                    position_limit: float = 0.5,      # 最大仓位
+                    volatility_threshold: float = 0.015,  # 波动率阈值
+                    signal_threshold: float = 0.3,    # 信号阈值
+                    smoothing_factor: float = 0.7,    # 平滑因子
                     prediction_horizon: int = 14,
-                    verbose: bool = True
+                    verbose: bool = True,
+                    dynamic_position_sizing: bool = True,  # 动态仓位控制
+                    stop_loss_pct: float = 0.02,      # 止损百分比
+                    take_profit_pct: float = 0.05,    # 止盈百分比
                     ) -> Dict:
         """运行回测"""
         print("开始回测...")
@@ -55,6 +56,10 @@ class TransformerBacktester:
         trades = []
         signal_records = []
         
+        # 风险管理变量
+        stop_loss_price = 0
+        take_profit_price = 0
+        
         # 遍历每个时间点
         window_size = 60
         for i in range(window_size, len(features) - prediction_horizon):
@@ -69,35 +74,16 @@ class TransformerBacktester:
             
             future_returns = pred[0].cpu().numpy()
             
-            # 信号生成优化 - 放宽条件
-            short_term = np.mean(future_returns[0:3])     # 改用均值
-            medium_term = np.mean(future_returns[3:8])    # 改用均值
-            long_term = np.mean(future_returns[8:14])     # 改用均值
+            # 信号生成
+            short_term = np.mean(future_returns[0:3])     # 短期信号
+            medium_term = np.mean(future_returns[3:8])    # 中期信号
+            long_term = np.mean(future_returns[8:14])     # 长期信号
             
-            # 计算波动率 - 使用更简单的方法
-            volatility = np.std(future_returns)  # 改用标准差
-                        # 信号平滑处理
-            if len(signal_records) > 0:
-                last_medium_term = signal_records[-1].get('medium_term', medium_term)
-                medium_term = smoothing_factor * last_medium_term + \
-                             (1 - smoothing_factor) * medium_term
-            
-            # 开仓和调仓逻辑 - 放宽条件
-            target_position = current_position
-            
-            if current_position == 0:
-                # 放宽趋势一致性检查
-                trend_aligned = (np.sign(medium_term + long_term) != 0)  # 只要不是反向
-                # 放宽信号强度检查
-                signal_strong = abs(medium_term) > volatility * signal_threshold
-                
-                if signal_strong:  # 移除trend_aligned条件
-                    target_position = np.sign(medium_term) * position_limit
-            else:
-                # 持仓调整 - 更保守的平仓
-                if (np.sign(short_term) != np.sign(current_position) and 
-                    np.sign(medium_term) != np.sign(current_position)):
-                    target_position = 0
+            # 计算波动率 - 使用EWMA波动率估计
+            volatility = np.std(future_returns)
+            if i > window_size:
+                # 结合历史波动率和当前波动率
+                volatility = 0.94 * volatility + 0.06 * data['close'].iloc[i-20:i].pct_change().std()
             
             # 记录信号
             signal_records.append({
@@ -106,16 +92,120 @@ class TransformerBacktester:
                 'short_term': short_term,
                 'medium_term': medium_term,
                 'long_term': long_term,
-                'volatility': volatility,
-                'current_position': current_position,
-                'target_position': target_position,
-                'trend_aligned': trend_aligned if current_position == 0 else None,
-                'signal_strong': signal_strong if current_position == 0 else None
+                'volatility': volatility
             })
+            
+            # 信号平滑处理
+            if len(signal_records) > 0:
+                last_medium_term = signal_records[-1].get('medium_term', medium_term)
+                medium_term = smoothing_factor * last_medium_term + \
+                             (1 - smoothing_factor) * medium_term
+            
+            # 止损和止盈检查
+            if current_position > 0 and stop_loss_price > 0 and current_price <= stop_loss_price:
+                # 触发止损
+                target_position = 0
+                trades.append({
+                    'time': current_time,
+                    'type': 'stop_loss',
+                    'price': current_price,
+                    'size': -current_position,
+                    'cost': abs(current_position) * transaction_cost * equity[-1],
+                    'pnl': (current_price/entry_price - 1) * current_position * equity[-1],
+                    'short_term': short_term,
+                    'medium_term': medium_term,
+                    'long_term': long_term
+                })
+                current_position = 0
+                stop_loss_price = 0
+                take_profit_price = 0
+            elif current_position < 0 and stop_loss_price > 0 and current_price >= stop_loss_price:
+                # 触发止损
+                target_position = 0
+                trades.append({
+                    'time': current_time,
+                    'type': 'stop_loss',
+                    'price': current_price,
+                    'size': -current_position,
+                    'cost': abs(current_position) * transaction_cost * equity[-1],
+                    'pnl': (1 - current_price/entry_price) * abs(current_position) * equity[-1],
+                    'short_term': short_term,
+                    'medium_term': medium_term,
+                    'long_term': long_term
+                })
+                current_position = 0
+                stop_loss_price = 0
+                take_profit_price = 0
+            elif current_position > 0 and take_profit_price > 0 and current_price >= take_profit_price:
+                # 触发止盈
+                target_position = 0
+                trades.append({
+                    'time': current_time,
+                    'type': 'take_profit',
+                    'price': current_price,
+                    'size': -current_position,
+                    'cost': abs(current_position) * transaction_cost * equity[-1],
+                    'pnl': (current_price/entry_price - 1) * current_position * equity[-1],
+                    'short_term': short_term,
+                    'medium_term': medium_term,
+                    'long_term': long_term
+                })
+                current_position = 0
+                stop_loss_price = 0
+                take_profit_price = 0
+            elif current_position < 0 and take_profit_price > 0 and current_price <= take_profit_price:
+                # 触发止盈
+                target_position = 0
+                trades.append({
+                    'time': current_time,
+                    'type': 'take_profit',
+                    'price': current_price,
+                    'size': -current_position,
+                    'cost': abs(current_position) * transaction_cost * equity[-1],
+                    'pnl': (1 - current_price/entry_price) * abs(current_position) * equity[-1],
+                    'short_term': short_term,
+                    'medium_term': medium_term,
+                    'long_term': long_term
+                })
+                current_position = 0
+                stop_loss_price = 0
+                take_profit_price = 0
+            else:
+                # 新的多空切换逻辑
+                target_position = current_position  # 默认保持当前仓位
+                
+                # 信号一致性检查
+                signals_aligned = (
+                    np.sign(short_term) == np.sign(medium_term) and 
+                    np.sign(medium_term) == np.sign(long_term)
+                )
+                
+                # 信号强度检查
+                signal_strong = abs(medium_term) > volatility * signal_threshold
+                
+                if signals_aligned and signal_strong:
+                    if medium_term > 0:  # 看多信号
+                        if current_position <= 0:  # 当前空仓或空头
+                            # 平空仓并做多
+                            if dynamic_position_sizing:
+                                # 动态仓位大小基于信号强度和波动率
+                                signal_strength = medium_term / volatility
+                                target_position = min(position_limit * signal_strength / 2, position_limit)
+                            else:
+                                target_position = position_limit
+                    else:  # 看空信号
+                        if current_position >= 0:  # 当前空仓或多头
+                            # 平多仓并做空
+                            if dynamic_position_sizing:
+                                # 动态仓位大小基于信号强度和波动率
+                                signal_strength = abs(medium_term) / volatility
+                                target_position = max(-position_limit * signal_strength / 2, -position_limit)
+                            else:
+                                target_position = -position_limit
             
             # 执行交易
             position_change = target_position - current_position
-            if abs(position_change) > 0.05:  # 降低最小交易阈值
+            if abs(position_change) > 0.05:  # 最小交易阈值
                 # 计算交易成本和PNL
                 transaction_fee = abs(position_change) * transaction_cost * equity[-1]
                 
@@ -125,18 +215,32 @@ class TransformerBacktester:
                 else:
                     pnl = 0
                 
+                trade_type = 'long' if target_position > 0 else 'short' if target_position < 0 else 'close'
                 trades.append({
                     'time': current_time,
-                    'type': 'signal',
+                    'type': trade_type,
                     'price': current_price,
                     'size': position_change,
                     'cost': transaction_fee,
-                    'pnl': pnl
+                    'pnl': pnl,
+                    'short_term': short_term,
+                    'medium_term': medium_term,
+                    'long_term': long_term
                 })
                 
                 current_position = target_position
                 if current_position != 0:
                     entry_price = current_price
+                    # 设置止损和止盈价格
+                    if current_position > 0:  # 多头
+                        stop_loss_price = current_price * (1 - stop_loss_pct)
+                        take_profit_price = current_price * (1 + take_profit_pct)
+                    else:  # 空头
+                        stop_loss_price = current_price * (1 + stop_loss_pct)
+                        take_profit_price = current_price * (1 - take_profit_pct)
+                else:
+                    stop_loss_price = 0
+                    take_profit_price = 0
             
             positions.append(current_position)
             
@@ -153,24 +257,23 @@ class TransformerBacktester:
             else:
                 equity.append(equity[-1])
             
-                        # 打印进度
-            if i % 100 == 0:
-                print(f"进度: {i}/{len(features)}, 当前权益: {equity[-1]:,.2f}")
-            
             # 打印详细信息
             if verbose and i % 100 == 0:
+                # 计算当前收益率和最大回撤
+                current_return = (equity[-1] / initial_capital - 1) * 100
+                equity_series_temp = pd.Series(equity)
+                max_drawdown = ((equity_series_temp.cummax() - equity_series_temp) / equity_series_temp.cummax()).max() * 100
+                
                 print(f"""
+======== 回测状态更新 ========
 时间: {current_time}
 价格: {current_price:.2f}
+账户资金: {equity[-1]:,.2f} USDT
+当前收益率: {current_return:.2f}%
+最大回撤: {max_drawdown:.2f}%
 当前仓位: {current_position:.2f}
-目标仓位: {target_position:.2f}
-短期信号: {short_term*100:.2f}%
-中期信号: {medium_term*100:.2f}%
-长期信号: {long_term*100:.2f}%
-波动率: {volatility*100:.2f}%
-信号强度: {abs(medium_term/volatility):.2f}
-权益: {equity[-1]:.2f}
 交易次数: {len(trades)}
+==============================
                 """)
         
         # 在回测循环结束后，创建返回数据结构
@@ -311,8 +414,22 @@ class TransformerBacktester:
         sharpe = annual_return / annual_vol if annual_vol != 0 else 0
         max_drawdown = ((equity_series.cummax() - equity_series) / equity_series.cummax()).max() * 100
         
-        # 绘制回测图表
-        # self._plot_backtest_results(equity_series, position_series, trade_df)
+        # 修改打印回测结果摘要
+        print(f"""
+============= 回测结果摘要 =============
+初始资金: {equity[0]:,.2f} USDT
+最终资金: {equity[-1]:,.2f} USDT
+总收益率: {total_return:.2f}%
+年化收益率: {annual_return*100:.2f}%
+年化波动率: {annual_vol*100:.2f}%
+夏普比率: {sharpe:.2f}
+最大回撤: {max_drawdown:.2f}%
+交易次数: {len(trade_df)}
+胜率: {win_rate*100:.2f}%
+平均收益: {avg_trade_return:.2f}
+总交易成本: {total_cost:.2f}
+=======================================
+        """)
         
         return {
             'equity': equity_series,
@@ -414,8 +531,8 @@ if __name__ == "__main__":
     data = data_mgr.get_feed(
         symbol='BTC/USDT',
         timeframe='15m',
-        start=datetime(2024, 6, 1),
-        end=datetime(2025, 2, 1)
+        start=datetime(2024, 1, 1),
+        end=datetime(2025, 2, 24)
     )['indicator']
     
     # 运行回测
@@ -424,11 +541,9 @@ if __name__ == "__main__":
         data=data,
         initial_capital=1_000_000,
         transaction_cost=0.0004,
-        stop_loss=0.02,          # 2%止损
-        take_profit=0.03,        # 3%止盈
-        position_limit=0.5,      # 最大50%仓位
-        volatility_threshold=0.015,# 1.5%波动率阈值
+        position_limit=0.5,      # 最大仓位
+        volatility_threshold=0.015,  # 波动率阈值
         signal_threshold=0.3,    # 信号阈值
-        smoothing_factor=0.7,     # 信号平滑因子
+        smoothing_factor=0.7,    # 平滑因子
         prediction_horizon=14    # 预测周期
     )

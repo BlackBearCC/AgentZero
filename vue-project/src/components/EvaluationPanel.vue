@@ -39,19 +39,19 @@
       <div class="control-group">
         <div class="control-label">CHANNEL</div>
         <div class="channel-buttons">
-          <button @click="handleChannelClick(1)" class="control-button channel-btn" :class="{ 'active': !showReport.value }">1</button>
-          <button @click="handleChannelClick(2)" class="control-button channel-btn" :class="{ 'active': showReport.value }">2</button>
-          <button @click="handleChannelClick(3)" class="control-button channel-btn">3</button>
+          <button @click="changeChannel(1)" class="control-button channel-btn" :class="{ 'active': activeChannel === 1 }">1</button>
+          <button @click="changeChannel(2)" class="control-button channel-btn" :class="{ 'active': activeChannel === 2 }">2</button>
+          <button @click="changeChannel(3)" class="control-button channel-btn" :class="{ 'active': activeChannel === 3 }">3</button>
         </div>
       </div>
     </div>
 
     <!-- 电视屏幕 -->
     <div class="tv-screen">
-      <div class="screen-frame" :class="{ 'scanning': isScanning }">
+      <div class="screen-frame" :class="{ 'scanning': isScanning, 'changing-channel': isChangingChannel }">
         <div class="screen-content">
-          <!-- 评估过程显示 -->
-          <div v-if="!showReport" class="chat-window" ref="chatWindow">
+          <!-- 评估过程显示 - Channel 1 -->
+          <div v-if="activeChannel === 1" class="chat-window" ref="chatWindow">
             <div class="message system-message" v-if="systemMessage">
               {{ systemMessage }}
             </div>
@@ -66,8 +66,8 @@
             </div>
           </div>
           
-          <!-- 评估报告显示 -->
-          <div v-if="showReport" class="report-view">
+          <!-- 评估报告显示 - Channel 2 -->
+          <div v-if="activeChannel === 2" class="chat-window report-view">
             <div class="report-container" v-if="evaluationStats">
               <h2 class="report-title">评估报告</h2>
               
@@ -145,10 +145,12 @@
                 </ul>
               </div>
             </div>
-            
-            <div class="report-controls">
-              <button @click="showReport = false" class="return-btn">返回</button>
-            </div>
+          </div>
+          
+          <!-- 无信号显示 - Channel 3 -->
+          <div v-if="activeChannel === 3" class="no-signal">
+            <div class="static-effect"></div>
+            <div class="no-signal-text">NO SIGNAL</div>
           </div>
         </div>
       </div>
@@ -204,6 +206,8 @@ const fieldsConfirmed = ref(false)
 const showReport = ref(false)
 // 新增：报告数据
 const evaluationStats = ref(null)
+const activeChannel = ref(1) // 当前频道
+const isChangingChannel = ref(false) // 是否正在换台
 
 const router = useRouter()
 
@@ -397,23 +401,38 @@ const startEvaluation = async () => {
   }
 }
 
-// 修改CHANNEL按钮处理函数，使用Vue Router导航到报告页面
-const handleChannelClick = (channel) => {
-  if (channel === 1) {
-    // 评估过程视图
-    showReport.value = false
-  } else if (channel === 2) {
-    // 报告视图 - 直接在当前页面显示
-    if (evaluationStats.value) {
-      showReport.value = true
-      console.log('显示报告，当前报告数据:', evaluationStats.value)
-    } else {
+// 修改换台函数
+const changeChannel = (channel) => {
+  if (channel === activeChannel.value) return
+  
+  // 开始换台效果
+  isChangingChannel.value = true
+  isScanning.value = true
+  
+  // 延迟切换频道，模拟换台过程
+  setTimeout(() => {
+    activeChannel.value = channel
+    
+    // 如果切换到报告频道但没有数据
+    if (channel === 2 && !evaluationStats.value) {
       systemMessage.value = '没有评估报告可以显示'
+      activeChannel.value = 1 // 切回评估频道
     }
-  } else if (channel === 3) {
-    // 导出评估数据
-    exportEvaluationReport()
-  }
+    
+    // 如果切换到频道3，显示无信号
+    if (channel === 3) {
+      // 导出评估数据
+      if (evaluationStats.value) {
+        exportEvaluationReport()
+      }
+    }
+    
+    // 结束换台效果
+    setTimeout(() => {
+      isChangingChannel.value = false
+      isScanning.value = false
+    }, 500)
+  }, 1000)
 }
 
 // 导出评估报告函数
@@ -459,7 +478,7 @@ const getScoreValue = (key, category) => {
   return evaluationStats.value[category][key].avg || 0
 }
 
-// 修改显示统计报告的方法，不再需要转换为其他组件的格式
+// 修改显示统计报告的方法
 const showEvaluationReport = (stats) => {
   if (!stats) {
     console.error('没有收到统计数据')
@@ -479,7 +498,7 @@ const showEvaluationReport = (stats) => {
   isScanning.value = false
   
   // 自动切换到报告视图
-  showReport.value = true
+  changeChannel(2)
 }
 </script>
 
@@ -706,109 +725,25 @@ const showEvaluationReport = (stats) => {
   text-shadow: 0 0 2px rgba(255,255,255,0.5);
 }
 
-/* 自定义滚动条样式 */
-.chat-window::-webkit-scrollbar {
+/* 统一滚动条样式 */
+.chat-window::-webkit-scrollbar,
+.report-view::-webkit-scrollbar {
   width: 8px;
 }
 
-.chat-window::-webkit-scrollbar-track {
+.chat-window::-webkit-scrollbar-track,
+.report-view::-webkit-scrollbar-track {
   background: #2a2a3a;
   border-radius: 4px;
 }
 
-.chat-window::-webkit-scrollbar-thumb {
+.chat-window::-webkit-scrollbar-thumb,
+.report-view::-webkit-scrollbar-thumb {
   background: #4a4a5a;
   border-radius: 4px;
 }
 
-/* 字段选择器样式调整 */
-.field-selector-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  backdrop-filter: blur(10px);
-}
-
-.field-selector-content {
-  background: #2a2a3a;
-  padding: 2rem;
-  border-radius: 16px;
-  width: 90%;
-  max-width: 500px;
-  border: 2px solid #3a3a4a;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.field-count {
-  color: #8a8a9a;
-  font-size: 0.9rem;
-}
-
-.field-list {
-  max-height: 300px;
-  overflow-y: auto;
-  margin: 1rem 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.5rem;
-}
-
-.field-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.field-selector-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 1rem;
-}
-
-.confirm-btn {
-  background: linear-gradient(45deg, #7c4dff, #448aff);
-  color: white;
-}
-
-/* 响应式设计优化 */
-@media (max-width: 768px) {
-  .tv-container {
-    flex-direction: column;
-    padding: 1rem;
-    height: 100vh;
-    overflow-y: auto;
-  }
-
-  .control-panel {
-    width: 100%;
-    height: auto;
-    min-height: 200px;
-  }
-
-  .tv-screen {
-    transform: none;
-  }
-}
-
-/* 添加报告视图相关样式 */
+/* 报告视图样式调整 */
 .report-view {
   height: 100%;
   overflow-y: auto;
@@ -946,34 +881,135 @@ const showEvaluationReport = (stats) => {
   font-size: 1.3rem;
 }
 
-.report-controls {
+/* 换台效果 */
+.changing-channel::before {
+  content: '';
   position: absolute;
-  bottom: 1rem;
-  right: 1rem;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.2) 80%,
+    transparent
+  );
   z-index: 10;
+  animation: channel-change 1s ease-in-out;
+  pointer-events: none;
 }
 
-.return-btn {
-  background: rgba(68, 255, 68, 0.2);
-  border: 1px solid #44ff44;
-  color: #44ff44;
-  text-shadow: 0 0 5px #44ff44;
-  transition: all 0.3s ease;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
+@keyframes channel-change {
+  0% { transform: translateY(-100%); opacity: 0.8; }
+  50% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0.8; }
 }
 
-.return-btn:hover {
-  background: rgba(68, 255, 68, 0.3);
-  box-shadow: 0 0 10px #44ff44;
+/* 无信号效果 */
+.no-signal {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
 }
 
-/* 在style部分添加 */
+.static-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="a"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter><rect width="100%" height="100%" filter="url(%23a)"/></svg>');
+  opacity: 0.3;
+  animation: static 0.5s steps(1) infinite;
+}
+
+@keyframes static {
+  0% { transform: translate(0, 0); }
+  10% { transform: translate(-5%, -5%); }
+  20% { transform: translate(10%, 5%); }
+  30% { transform: translate(-5%, 10%); }
+  40% { transform: translate(5%, -10%); }
+  50% { transform: translate(-10%, 5%); }
+  60% { transform: translate(10%, 10%); }
+  70% { transform: translate(-10%, -10%); }
+  80% { transform: translate(5%, 5%); }
+  90% { transform: translate(-5%, -5%); }
+  100% { transform: translate(0, 0); }
+}
+
+.no-signal-text {
+  font-size: 3rem;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  letter-spacing: 5px;
+  animation: flicker 2s linear infinite;
+  z-index: 2;
+}
+
+@keyframes flicker {
+  0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100% {
+    opacity: 0.99;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5), 0 0 20px rgba(255, 255, 255, 0.4);
+  }
+  20%, 21.999%, 63%, 63.999%, 65%, 69.999% {
+    opacity: 0.4;
+    text-shadow: none;
+  }
+}
+
+/* 激活的频道按钮样式 */
 .channel-btn.active {
   background: rgba(68, 255, 68, 0.2);
   border: 1px solid #44ff44;
   color: #44ff44;
   text-shadow: 0 0 5px #44ff44;
+  box-shadow: 0 0 10px rgba(68, 255, 68, 0.3);
+}
+
+/* 频道按钮组样式 */
+.channel-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.channel-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.channel-btn:hover {
+  transform: scale(1.05);
+}
+
+/* 响应式设计优化 */
+@media (max-width: 768px) {
+  .tv-container {
+    flex-direction: column;
+    padding: 1rem;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .control-panel {
+    width: 100%;
+    height: auto;
+    min-height: 200px;
+  }
+
+  .tv-screen {
+    transform: none;
+  }
 }
 </style> 

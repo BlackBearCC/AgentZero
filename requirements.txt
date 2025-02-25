@@ -25,3 +25,4 @@ python-telegram-bot>=20.0
 backtrader
 -e .
 torch
+optuna

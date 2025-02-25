@@ -75,17 +75,16 @@ class EvaluationAgent(BaseAgent):
                 )
                 
                 context = await self._build_eval_context(prompt)
-                response = ""
                 
-                # 先发送评估项开始标记
+                # 发送评估项开始标记
                 yield f"data: {json.dumps({'index': idx + 1, 'type': 'start'}, ensure_ascii=False)}\n\n"
                 
-                # 收集完整的响应
+                # 流式返回每个chunk
                 async for chunk in self.llm.astream(context["messages"]):
-                    response += chunk
+                    yield f"data: {json.dumps({'index': idx + 1, 'type': 'chunk', 'content': chunk}, ensure_ascii=False)}"
                 
-                # 发送完整的评估结果
-                yield f"data: {json.dumps({'index': idx + 1, 'type': 'content', 'result': response}, ensure_ascii=False)}\n\n"
+                # 发送评估项结束标记
+                yield f"data: {json.dumps({'index': idx + 1, 'type': 'end'}, ensure_ascii=False)}\n\n"
                 
             except Exception as e:
                 yield f"data: {json.dumps({'index': idx + 1, 'type': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"

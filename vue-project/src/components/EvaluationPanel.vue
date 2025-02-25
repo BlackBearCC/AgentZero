@@ -118,7 +118,7 @@ const startEvaluation = async () => {
 
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
-    let buffer = '' // 用于存储不完整的JSON数据
+    let buffer = ''
 
     let currentEvaluation = {
       index: null,
@@ -144,23 +144,39 @@ const startEvaluation = async () => {
             continue
           }
 
-          if (data.type === 'start') {
-            // 开始新的评估项，重置当前评估内容
-            currentEvaluation = {
-              index: data.index,
-              content: ''
-            }
-          } else if (data.type === 'content') {
-            // 更新当前评估内容并显示
-            if (evaluationText.value && processed.value !== data.index) {
-              evaluationText.value += '\n---\n'
-            }
-            evaluationText.value = evaluationText.value.split(`评估项 ${data.index}:`)[0] // 移除之前的相同评估项
-            evaluationText.value += `评估项 ${data.index}:\n${data.result}`
-            processed.value = data.index
-            scrollToBottom()
-          } else if (data.type === 'error') {
-            systemMessage.value = `评估项 ${data.index} 错误: ${data.error}`
+          switch (data.type) {
+            case 'start':
+              // 开始新的评估项
+              if (currentEvaluation.index !== null) {
+                // 如果有未完成的评估，先添加分隔符
+                if (evaluationText.value) {
+                  evaluationText.value += '\n---\n'
+                }
+              }
+              currentEvaluation = {
+                index: data.index,
+                content: ''
+              }
+              evaluationText.value += `评估项 ${data.index}:\n`
+              break
+
+            case 'chunk':
+              // 累加内容
+              currentEvaluation.content += data.content
+              // 更新显示
+              evaluationText.value = evaluationText.value.split(`评估项 ${data.index}:`)[0] + 
+                                   `评估项 ${data.index}:\n${currentEvaluation.content}`
+              scrollToBottom()
+              break
+
+            case 'end':
+              // 评估项完成
+              processed.value = data.index
+              break
+
+            case 'error':
+              systemMessage.value = `评估项 ${data.index} 错误: ${data.error}`
+              break
           }
         } catch (e) {
           console.error('解析SSE数据失败:', e)

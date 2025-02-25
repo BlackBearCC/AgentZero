@@ -145,26 +145,19 @@ const startEvaluation = async () => {
           }
 
           if (data.type === 'start') {
-            // 开始新的评估项
-            if (currentEvaluation.index !== null) {
-              // 如果有未完成的评估，先添加到结果中
-              if (evaluationText.value) {
-                evaluationText.value += '\n---\n'
-              }
-              evaluationText.value += `评估项 ${currentEvaluation.index}:\n${currentEvaluation.content}`
-            }
+            // 开始新的评估项，重置当前评估内容
             currentEvaluation = {
               index: data.index,
               content: ''
             }
           } else if (data.type === 'content') {
-            // 添加评估内容
-            currentEvaluation.content = data.result
-            if (evaluationText.value) {
+            // 更新当前评估内容并显示
+            if (evaluationText.value && processed.value !== data.index) {
               evaluationText.value += '\n---\n'
             }
-            evaluationText.value += `评估项 ${currentEvaluation.index}:\n${currentEvaluation.content}`
-            processed.value = currentEvaluation.index
+            evaluationText.value = evaluationText.value.split(`评估项 ${data.index}:`)[0] // 移除之前的相同评估项
+            evaluationText.value += `评估项 ${data.index}:\n${data.result}`
+            processed.value = data.index
             scrollToBottom()
           } else if (data.type === 'error') {
             systemMessage.value = `评估项 ${data.index} 错误: ${data.error}`

@@ -2,40 +2,20 @@
   <div class="tv-container">
     <!-- 控制面板 -->
     <div class="control-panel">
-      <div class="control-group">
-        <div class="control-label">INPUT</div>
-        <label class="control-button upload-btn">
-          <input type="file" @change="handleFileUpload" accept=".csv,.xlsx" />
-          <div class="button-face">
-            <span class="button-icon">📁</span>
-            <span class="button-text">SELECT FILE</span>
-          </div>
-        </label>
-      </div>
-
-      <div class="control-group">
-        <div class="control-label">MODE</div>
-        <select v-model="selectedEvalType" class="control-button mode-select">
-          <option value="dialogue">DIALOGUE</option>
-          <option value="memory">MEMORY</option>
-        </select>
-      </div>
-
+      <div class="panel-title">控制中心</div>
+      
+      <!-- 电源控制 -->
       <div class="control-group">
         <div class="control-label">POWER</div>
-        <button 
-          @click="startEvaluation" 
-          :disabled="isEvaluating || !fieldsConfirmed" 
-          class="control-button power-btn"
-        >
+        <button @click="togglePower" class="control-button">
           <div class="button-face">
-            <div class="power-indicator" :class="{ 'active': isEvaluating }"></div>
-            <span class="button-text">{{ isEvaluating ? 'RUNNING' : 'START' }}</span>
+            <span>{{ isPoweredOn ? 'ON' : 'OFF' }}</span>
+            <div class="power-indicator" :class="{ 'active': isPoweredOn }"></div>
           </div>
         </button>
       </div>
-
-      <!-- 预留其他功能的控制组 -->
+      
+      <!-- 频道控制 -->
       <div class="control-group">
         <div class="control-label">CHANNEL</div>
         <div class="channel-buttons">
@@ -43,6 +23,60 @@
           <button @click="changeChannel(2)" class="control-button channel-btn" :class="{ 'active': activeChannel === 2 }">2</button>
           <button @click="changeChannel(3)" class="control-button channel-btn" :class="{ 'active': activeChannel === 3 }">3</button>
         </div>
+      </div>
+      
+      <!-- 文件上传 -->
+      <div class="control-group">
+        <div class="control-label">INPUT</div>
+        <label class="control-button file-input-button">
+          <div class="button-face">
+            <span>上传文件</span>
+            <i class="upload-icon">↑</i>
+          </div>
+          <input type="file" @change="handleFileUpload" accept=".json" class="hidden-file-input" />
+        </label>
+      </div>
+      
+      <!-- 评估类型选择 -->
+      <div class="control-group">
+        <div class="control-label">MODE</div>
+        <div class="mode-selector">
+          <button 
+            @click="evalType = 'dialogue'" 
+            class="control-button mode-btn" 
+            :class="{ 'active': evalType === 'dialogue' }"
+          >
+            对话评估
+          </button>
+          <button 
+            @click="evalType = 'memory'" 
+            class="control-button mode-btn" 
+            :class="{ 'active': evalType === 'memory' }"
+          >
+            记忆评估
+          </button>
+        </div>
+      </div>
+      
+      <!-- 开始评估按钮 -->
+      <div class="control-group">
+        <div class="control-label">OPERATION</div>
+        <button 
+          @click="startEvaluation" 
+          class="control-button start-btn" 
+          :disabled="!fileData || isEvaluating"
+        >
+          <div class="button-face">
+            <span>{{ isEvaluating ? '评估中...' : '开始评估' }}</span>
+            <div class="operation-indicator" :class="{ 'active': isEvaluating }"></div>
+          </div>
+        </button>
+      </div>
+      
+      <!-- 系统状态 -->
+      <div class="system-status">
+        <div class="status-label">SYSTEM STATUS</div>
+        <div class="status-value">{{ systemStatus }}</div>
       </div>
     </div>
 
@@ -514,6 +548,25 @@ const showEvaluationReport = (stats) => {
   // 自动切换到报告视图
   changeChannel(2)
 }
+
+// 添加电源状态变量
+const isPoweredOn = ref(true)
+const systemStatus = ref('系统就绪')
+
+// 电源开关函数
+const togglePower = () => {
+  isPoweredOn.value = !isPoweredOn.value
+  
+  if (!isPoweredOn.value) {
+    // 关闭电源
+    activeChannel.value = 0 // 无频道
+    systemStatus.value = '系统待机'
+  } else {
+    // 打开电源
+    activeChannel.value = 1 // 默认频道1
+    systemStatus.value = '系统就绪'
+  }
+}
 </script>
 
 <style scoped>
@@ -531,6 +584,7 @@ const showEvaluationReport = (stats) => {
   overflow: hidden;
 }
 
+/* 控制面板样式优化 */
 .control-panel {
   width: 280px;
   background: #2a2a3a;
@@ -543,12 +597,30 @@ const showEvaluationReport = (stats) => {
   border: 2px solid #3a3a4a;
   height: calc(100vh - 4rem);
   overflow-y: auto;
+  position: relative;
+}
+
+/* 面板标题 */
+.panel-title {
+  text-align: center;
+  color: #44ff44;
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+  margin-bottom: 1rem;
+  border-bottom: 2px solid rgba(68, 255, 68, 0.3);
+  padding-bottom: 0.5rem;
 }
 
 .control-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #3a3a4a;
 }
 
 .control-label {
@@ -556,6 +628,7 @@ const showEvaluationReport = (stats) => {
   font-size: 0.8rem;
   letter-spacing: 2px;
   text-transform: uppercase;
+  margin-bottom: 0.5rem;
 }
 
 .control-button {
@@ -568,15 +641,31 @@ const showEvaluationReport = (stats) => {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
 }
 
 .control-button:hover {
   background: #4a4a5a;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.control-button:active {
+  transform: translateY(1px);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
 }
 
 .control-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .button-face {
@@ -586,17 +675,152 @@ const showEvaluationReport = (stats) => {
   gap: 0.5rem;
 }
 
+/* 电源指示灯 */
 .power-indicator {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #ff4444;
   transition: all 0.3s ease;
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.5);
 }
 
 .power-indicator.active {
   background: #44ff44;
+  box-shadow: 0 0 10px #44ff44, inset 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+/* 操作指示灯 */
+.operation-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #8a8a9a;
+  transition: all 0.3s ease;
+}
+
+.operation-indicator.active {
+  background: #44ff44;
   box-shadow: 0 0 10px #44ff44;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* 频道按钮 */
+.channel-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.channel-btn {
+  flex: 1;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.channel-btn.active {
+  background: rgba(68, 255, 68, 0.2);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+  text-shadow: 0 0 5px #44ff44;
+  box-shadow: 0 0 10px rgba(68, 255, 68, 0.3);
+}
+
+/* 文件上传按钮 */
+.file-input-button {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  text-align: center;
+}
+
+.hidden-file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.upload-icon {
+  font-style: normal;
+  font-size: 1.2rem;
+}
+
+/* 模式选择按钮 */
+.mode-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mode-btn {
+  text-align: left;
+  padding-left: 1rem;
+  position: relative;
+}
+
+.mode-btn.active {
+  background: rgba(68, 255, 68, 0.2);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+  text-shadow: 0 0 5px #44ff44;
+}
+
+.mode-btn.active::before {
+  content: '►';
+  position: absolute;
+  left: 0.4rem;
+  color: #44ff44;
+}
+
+/* 开始按钮 */
+.start-btn {
+  background: linear-gradient(to bottom, #3a3a4a, #2a2a3a);
+  border: 1px solid #4a4a5a;
+  font-weight: bold;
+  letter-spacing: 1px;
+  height: 50px;
+}
+
+.start-btn:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #4a4a5a, #3a3a4a);
+}
+
+/* 系统状态 */
+.system-status {
+  margin-top: auto;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border-top: 1px solid #3a3a4a;
+}
+
+.status-label {
+  color: #8a8a9a;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.status-value {
+  color: #44ff44;
+  font-family: monospace;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px rgba(68, 255, 68, 0.5);
+  word-break: break-word;
 }
 
 .tv-screen {
@@ -985,26 +1209,6 @@ const showEvaluationReport = (stats) => {
   color: #44ff44;
   text-shadow: 0 0 5px #44ff44;
   box-shadow: 0 0 10px rgba(68, 255, 68, 0.3);
-}
-
-/* 频道按钮组样式 */
-.channel-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.channel-btn {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  transition: all 0.3s ease;
-}
-
-.channel-btn:hover {
-  transform: scale(1.05);
 }
 
 /* 响应式设计优化 */

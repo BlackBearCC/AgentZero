@@ -193,11 +193,11 @@
                 
                 <!-- 角色扮演关键词词云 -->
                 <div class="keywords-section">
-                  <h4>关键词分析</h4>
+                  <h4>角色扮演关键词分析</h4>
                   <div class="keywords-tabs">
                     <button 
                       v-for="(item, key) in rolePlayItems" 
-                      :key="key"
+                      :key="`role-${key}`"
                       @click="activeRoleKeywordTab = key"
                       class="keyword-tab"
                       :class="{ 'active': activeRoleKeywordTab === key }"
@@ -205,24 +205,16 @@
                       {{ item.label }}
                     </button>
                   </div>
-                  <div class="retro-keyword-cloud">
+                  <div class="retro-keyword-cloud" :key="`role-cloud-${activeRoleKeywordTab}`">
                     <div class="scanlines"></div>
                     <div class="glow-container">
                       <div 
-                        v-for="(count, keyword) in getKeywords(activeRoleKeywordTab, 'role_play')" 
-                        :key="keyword"
+                        v-for="(keyword, index) in getFormattedKeywords('role_play', activeRoleKeywordTab)" 
+                        :key="`role-keyword-${keyword.text}-${index}`"
                         class="retro-keyword-tag"
-                        :style="{ 
-                          fontSize: `${getKeywordSize(count)}rem`,
-                          animationDelay: `${Math.random() * 2}s`,
-                          animationDuration: `${3 + Math.random() * 2}s`,
-                          left: `${Math.random() * 70 + 15}%`,
-                          top: `${Math.random() * 70 + 15}%`,
-                          transform: `rotate(${Math.random() * 20 - 10}deg)`,
-                          opacity: 0.7 + (count / 10) * 0.3
-                        }"
+                        :style="keyword.style"
                       >
-                        {{ keyword }}
+                        {{ keyword.text }}
                       </div>
                     </div>
                   </div>
@@ -244,11 +236,11 @@
                 
                 <!-- 对话体验关键词词云 -->
                 <div class="keywords-section">
-                  <h4>关键词分析</h4>
+                  <h4>对话体验关键词分析</h4>
                   <div class="keywords-tabs">
                     <button 
                       v-for="(item, key) in dialogueItems" 
-                      :key="key"
+                      :key="`dialogue-${key}`"
                       @click="activeDialogueKeywordTab = key"
                       class="keyword-tab"
                       :class="{ 'active': activeDialogueKeywordTab === key }"
@@ -256,24 +248,16 @@
                       {{ item.label }}
                     </button>
                   </div>
-                  <div class="retro-keyword-cloud">
+                  <div class="retro-keyword-cloud" :key="`dialogue-cloud-${activeDialogueKeywordTab}`">
                     <div class="scanlines"></div>
                     <div class="glow-container">
                       <div 
-                        v-for="(count, keyword) in getKeywords(activeDialogueKeywordTab, 'dialogue_experience')" 
-                        :key="keyword"
+                        v-for="(keyword, index) in getFormattedKeywords('dialogue_experience', activeDialogueKeywordTab)" 
+                        :key="`dialogue-keyword-${keyword.text}-${index}`"
                         class="retro-keyword-tag"
-                        :style="{ 
-                          fontSize: `${getKeywordSize(count)}rem`,
-                          animationDelay: `${Math.random() * 2}s`,
-                          animationDuration: `${3 + Math.random() * 2}s`,
-                          left: `${Math.random() * 70 + 15}%`,
-                          top: `${Math.random() * 70 + 15}%`,
-                          transform: `rotate(${Math.random() * 20 - 10}deg)`,
-                          opacity: 0.7 + (count / 10) * 0.3
-                        }"
+                        :style="keyword.style"
                       >
-                        {{ keyword }}
+                        {{ keyword.text }}
                       </div>
                     </div>
                   </div>
@@ -359,6 +343,9 @@ const router = useRouter()
 // 添加关键词标签页状态
 const activeRoleKeywordTab = ref('consistency')
 const activeDialogueKeywordTab = ref('response_quality')
+
+// 缓存每个维度的关键词位置
+const keywordPositions = ref({})
 
 // 自动滚动到底部
 const scrollToBottom = () => {
@@ -697,6 +684,57 @@ const getKeywordSize = (count) => {
   const baseSize = 0.9;
   const maxSize = 2.2;
   return Math.min(baseSize + (count / 5) * 0.5, maxSize);
+}
+
+// 获取格式化的关键词数组，包含样式
+const getFormattedKeywords = (category, key) => {
+  const keywords = getKeywords(key, category);
+  if (Object.keys(keywords).length === 0) return [];
+  
+  // 创建缓存key
+  const cacheKey = `${category}-${key}`;
+  
+  // 如果没有缓存，创建新的位置数据
+  if (!keywordPositions.value[cacheKey]) {
+    keywordPositions.value[cacheKey] = {};
+  }
+  
+  // 格式化关键词数组
+  const result = [];
+  for (const [text, count] of Object.entries(keywords)) {
+    // 如果该关键词没有缓存位置，创建一个
+    if (!keywordPositions.value[cacheKey][text]) {
+      keywordPositions.value[cacheKey][text] = {
+        left: `${Math.random() * 70 + 15}%`,
+        top: `${Math.random() * 70 + 15}%`,
+        rotation: `${Math.random() * 20 - 10}deg`,
+        delay: `${Math.random() * 2}s`,
+        duration: `${3 + Math.random() * 2}s`
+      };
+    }
+    
+    // 从缓存获取位置
+    const position = keywordPositions.value[cacheKey][text];
+    
+    // 创建样式对象
+    const style = {
+      fontSize: `${getKeywordSize(count)}rem`,
+      left: position.left,
+      top: position.top,
+      transform: `rotate(${position.rotation})`,
+      opacity: 0.7 + (count / 10) * 0.3,
+      animationDelay: position.delay,
+      animationDuration: position.duration
+    };
+    
+    result.push({
+      text,
+      count,
+      style
+    });
+  }
+  
+  return result;
 }
 </script>
 

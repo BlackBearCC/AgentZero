@@ -604,6 +604,40 @@ const formatFileSize = (bytes) => {
 </script>
 
 <style scoped>
+/* 全局滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #333333, #222222);
+  border-radius: 4px;
+  box-shadow: inset 0 0 3px rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(68, 255, 68, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #444444, #333333);
+  border-color: rgba(68, 255, 68, 0.5);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 为Firefox浏览器设置滚动条样式 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #333333 rgba(0, 0, 0, 0.3);
+}
+
 .tv-container {
   display: flex;
   gap: 2rem;
@@ -997,24 +1031,6 @@ const formatFileSize = (bytes) => {
   text-shadow: 0 0 2px rgba(255,255,255,0.5);
 }
 
-/* 统一滚动条样式 */
-.chat-window::-webkit-scrollbar,
-.report-view::-webkit-scrollbar {
-  width: 8px;
-}
-
-.chat-window::-webkit-scrollbar-track,
-.report-view::-webkit-scrollbar-track {
-  background: #2a2a3a;
-  border-radius: 4px;
-}
-
-.chat-window::-webkit-scrollbar-thumb,
-.report-view::-webkit-scrollbar-thumb {
-  background: #4a4a5a;
-  border-radius: 4px;
-}
-
 /* 报告视图样式调整 */
 .report-view {
   height: 100%;
@@ -1406,23 +1422,6 @@ const formatFileSize = (bytes) => {
   padding: 0.5rem;
   background: rgba(20, 20, 30, 0.5);
   border-radius: 4px;
-  /* 自定义滚动条 */
-  scrollbar-width: thin;
-  scrollbar-color: #44ff44 #1a1a2e;
-}
-
-.field-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.field-list::-webkit-scrollbar-track {
-  background: #1a1a2e;
-  border-radius: 3px;
-}
-
-.field-list::-webkit-scrollbar-thumb {
-  background-color: #44ff44;
-  border-radius: 3px;
 }
 
 .field-item {

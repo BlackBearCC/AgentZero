@@ -215,6 +215,7 @@
                         :style="keyword.style"
                       >
                         {{ keyword.text }}
+                        <span class="keyword-count">{{ keyword.count }}</span>
                       </div>
                     </div>
                   </div>
@@ -258,6 +259,7 @@
                         :style="keyword.style"
                       >
                         {{ keyword.text }}
+                        <span class="keyword-count">{{ keyword.count }}</span>
                       </div>
                     </div>
                   </div>
@@ -699,18 +701,77 @@ const getFormattedKeywords = (category, key) => {
     keywordPositions.value[cacheKey] = {};
   }
   
+  // 获取最大计数值用于归一化
+  const counts = Object.values(keywords);
+  const maxCount = Math.max(...counts);
+  
+  // 按计数从大到小排序关键词
+  const sortedKeywords = Object.entries(keywords).sort((a, b) => b[1] - a[1]);
+  
+  // 保存已放置的元素区域，用于避免重叠
+  const placedAreas = [];
+  
   // 格式化关键词数组
   const result = [];
-  for (const [text, count] of Object.entries(keywords)) {
+  for (const [text, count] of sortedKeywords) {
+    // 归一化权重 (0.1 - 1.0)
+    const normalizedWeight = 0.3 + (count / maxCount) * 0.7;
+    
     // 如果该关键词没有缓存位置，创建一个
     if (!keywordPositions.value[cacheKey][text]) {
-      keywordPositions.value[cacheKey][text] = {
-        left: `${Math.random() * 70 + 15}%`,
-        top: `${Math.random() * 70 + 15}%`,
-        rotation: `${Math.random() * 20 - 10}deg`,
-        delay: `${Math.random() * 2}s`,
-        duration: `${3 + Math.random() * 2}s`
-      };
+      // 尝试找到不重叠的位置
+      let attempts = 0;
+      let position;
+      let overlap = true;
+      
+      while (overlap && attempts < 100) {
+        // 基于词的重要性放置更重要的词接近中心
+        const centeringFactor = normalizedWeight; // 越重要的词越靠近中心
+        const margin = (1 - centeringFactor) * 35; // 边缘距离随重要性减小
+        
+        position = {
+          left: `${margin + Math.random() * (100 - 2 * margin)}%`,
+          top: `${margin + Math.random() * (100 - 2 * margin)}%`,
+          rotation: `${Math.random() * 20 - 10}deg`,
+          delay: `${Math.random() * 2}s`,
+          duration: `${3 + Math.random() * 2}s`
+        };
+        
+        // 估算元素大小
+        const fontSize = getKeywordSize(count);
+        const estimatedWidth = text.length * fontSize * 0.6; // 粗略估算宽度
+        const estimatedHeight = fontSize * 1.5; // 估算高度
+        
+        // 创建此元素的区域对象
+        const area = {
+          left: parseFloat(position.left) - estimatedWidth/2,
+          right: parseFloat(position.left) + estimatedWidth/2,
+          top: parseFloat(position.top) - estimatedHeight/2,
+          bottom: parseFloat(position.top) + estimatedHeight/2
+        };
+        
+        // 检查与已放置元素是否重叠
+        overlap = placedAreas.some(placed => {
+          return !(
+            area.right < placed.left || 
+            area.left > placed.right || 
+            area.bottom < placed.top || 
+            area.top > placed.bottom
+          );
+        });
+        
+        if (!overlap) {
+          placedAreas.push(area);
+          keywordPositions.value[cacheKey][text] = position;
+        }
+        
+        attempts++;
+      }
+      
+      // 如果尝试多次仍然无法找到不重叠的位置，使用最后一个位置
+      if (overlap) {
+        keywordPositions.value[cacheKey][text] = position;
+      }
     }
     
     // 从缓存获取位置
@@ -722,15 +783,18 @@ const getFormattedKeywords = (category, key) => {
       left: position.left,
       top: position.top,
       transform: `rotate(${position.rotation})`,
-      opacity: 0.7 + (count / 10) * 0.3,
+      opacity: 0.7 + (normalizedWeight * 0.3), // 高频词更不透明
       animationDelay: position.delay,
-      animationDuration: position.duration
+      animationDuration: position.duration,
+      // 基于词频调整发光效果
+      textShadow: `0 0 ${3 + normalizedWeight * 7}px rgba(68, 255, 68, ${0.5 + normalizedWeight * 0.5})`
     };
     
     result.push({
       text,
       count,
-      style
+      style,
+      weight: normalizedWeight
     });
   }
   
@@ -1774,6 +1838,8 @@ const getFormattedKeywords = (category, key) => {
   z-index: 3;
   transform-origin: center;
   transition: all 0.3s ease;
+  padding: 3px 6px;
+  border-radius: 4px;
 }
 
 .retro-keyword-tag:hover {
@@ -1784,6 +1850,26 @@ const getFormattedKeywords = (category, key) => {
     0 0 10px rgba(68, 255, 68, 0.8),
     0 0 15px rgba(68, 255, 68, 0.6);
   z-index: 10;
+  background: rgba(68, 255, 68, 0.2);
+}
+
+.keyword-count {
+  position: absolute;
+  top: -12px;
+  right: -8px;
+  background-color: rgba(20, 20, 30, 0.8);
+  color: #44ff44;
+  font-size: 0.7rem;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid rgba(68, 255, 68, 0.5);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.retro-keyword-tag:hover .keyword-count {
+  opacity: 1;
 }
 
 @keyframes float {

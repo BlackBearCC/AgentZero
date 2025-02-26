@@ -190,6 +190,32 @@
                     <div class="score-bar-value">{{ getScoreValue(key, 'role_play') }}</div>
                   </div>
                 </div>
+                
+                <!-- 角色扮演关键词词云 -->
+                <div class="keywords-section">
+                  <h4>关键词分析</h4>
+                  <div class="keywords-tabs">
+                    <button 
+                      v-for="(item, key) in rolePlayItems" 
+                      :key="key"
+                      @click="activeRoleKeywordTab = key"
+                      class="keyword-tab"
+                      :class="{ 'active': activeRoleKeywordTab === key }"
+                    >
+                      {{ item.label }}
+                    </button>
+                  </div>
+                  <div class="keyword-cloud">
+                    <div 
+                      v-for="(count, keyword) in getKeywords(activeRoleKeywordTab, 'role_play')" 
+                      :key="keyword"
+                      class="keyword-tag"
+                      :style="{ fontSize: `${getKeywordSize(count)}rem` }"
+                    >
+                      {{ keyword }}
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <!-- 对话体验评估 -->
@@ -202,6 +228,32 @@
                       <div class="score-bar" :style="{ width: `${getScoreValue(key, 'dialogue_experience')}%` }"></div>
                     </div>
                     <div class="score-bar-value">{{ getScoreValue(key, 'dialogue_experience') }}</div>
+                  </div>
+                </div>
+                
+                <!-- 对话体验关键词词云 -->
+                <div class="keywords-section">
+                  <h4>关键词分析</h4>
+                  <div class="keywords-tabs">
+                    <button 
+                      v-for="(item, key) in dialogueItems" 
+                      :key="key"
+                      @click="activeDialogueKeywordTab = key"
+                      class="keyword-tab"
+                      :class="{ 'active': activeDialogueKeywordTab === key }"
+                    >
+                      {{ item.label }}
+                    </button>
+                  </div>
+                  <div class="keyword-cloud">
+                    <div 
+                      v-for="(count, keyword) in getKeywords(activeDialogueKeywordTab, 'dialogue_experience')" 
+                      :key="keyword"
+                      class="keyword-tag"
+                      :style="{ fontSize: `${getKeywordSize(count)}rem` }"
+                    >
+                      {{ keyword }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -281,6 +333,10 @@ const activeChannel = ref(1) // 当前频道
 const isChangingChannel = ref(false) // 是否正在换台
 
 const router = useRouter()
+
+// 添加关键词标签页状态
+const activeRoleKeywordTab = ref('consistency')
+const activeDialogueKeywordTab = ref('response_quality')
 
 // 自动滚动到底部
 const scrollToBottom = () => {
@@ -601,6 +657,23 @@ const formatFileSize = (bytes) => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
+
+// 获取关键词的辅助函数
+const getKeywords = (key, category) => {
+  if (!evaluationStats.value || 
+      !evaluationStats.value[category] || 
+      !evaluationStats.value[category][key] || 
+      !evaluationStats.value[category][key].keywords) {
+    return {}
+  }
+  return evaluationStats.value[category][key].keywords
+}
+
+// 计算关键词大小的辅助函数
+const getKeywordSize = (count) => {
+  // 基础大小为0.8rem，最大为2rem
+  return 0.8 + Math.min(count / 2, 1.2)
+}
 </script>
 
 <style scoped>
@@ -1523,6 +1596,80 @@ const formatFileSize = (bytes) => {
   text-align: center;
   font-size: 0.8rem;
   color: #8a8a9a;
+}
+
+/* 关键词词云样式 */
+.keywords-section {
+  margin-top: 1.5rem;
+  background: rgba(20, 20, 30, 0.5);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid rgba(68, 255, 68, 0.2);
+}
+
+.keywords-section h4 {
+  color: #44ff44;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.keywords-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.keyword-tab {
+  background: rgba(40, 40, 50, 0.8);
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.keyword-tab:hover {
+  background: rgba(50, 50, 60, 0.8);
+}
+
+.keyword-tab.active {
+  background: rgba(68, 255, 68, 0.2);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+}
+
+.keyword-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  min-height: 100px;
+  align-items: center;
+  justify-content: center;
+}
+
+.keyword-tag {
+  color: #44ff44;
+  padding: 0.3rem 0.6rem;
+  background: rgba(68, 255, 68, 0.1);
+  border-radius: 4px;
+  display: inline-block;
+  transition: all 0.2s ease;
+  text-align: center;
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  box-shadow: 0 0 5px rgba(68, 255, 68, 0.2);
+}
+
+.keyword-tag:hover {
+  transform: scale(1.05);
+  background: rgba(68, 255, 68, 0.2);
+  box-shadow: 0 0 10px rgba(68, 255, 68, 0.4);
 }
 </style>
 

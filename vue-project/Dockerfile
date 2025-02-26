@@ -6,6 +6,7 @@ ENV NODE_OPTIONS=--openssl-legacy-provider
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
+RUN npm install jspdf jspdf-autotable
 COPY . .
 RUN npm run build
 

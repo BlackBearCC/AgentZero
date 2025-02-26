@@ -200,13 +200,9 @@
               <div class="report-header">
                 <h2 class="report-title">评估报告</h2>
                 <div class="report-actions">
-                  <button @click="saveReport" class="crt-button">
-                    <span class="button-text">[ 保存报告 ]</span>
-
-                  </button>
-                  <button @click="downloadCurrentReport" class="crt-button">
-                    <span class="button-text">[ 下载报告 ]</span>
-
+                  <button @click="exportReportPDF" class="crt-button export-btn">
+                    <span class="button-text">[ 导出报告 ]</span>
+                    <div class="button-icon">📄</div>
                   </button>
                 </div>
               </div>
@@ -315,35 +311,8 @@
                 </div>
               </div>
               
-              <!-- 优势和弱点 -->
-              <div class="strengths-weaknesses">
-                <div class="sw-column">
-                  <h3>优势</h3>
-                  <ul class="sw-list">
-                    <li v-for="(count, strength) in evaluationStats.common_strengths" :key="strength">
-                      {{ strength }}
-                    </li>
-                  </ul>
-                </div>
-                <div class="sw-column">
-                  <h3>弱点</h3>
-                  <ul class="sw-list">
-                    <li v-for="(count, weakness) in evaluationStats.common_weaknesses" :key="weakness">
-                      {{ weakness }}
-                    </li>
-                  </ul>
-                </div>
-              </div>
               
-              <!-- 建议 -->
-              <div class="suggestions-section">
-                <h3>改进建议</h3>
-                <ul class="suggestions-list">
-                  <li v-for="(count, suggestion) in evaluationStats.common_suggestions" :key="suggestion">
-                    {{ suggestion }}
-                  </li>
-                </ul>
-              </div>
+
             </div>
           </div>
           
@@ -467,6 +436,12 @@
                   </div>
                 </div>
               </div>
+              <div v-if="savedReports.length > 0" class="report-actions">
+                <button @click="exportComparisonPDF" class="crt-button export-btn">
+                  <span class="button-text">[ 导出对比报告 ]</span>
+                  <div class="button-icon">📊</div>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -479,6 +454,9 @@
 import { ref, computed, watch } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
+import 'jspdf-autotable'
 
 const API_BASE_URL = 'http://localhost:8000' // 修改为你的后端地址
 
@@ -609,30 +587,31 @@ const playTypeSound = () => {
   audio.play().catch(() => {});
 };
 
+// 修改开始评估函数，自动添加报告到对比列表
 const startEvaluation = async () => {
   if (!selectedFile.value || !fieldsConfirmed.value) return
   
-  const formData = new FormData()
-  formData.append('file', selectedFile.value)
-  formData.append('eval_type', selectedEvalType.value)
-  formData.append('user_id', 'user123') // 可以使用实际用户ID
-  formData.append('selected_fields', JSON.stringify(selectedFields.value))
-  
-  // 添加评估代号
-  formData.append('evaluation_code', evaluationCode.value || `评估${new Date().toISOString().slice(0,10)}`)
-  
-  // 添加人设信息
-  if (roleInfo.value && roleInfo.value.trim()) {
-    formData.append('role_info', roleInfo.value.trim())
-  }
-  
-  isEvaluating.value = true
-  systemMessage.value = '正在评估，请稍候...'
-  evaluationText.value = ''
-  processed.value = 0
-  total.value = 0
-  
   try {
+    const formData = new FormData()
+    formData.append('file', selectedFile.value)
+    formData.append('eval_type', selectedEvalType.value)
+    formData.append('user_id', 'user123') // 可以使用实际用户ID
+    formData.append('selected_fields', JSON.stringify(selectedFields.value))
+    
+    // 添加评估代号
+    formData.append('evaluation_code', evaluationCode.value || `评估${new Date().toISOString().slice(0,10)}`)
+    
+    // 添加人设信息
+    if (roleInfo.value && roleInfo.value.trim()) {
+      formData.append('role_info', roleInfo.value.trim())
+    }
+    
+    isEvaluating.value = true
+    systemMessage.value = '正在评估，请稍候...'
+    evaluationText.value = ''
+    processed.value = 0
+    total.value = 0
+    
     const response = await fetch(`${API_BASE_URL}/api/v1/evaluate/stream`, {
       method: 'POST',
       body: formData
@@ -724,11 +703,26 @@ const startEvaluation = async () => {
         }
       }
     }
-
+    
+    // 评估完成后自动添加到对比列表
+    const report = {
+      id: `report-${Date.now()}`,
+      evaluation_code: evaluationCode.value,
+      timestamp: new Date(),
+      stats: JSON.parse(JSON.stringify(evaluationStats.value)),
+      role_info: roleInfo.value
+    }
+    
+    savedReports.value.push(report)
+    
+    // 如果选中报告少于3个，自动选中新生成的报告
+    if (selectedReports.value.length < 3) {
+      selectedReports.value.push(report.id)
+    }
+    
   } catch (error) {
-    console.error('评估失败:', error)
-    systemMessage.value = `评估失败: ${error.message}`
-    isScanning.value = false
+    console.error('Error during evaluation:', error)
+    systemMessage.value = '评估失败'
   } finally {
     isEvaluating.value = false
     systemMessage.value = '评估完成！'
@@ -1317,6 +1311,222 @@ const validateReportFormat = (report) => {
     console.error('Error validating report format:', e)
     return false
   }
+}
+
+// 添加导出图表函数
+const exportReportChart = () => {
+  const chartElement = document.querySelector('.report-container')
+  if (!chartElement) {
+    systemMessage.value = '未找到可导出的图表'
+    return
+  }
+  
+  html2canvas(chartElement).then(canvas => {
+    const link = document.createElement('a')
+    link.download = `report-chart-${Date.now()}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+  })
+}
+
+// 修改导出报告函数
+const exportReportPDF = async () => {
+  try {
+    if (!evaluationStats.value) {
+      systemMessage.value = '没有可导出的报告数据'
+      return
+    }
+
+    // 创建PDF文档
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      putOnlyUsedFonts: true
+    })
+
+    // 使用内置字体
+    doc.setFont('helvetica', 'normal')
+
+    // 确保所有文本内容都是字符串类型
+    const safeText = (text) => String(text || '')
+    
+    // 确保数字是有效的
+    const safeNumber = (num) => Number(num) || 0
+
+    // 添加标题
+    doc.setFontSize(16)
+    doc.text(`Evaluation Report - ${safeText(evaluationCode.value)}`, 15, 20)
+
+    // 添加基本信息
+    doc.setFontSize(10)
+    doc.text(`Time: ${new Date().toLocaleString()}`, 15, 30)
+    doc.text(`Code: ${safeText(evaluationCode.value)}`, 15, 35)
+    doc.text(`Role Info: ${safeText(roleInfo.value)}`, 15, 40)
+
+    // 准备总体评分数据
+    const scores = evaluationStats.value.overall_scores || {}
+    const overallScores = [
+      ['Overall Score', safeNumber(scores.final_score)],
+      ['Role Score', safeNumber(scores.role_score)],
+      ['Dialogue Score', safeNumber(scores.dialogue_score)]
+    ]
+
+    // 添加总体评分表格
+    doc.setFontSize(12)
+    doc.text('Overall Scores', 15, 50)
+    const overallTable = doc.autoTable({
+      startY: 55,
+      head: [['Type', 'Score']],
+      body: overallScores.map(([label, score]) => [
+        label,
+        score.toFixed(2)
+      ]),
+      theme: 'grid',
+      styles: {
+        fontSize: 10,
+        font: 'helvetica'
+      },
+      headStyles: {
+        fillColor: [68, 255, 68],
+        textColor: [0, 0, 0],
+        fontSize: 10,
+        font: 'helvetica',
+        fontStyle: 'bold'
+      }
+    })
+
+    // 准备角色扮演评分数据
+    const rolePlays = evaluationStats.value.role_play || {}
+    const rolePlayData = Object.entries(rolePlays).map(([key, value]) => {
+      const item = rolePlayItems[key] || { label: key }
+      return [
+        safeText(item.label),
+        safeNumber(value?.avg),
+        safeNumber(value?.min),
+        safeNumber(value?.max)
+      ]
+    })
+
+    // 添加角色扮演评分表格
+    const rolePlayY = (overallTable.finalY || 55) + 10
+    doc.text('Role Play Scores', 15, rolePlayY)
+    const rolePlayTable = doc.autoTable({
+      startY: rolePlayY + 5,
+      head: [['Dimension', 'Average', 'Min', 'Max']],
+      body: rolePlayData.map(row => row.map(val => 
+        typeof val === 'number' ? val.toFixed(2) : val
+      )),
+      theme: 'grid',
+      styles: {
+        fontSize: 10,
+        font: 'helvetica'
+      },
+      headStyles: {
+        fillColor: [68, 255, 68],
+        textColor: [0, 0, 0],
+        fontSize: 10,
+        font: 'helvetica',
+        fontStyle: 'bold'
+      }
+    })
+
+    // 准备对话体验评分数据
+    const dialogues = evaluationStats.value.dialogue_experience || {}
+    const dialogueData = Object.entries(dialogues).map(([key, value]) => {
+      const item = dialogueItems[key] || { label: key }
+      return [
+        safeText(item.label),
+        safeNumber(value?.avg),
+        safeNumber(value?.min),
+        safeNumber(value?.max)
+      ]
+    })
+
+    // 添加对话体验评分表格
+    const dialogueY = (rolePlayTable.finalY || rolePlayY + 50) + 10
+    doc.text('Dialogue Experience Scores', 15, dialogueY)
+    doc.autoTable({
+      startY: dialogueY + 5,
+      head: [['Dimension', 'Average', 'Min', 'Max']],
+      body: dialogueData.map(row => row.map(val => 
+        typeof val === 'number' ? val.toFixed(2) : val
+      )),
+      theme: 'grid',
+      styles: {
+        fontSize: 10,
+        font: 'helvetica'
+      },
+      headStyles: {
+        fillColor: [68, 255, 68],
+        textColor: [0, 0, 0],
+        fontSize: 10,
+        font: 'helvetica',
+        fontStyle: 'bold'
+      }
+    })
+
+    // 保存PDF
+    const filename = `Report_${safeText(evaluationCode.value)}_${new Date().getTime()}.pdf`
+    doc.save(filename)
+    systemMessage.value = '报告已导出为PDF'
+
+  } catch (error) {
+    console.error('PDF生成错误:', error)
+    systemMessage.value = '报告生成失败，请重试'
+  }
+}
+
+// 添加导出对比报告函数
+const exportComparisonPDF = () => {
+  if (selectedReports.value.length === 0) {
+    systemMessage.value = '请先选择要对比的报告'
+    return
+  }
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  })
+
+  // 添加标题
+  doc.setFontSize(20)
+  doc.setFont('helvetica', 'bold')
+  doc.text('报告对比', 15, 20)
+
+  // 添加基本信息
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'normal')
+  doc.text(`生成时间: ${new Date().toLocaleString()}`, 15, 30)
+
+  // 添加对比表格
+  let startY = 40
+  selectedReports.value.forEach((reportId, index) => {
+    const report = getReportById(reportId)
+    if (report) {
+      doc.setFontSize(14)
+      doc.text(`报告 ${index + 1}: ${report.evaluation_code}`, 15, startY)
+      
+      // 添加总体评分表格
+      doc.autoTable({
+        startY: startY + 5,
+        head: [['评分类型', '分数']],
+        body: [
+          ['角色评分', report.stats.overall_scores.role_score.toFixed(2)],
+          ['对话评分', report.stats.overall_scores.dialogue_score.toFixed(2)],
+          ['最终评分', report.stats.overall_scores.final_score.toFixed(2)]
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [68, 255, 68] }
+      })
+
+      startY = doc.autoTable.previous.finalY + 10
+    }
+  })
+
+  doc.save(`报告对比_${new Date().toISOString().slice(0, 10)}.pdf`)
+  systemMessage.value = '对比报告已导出为PDF'
 }
 </script>
 
@@ -2847,6 +3057,22 @@ const validateReportFormat = (report) => {
   10% { opacity: 1; transform: translateY(0); }
   90% { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* 优化导出按钮样式 */
+.crt-button.export-btn {
+  background: rgba(68, 255, 68, 0.1);
+  border: 2px solid #44ff44;
+  padding: 0.75rem 1.5rem;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 1rem 0;
+}
+
+.crt-button.export-btn:hover {
+  background: rgba(68, 255, 68, 0.2);
+  box-shadow: 0 0 15px rgba(68, 255, 68, 0.3);
 }
 </style>
 

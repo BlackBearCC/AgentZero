@@ -197,22 +197,18 @@
             
             <!-- 有数据时显示报告 -->
             <div v-else class="report-container">
-              <h2 class="report-title">评估报告</h2>
-              
-              <!-- 添加明显的报告操作按钮组 -->
-              <div class="report-actions">
-                <button @click="saveReport" class="control-button save-report-btn">
-                  <div class="button-face">
-                    <span>保存报告</span>
-                    <i class="save-icon">💾</i>
-                  </div>
-                </button>
-                <button @click="downloadCurrentReport" class="control-button download-btn">
-                  <div class="button-face">
-                    <span>下载报告</span>
-                    <i class="download-icon">📥</i>
-                  </div>
-                </button>
+              <div class="report-header">
+                <h2 class="report-title">评估报告</h2>
+                <div class="report-actions">
+                  <button @click="saveReport" class="crt-button">
+                    <span class="button-text">[ 保存报告 ]</span>
+
+                  </button>
+                  <button @click="downloadCurrentReport" class="crt-button">
+                    <span class="button-text">[ 下载报告 ]</span>
+
+                  </button>
+                </div>
               </div>
               
               <!-- 总体评分 -->
@@ -351,14 +347,31 @@
             </div>
           </div>
           
-          <!-- 无信号显示 - Channel 3 -->
+          <!-- Channel 3 的报告对比视图 -->
           <div v-if="activeChannel === 3" class="chat-window report-comparison">
+            <div class="comparison-header">
+              <h2>报告对比</h2>
+              <!-- 添加文件上传按钮 -->
+              <label class="crt-button upload-button">
+                <span class="button-text">[ 上传报告文件 ]</span>
+                <div class="button-icon">📁</div>
+                <input 
+                  type="file" 
+                  @change="handleReportFileUpload" 
+                  accept=".json"
+                  multiple
+                  class="hidden-file-input"
+                />
+              </label>
+            </div>
+
             <!-- 无保存报告时显示引导信息 -->
             <div v-if="savedReports.length === 0" class="no-reports">
               <div class="info-icon">i</div>
               <div class="no-reports-text">
                 <h3>暂无保存的报告</h3>
                 <p>在报告页面(频道2)点击"保存报告"按钮将报告保存到对比列表中</p>
+                <p>或者上传已保存的报告文件</p>
               </div>
             </div>
             
@@ -1053,14 +1066,29 @@ const getReportColor = (reportId) => {
   return comparisonColors.value[index % comparisonColors.value.length]
 }
 
-// 获取特定维度的评分
+// 修改获取维度评分的函数，添加安全访问
 const getDimensionScore = (reportId, category, dimension) => {
   const report = getReportById(reportId)
-  if (!report.stats) return 0
+  if (!report || !report.stats) return 0
   
   try {
-    return report.stats[category][dimension].score
+    // 使用可选链操作符安全访问嵌套属性
+    return report.stats[category]?.[dimension]?.avg || 0
   } catch (e) {
+    console.error('Error getting dimension score:', e)
+    return 0
+  }
+}
+
+// 修改获取总分的函数
+const getOverallScore = (reportId, scoreType) => {
+  const report = getReportById(reportId)
+  if (!report || !report.stats || !report.stats.overall_scores) return 0
+  
+  try {
+    return report.stats.overall_scores[scoreType] || 0
+  } catch (e) {
+    console.error('Error getting overall score:', e)
     return 0
   }
 }
@@ -1155,6 +1183,139 @@ const saveReport = () => {
   // 选中新保存的报告
   if (selectedReports.value.length < 2) {
     selectedReports.value.push(reportId)
+  }
+}
+
+// 完全移除 watch(activeChannel) 中的下载相关逻辑
+watch(activeChannel, (newChannel, oldChannel) => {
+  isChangingChannel.value = true
+  setTimeout(() => {
+    isChangingChannel.value = false
+  }, 1000)
+})
+
+// 添加报告文件上传处理函数
+const handleReportFileUpload = async (event) => {
+  const files = event.target.files
+  if (!files || files.length === 0) return
+
+  for (const file of files) {
+    try {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const reportData = JSON.parse(e.target.result)
+          // 验证文件格式是否符合要求
+          if (validateReportFormat(reportData)) {
+            // 生成报告对象，与保存报告格式一致
+            const report = {
+              id: `imported-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              evaluation_code: file.name.replace('.json', ''),
+              timestamp: new Date(),
+              stats: reportData.stats, // 直接使用上传的stats
+              role_info: reportData.role_info || '' // 使用上传的role_info，如果没有则设为空字符串
+            }
+            
+            // 添加到已保存报告列表
+            savedReports.value.push(report)
+            
+            // 如果选中报告少于3个，自动选中新上传的报告
+            if (selectedReports.value.length < 3) {
+              selectedReports.value.push(report.id)
+            }
+            
+            // 显示成功消息
+            systemMessage.value = `报告已上传: ${file.name}`
+          } else {
+            throw new Error('文件格式不符合要求')
+          }
+        } catch (error) {
+          console.error('Error parsing JSON:', error)
+          systemMessage.value = `文件解析失败: ${file.name}`
+        }
+      }
+      reader.readAsText(file)
+    } catch (error) {
+      console.error('Error reading file:', error)
+      systemMessage.value = `文件读取失败: ${file.name}`
+    }
+  }
+  // 清空input以允许重复上传相同文件
+  event.target.value = ''
+}
+
+// 修改报告格式验证函数，添加更严格的检查
+const validateReportFormat = (report) => {
+  try {
+    // 检查必要的字段
+    const requiredFields = [
+      'evaluation_code',
+      'timestamp',
+      'stats',
+      'role_info'
+    ]
+    
+    // 检查stats中的必要字段
+    const requiredStatsFields = [
+      'overall_scores',
+      'role_play',
+      'dialogue_experience'
+    ]
+    
+    // 检查overall_scores中的必要字段
+    const requiredOverallScoresFields = [
+      'role_score',
+      'dialogue_score',
+      'final_score'
+    ]
+    
+    // 检查role_play中的必要维度
+    const requiredRolePlayDimensions = [
+      'consistency',
+      'knowledge',
+      'language_style',
+      'emotional_expression',
+      'character_depth'
+    ]
+    
+    // 检查dialogue_experience中的必要维度
+    const requiredDialogueExperienceDimensions = [
+      'response_quality',
+      'interaction_fluency',
+      'language_expression',
+      'context_adaptation',
+      'personalization'
+    ]
+    
+    // 检查顶层字段
+    if (!requiredFields.every(field => report?.hasOwnProperty(field))) {
+      return false
+    }
+    
+    // 检查stats字段
+    if (!report.stats || !requiredStatsFields.every(field => report.stats?.hasOwnProperty(field))) {
+      return false
+    }
+    
+    // 检查overall_scores字段
+    if (!report.stats.overall_scores || !requiredOverallScoresFields.every(field => report.stats.overall_scores?.hasOwnProperty(field))) {
+      return false
+    }
+    
+    // 检查role_play字段
+    if (!report.stats.role_play || !requiredRolePlayDimensions.every(dimension => report.stats.role_play?.hasOwnProperty(dimension))) {
+      return false
+    }
+    
+    // 检查dialogue_experience字段
+    if (!report.stats.dialogue_experience || !requiredDialogueExperienceDimensions.every(dimension => report.stats.dialogue_experience?.hasOwnProperty(dimension))) {
+      return false
+    }
+    
+    return true
+  } catch (e) {
+    console.error('Error validating report format:', e)
+    return false
   }
 }
 </script>
@@ -2570,6 +2731,122 @@ const saveReport = () => {
 .save-icon, .download-icon {
   margin-left: 0.5rem;
   font-style: normal;
+}
+
+/* 报告操作按钮样式 */
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem;
+  border-bottom: 2px solid rgba(68, 255, 68, 0.3);
+}
+
+.report-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.crt-button {
+  background: transparent;
+  border: 1px solid #44ff44;
+  color: #44ff44;
+  padding: 0.5rem 1rem;
+  font-family: 'VT323', monospace;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  text-shadow: 0 0 8px rgba(68, 255, 68, 0.5);
+  box-shadow: 0 0 10px rgba(68, 255, 68, 0.2);
+}
+
+.crt-button:hover {
+  background: rgba(68, 255, 68, 0.1);
+  box-shadow: 0 0 15px rgba(68, 255, 68, 0.3);
+}
+
+.crt-button:active {
+  transform: scale(0.98);
+}
+
+.button-text {
+  font-weight: normal;
+  letter-spacing: 1px;
+}
+
+.button-icon {
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+/* 添加CRT效果 */
+.report-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(68, 255, 68, 0.5),
+    transparent
+  );
+}
+
+.comparison-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border-bottom: 2px solid rgba(68, 255, 68, 0.3);
+}
+
+.upload-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.hidden-file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.upload-button:hover {
+  background: rgba(68, 255, 68, 0.1);
+}
+
+/* 添加上传反馈样式 */
+.upload-feedback {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+  padding: 1rem;
+  border-radius: 4px;
+  z-index: 1000;
+  font-family: 'VT323', monospace;
+  animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-20px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-20px); }
 }
 </style>
 

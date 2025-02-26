@@ -83,6 +83,35 @@
         </div>
       </div>
       
+      <!-- 开始评估按钮之前添加新的控制组：评估代号和人设信息 -->
+      <div class="control-group">
+        <div class="control-label">评估代号</div>
+        <div class="eval-code-input">
+          <input 
+            type="text" 
+            v-model="evaluationCode" 
+            placeholder="输入代号或自动生成"
+            class="code-input"
+          >
+          <button @click="generateRandomCode" class="control-button small-btn">
+            <div class="button-face">
+              <span>生成</span>
+            </div>
+          </button>
+        </div>
+      </div>
+      
+      <!-- 人设信息输入 -->
+      <div class="control-group">
+        <div class="control-label">人设信息</div>
+        <textarea 
+          v-model="roleInfo" 
+          placeholder="输入角色人设信息（可选）"
+          class="role-info-input"
+          rows="4"
+        ></textarea>
+      </div>
+      
       <!-- 开始评估按钮 -->
       <div class="control-group">
         <div class="control-label">OPERATION</div>
@@ -161,6 +190,22 @@
             <!-- 有数据时显示报告 -->
             <div v-else class="report-container">
               <h2 class="report-title">评估报告</h2>
+              
+              <!-- 添加明显的报告操作按钮组 -->
+              <div class="report-actions">
+                <button @click="saveReport" class="control-button save-report-btn">
+                  <div class="button-face">
+                    <span>保存报告</span>
+                    <i class="save-icon">💾</i>
+                  </div>
+                </button>
+                <button @click="downloadCurrentReport" class="control-button download-btn">
+                  <div class="button-face">
+                    <span>下载报告</span>
+                    <i class="download-icon">📥</i>
+                  </div>
+                </button>
+              </div>
               
               <!-- 总体评分 -->
               <div class="score-overview">
@@ -299,9 +344,109 @@
           </div>
           
           <!-- 无信号显示 - Channel 3 -->
-          <div v-if="activeChannel === 3" class="no-signal">
-            <div class="static-effect"></div>
-            <div class="no-signal-text">NO SIGNAL</div>
+          <div v-if="activeChannel === 3" class="chat-window report-comparison">
+            <!-- 无保存报告时显示引导信息 -->
+            <div v-if="savedReports.length === 0" class="no-reports">
+              <div class="info-icon">i</div>
+              <div class="no-reports-text">
+                <h3>暂无保存的报告</h3>
+                <p>在报告页面(频道2)点击"保存报告"按钮将报告保存到对比列表中</p>
+              </div>
+            </div>
+            
+            <!-- 有保存报告时显示报告列表和对比视图 -->
+            <div v-else class="reports-container">
+              <h2 class="report-title">报告对比</h2>
+              
+              <!-- 保存的报告列表 -->
+              <div class="saved-reports-list">
+                <h3>已保存报告 ({{ savedReports.length }})</h3>
+                <div class="report-cards">
+                  <div 
+                    v-for="(report, index) in savedReports" 
+                    :key="index"
+                    class="report-card"
+                    :class="{ 'selected': selectedReports.includes(report.id) }"
+                    @click="toggleReportSelection(report.id)"
+                  >
+                    <div class="report-card-header">
+                      <div class="report-code">{{ report.evaluation_code }}</div>
+                      <div class="report-date">{{ formatDate(report.timestamp) }}</div>
+                    </div>
+                    <div class="report-score">{{ report.stats.overall_scores.final_score }}</div>
+                    <div class="report-card-footer">
+                      <button @click.stop="downloadReport(report)" class="mini-btn">下载</button>
+                      <button @click.stop="removeReport(report.id)" class="mini-btn delete">删除</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 对比视图 - 只在选择了2个及以上报告时显示 -->
+              <div v-if="selectedReports.length >= 2" class="comparison-view">
+                <h3>评分对比</h3>
+                
+                <!-- 总体评分对比 -->
+                <div class="comparison-section">
+                  <h4>总体评分</h4>
+                  <div class="comparison-bars">
+                    <div 
+                      v-for="reportId in selectedReports" 
+                      :key="`overall-${reportId}`"
+                      class="comparison-bar-row"
+                    >
+                      <div class="comparison-label">{{ getReportById(reportId).evaluation_code }}</div>
+                      <div class="comparison-bar-container">
+                        <div 
+                          class="comparison-bar" 
+                          :style="{ 
+                            width: `${getReportById(reportId).stats.overall_scores.final_score}%`,
+                            backgroundColor: getReportColor(reportId)
+                          }"
+                        ></div>
+                      </div>
+                      <div class="comparison-value">{{ getReportById(reportId).stats.overall_scores.final_score }}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 角色扮演评分对比 -->
+                <div class="comparison-section">
+                  <h4>角色扮演评分</h4>
+                  <div class="dimension-tabs">
+                    <button 
+                      v-for="(item, key) in rolePlayItems" 
+                      :key="`comp-role-${key}`"
+                      @click="activeComparisonTab = key"
+                      class="dimension-tab"
+                      :class="{ 'active': activeComparisonTab === key }"
+                    >
+                      {{ item.label }}
+                    </button>
+                  </div>
+                  
+                  <div class="comparison-bars" v-if="activeComparisonTab">
+                    <div 
+                      v-for="reportId in selectedReports" 
+                      :key="`role-${reportId}-${activeComparisonTab}`"
+                      class="comparison-bar-row"
+                    >
+                      <div class="comparison-label">{{ getReportById(reportId).evaluation_code }}</div>
+                      <div class="comparison-bar-container">
+                        <div 
+                          class="comparison-bar" 
+                          :style="{ 
+                            width: `${getDimensionScore(reportId, 'role_play', activeComparisonTab)}%`,
+                            backgroundColor: getReportColor(reportId)
+                          }"
+                        ></div>
+                      </div>
+                      <div class="comparison-value">{{ getDimensionScore(reportId, 'role_play', activeComparisonTab) }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -435,25 +580,31 @@ const startEvaluation = async () => {
   const formData = new FormData()
   formData.append('file', selectedFile.value)
   formData.append('eval_type', selectedEvalType.value)
-  formData.append('user_id', 'default')
+  formData.append('user_id', 'user123') // 可以使用实际用户ID
   formData.append('selected_fields', JSON.stringify(selectedFields.value))
   
+  // 添加评估代号
+  formData.append('evaluation_code', evaluationCode.value || `评估${new Date().toISOString().slice(0,10)}`)
+  
+  // 添加人设信息
+  if (roleInfo.value && roleInfo.value.trim()) {
+    formData.append('role_info', roleInfo.value.trim())
+  }
+  
+  isEvaluating.value = true
+  systemMessage.value = '正在评估，请稍候...'
+  evaluationText.value = ''
+  processed.value = 0
+  total.value = 0
+  
   try {
-    isEvaluating.value = true
-    evaluationText.value = ''
-    systemMessage.value = '开始评估...'
-    processed.value = 0
-    total.value = 0
-    
     const response = await fetch(`${API_BASE_URL}/api/v1/evaluate/stream`, {
       method: 'POST',
       body: formData
     })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
+    
+    if (!response.ok) throw new Error('评估请求失败')
+    
     // 开始接收数据时启动扫描
     isScanning.value = true
 
@@ -841,6 +992,166 @@ const getFormattedKeywords = (category, key) => {
   }
   
   return result;
+}
+
+// 在script部分添加新的数据和方法
+const evaluationCode = ref('')
+const roleInfo = ref('')
+const savedReports = ref([])
+const selectedReports = ref([])
+const activeComparisonTab = ref('consistency')
+const comparisonColors = ref([
+  '#44ff44', '#ff5252', '#52a2ff', '#ffbd52', 
+  '#e552ff', '#52ffbd', '#ff52a2', '#bdff52'
+])
+
+// 生成随机评估代号
+const generateRandomCode = () => {
+  evaluationCode.value = generateRandomCodeValue()
+}
+
+// 生成随机代号的实际逻辑
+const generateRandomCodeValue = () => {
+  const adjectives = ['小', '大', '智能', '温暖', '冷静', '锋利', '柔软', '明亮', '黑暗', '高效'];
+  const nouns = ['熊猫', '狐狸', '机器人', '向日葵', '彗星', '飞船', '风暴', '树叶', '湖泊', '星空'];
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  
+  const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+  const randomLetter = letters[Math.floor(Math.random() * letters.length)];
+  
+  return `${randomAdjective}${randomNoun}${randomLetter}`;
+}
+
+// 切换报告选择状态
+const toggleReportSelection = (reportId) => {
+  const index = selectedReports.value.indexOf(reportId)
+  if (index === -1) {
+    // 最多只能选择3个报告进行对比
+    if (selectedReports.value.length < 3) {
+      selectedReports.value.push(reportId)
+    } else {
+      systemStatus.value = '最多只能选择3个报告进行对比'
+    }
+  } else {
+    selectedReports.value.splice(index, 1)
+  }
+}
+
+// 通过ID获取报告
+const getReportById = (id) => {
+  return savedReports.value.find(report => report.id === id) || {}
+}
+
+// 获取报告颜色（用于对比图）
+const getReportColor = (reportId) => {
+  const index = selectedReports.value.indexOf(reportId)
+  return comparisonColors.value[index % comparisonColors.value.length]
+}
+
+// 获取特定维度的评分
+const getDimensionScore = (reportId, category, dimension) => {
+  const report = getReportById(reportId)
+  if (!report.stats) return 0
+  
+  try {
+    return report.stats[category][dimension].score
+  } catch (e) {
+    return 0
+  }
+}
+
+// 格式化日期
+const formatDate = (date) => {
+  if (!date) return ''
+  
+  if (typeof date === 'string') {
+    date = new Date(date)
+  }
+  
+  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+// 下载报告
+const downloadReport = (report) => {
+  if (!report) return
+  
+  const reportData = JSON.stringify(report, null, 2)
+  const blob = new Blob([reportData], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${report.evaluation_code}_${formatDateForFilename(report.timestamp)}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+// 下载当前报告
+const downloadCurrentReport = () => {
+  if (!evaluationStats.value) return
+  
+  const report = {
+    evaluation_code: evaluationCode.value,
+    timestamp: new Date(),
+    stats: evaluationStats.value,
+    role_info: roleInfo.value
+  }
+  
+  downloadReport(report)
+}
+
+// 移除保存的报告
+const removeReport = (reportId) => {
+  const index = savedReports.value.findIndex(report => report.id === reportId)
+  if (index !== -1) {
+    savedReports.value.splice(index, 1)
+    localStorage.setItem('savedReports', JSON.stringify(savedReports.value))
+    
+    // 如果已选中，也要从选中列表中移除
+    const selectedIndex = selectedReports.value.indexOf(reportId)
+    if (selectedIndex !== -1) {
+      selectedReports.value.splice(selectedIndex, 1)
+    }
+  }
+}
+
+// 格式化用于文件名的日期
+const formatDateForFilename = (date) => {
+  if (typeof date === 'string') {
+    date = new Date(date)
+  }
+  
+  return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}_${String(date.getHours()).padStart(2, '0')}${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+// 保存当前报告
+const saveReport = () => {
+  if (!evaluationStats.value) return
+  
+  const reportId = Date.now().toString()
+  const report = {
+    id: reportId,
+    evaluation_code: evaluationCode.value,
+    timestamp: new Date(),
+    stats: JSON.parse(JSON.stringify(evaluationStats.value)), // 深拷贝
+    role_info: roleInfo.value
+  }
+  
+  savedReports.value.push(report)
+  
+  // 保存到本地存储
+  localStorage.setItem('savedReports', JSON.stringify(savedReports.value))
+  
+  // 显示成功消息
+  systemStatus.value = `报告已保存: ${evaluationCode.value}`
+  
+  // 选中新保存的报告
+  if (selectedReports.value.length < 2) {
+    selectedReports.value.push(reportId)
+  }
 }
 </script>
 
@@ -1991,6 +2302,272 @@ const getFormattedKeywords = (category, key) => {
     transform: scale(0, 0.1) translate(0, 100%);
     opacity: 0;
   }
+}
+
+/* 评估代号输入框样式 */
+.eval-code-input {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.code-input {
+  background: rgba(30, 30, 40, 0.8);
+  border: 1px solid #333;
+  color: #44ff44;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  flex: 1;
+}
+
+.small-btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  min-width: 60px;
+}
+
+/* 人设信息输入框样式 */
+.role-info-input {
+  width: 100%;
+  background: rgba(30, 30, 40, 0.8);
+  border: 1px solid #333;
+  color: #44ff44;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+}
+
+/* 报告对比界面样式 */
+.report-comparison {
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.no-reports {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+  color: #a0a0a0;
+}
+
+.info-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(68, 255, 68, 0.2);
+  border: 2px solid #44ff44;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #44ff44;
+  margin-bottom: 1rem;
+}
+
+.no-reports-text h3 {
+  color: #44ff44;
+  margin-bottom: 1rem;
+}
+
+.reports-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.saved-reports-list h3 {
+  color: #44ff44;
+  margin-bottom: 1rem;
+}
+
+.report-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.report-card {
+  background: rgba(20, 20, 30, 0.8);
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+  width: 180px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.report-card:hover {
+  background: rgba(30, 30, 40, 0.8);
+  box-shadow: 0 0 10px rgba(68, 255, 68, 0.3);
+}
+
+.report-card.selected {
+  border: 1px solid #44ff44;
+  background: rgba(68, 255, 68, 0.1);
+  box-shadow: 0 0 15px rgba(68, 255, 68, 0.4);
+}
+
+.report-card-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.report-code {
+  color: #44ff44;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.report-date {
+  color: #a0a0a0;
+  font-size: 0.8rem;
+}
+
+.report-score {
+  font-size: 2.5rem;
+  color: #44ff44;
+  text-align: center;
+  margin: 1rem 0;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(68, 255, 68, 0.4);
+}
+
+.report-card-footer {
+  display: flex;
+  justify-content: space-between;
+}
+
+.mini-btn {
+  background: rgba(40, 40, 50, 0.8);
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.mini-btn:hover {
+  background: rgba(50, 50, 60, 0.8);
+  color: #fff;
+}
+
+.mini-btn.delete {
+  color: #ff5252;
+}
+
+.mini-btn.delete:hover {
+  background: rgba(80, 30, 30, 0.8);
+}
+
+/* 对比视图样式 */
+.comparison-view {
+  background: rgba(20, 20, 30, 0.5);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.comparison-view h3, .comparison-view h4 {
+  color: #44ff44;
+  margin-bottom: 1rem;
+}
+
+.comparison-section {
+  margin-bottom: 2rem;
+}
+
+.comparison-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.comparison-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.comparison-label {
+  width: 100px;
+  text-align: right;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.comparison-bar-container {
+  flex: 1;
+  height: 15px;
+  background: rgba(40, 40, 50, 0.8);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.comparison-bar {
+  height: 100%;
+  border-radius: 8px;
+}
+
+.comparison-value {
+  width: 40px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.dimension-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.dimension-tab {
+  background: rgba(20, 20, 30, 0.8);
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.dimension-tab:hover {
+  background: rgba(40, 40, 50, 0.8);
+}
+
+.dimension-tab.active {
+  background: rgba(68, 255, 68, 0.2);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+}
+
+/* 报告操作按钮 */
+.report-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(68, 255, 68, 0.3);
+}
+
+.save-report-btn, .download-btn {
+  padding: 0.5rem 1rem;
+  min-width: 120px;
+}
+
+.save-icon, .download-icon {
+  margin-left: 0.5rem;
+  font-style: normal;
 }
 </style>
 

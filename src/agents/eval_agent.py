@@ -358,11 +358,17 @@ class EvaluationAgent(BaseAgent):
 
     async def _build_eval_context(self, prompt: str) -> Dict[str, Any]:
         """构建评估上下文"""
+        system_content = ""
+        
+        # 如果有人设信息，添加到系统提示中
+        if hasattr(self, 'role_info') and self.role_info:
+            system_content += f"\n\n以下是本次评估相关的角色人设信息：\n{self.role_info}"
+        
         return {
             "messages": [
                 {
-                    "role": "system",
-                    "content": "你是一个专业的AI对话质量评估专家。"
+                    "role": "system", 
+                    "content": system_content
                 },
                 {
                     "role": "user",

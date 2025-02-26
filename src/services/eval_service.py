@@ -57,14 +57,22 @@ class EvalService:
         data: List[Dict[str, Any]],
         eval_type: str,
         user_id: str,
+        evaluation_code: Optional[str] = None,
+        role_info: Optional[str] = None,
     ) -> AsyncIterator[str]:
         """评估数据"""
         try:
             self.eval_agent.eval_type = eval_type
             
-            # 首先发送总数信息
-            yield f"data: {json.dumps({'total': len(data)}, ensure_ascii=False)}\n\n"
+            # 首先发送总数信息和评估信息
+            yield f"data: {json.dumps({'total': len(data), 'evaluation_code': evaluation_code or '未命名评估'}, ensure_ascii=False)}\n\n"
             
+            # 如果提供了人设信息，更新评估Agent的人设
+            if role_info and role_info.strip():
+                self.eval_agent.role_info = role_info
+            else:
+                self.eval_agent.role_info = None
+                
             # 使用evaluate_batch方法进行批量评估
             async for result in self.eval_agent.evaluate_batch(data):
                 yield result + "\n\n"

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
 from src.services.eval_service import EvalService, get_eval_service
 from src.utils.file_utils import read_data_file
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi.responses import StreamingResponse
 import json
 from src.api.schemas.chat import EvalRequest
@@ -14,6 +14,8 @@ async def stream_evaluate(
     eval_type: str = Form(...),
     user_id: str = Form(...),
     selected_fields: str = Form(...),
+    evaluation_code: Optional[str] = Form(None),
+    role_info: Optional[str] = Form(None),
     eval_service: EvalService = Depends(get_eval_service)
 ) -> StreamingResponse:
     """流式评估接口"""
@@ -30,7 +32,9 @@ async def stream_evaluate(
         message_stream = eval_service.evaluate_data(
             data=filtered_data,
             eval_type=eval_type,
-            user_id=user_id
+            user_id=user_id,
+            evaluation_code=evaluation_code,
+            role_info=role_info
         )
 
         return StreamingResponse(

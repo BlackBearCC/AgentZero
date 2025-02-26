@@ -57,8 +57,16 @@
         
         <!-- 操作按钮 -->
         <div class="field-actions">
-          <button @click="selectAllFields" class="control-button field-btn">全选</button>
-          <button @click="confirmFields" class="control-button field-btn confirm-btn">确认</button>
+          <button 
+            @click="confirmFields" 
+            class="control-button confirm-fields-btn"
+            :disabled="selectedFields.length === 0"
+          >
+            <div class="button-face">
+              <span>确认字段</span>
+              <div v-if="fieldsConfirmed" class="confirm-indicator">✓</div>
+            </div>
+          </button>
         </div>
       </div>
       
@@ -84,18 +92,18 @@
       </div>
       
       <!-- 开始评估按钮之前添加新的控制组：评估代号和人设信息 -->
-      <div class="control-group">
+      <div v-if="selectedFile" class="control-group">
         <div class="control-label">评估代号</div>
         <div class="eval-code-input">
           <input 
             type="text" 
             v-model="evaluationCode" 
-            placeholder="输入代号或自动生成"
+            placeholder="评估代号"
             class="code-input"
           >
           <button @click="generateRandomCode" class="control-button small-btn">
             <div class="button-face">
-              <span>生成</span>
+              <span>重新生成</span>
             </div>
           </button>
         </div>
@@ -512,54 +520,68 @@ const progressStyle = computed(() => ({
   width: `${(processed.value / total.value) * 100}%`
 }))
 
+// 词组库
+const wordLists = {
+  games: ['魂斗罗', '双截龙', '坦克大战', '忍者龙剑传', '洛克人', '恶魔城', '冒险岛', '赤色要塞', 
+          '超级马里奥', '塞尔达传说', '银河战士', '最终幻想', '勇者斗恶龙', '街头霸王', '快打旋风', 
+          '魔界村', '绿色兵团', '沙罗曼蛇', '赤影战士', '忍者神龟', '超级魂斗罗', '热血物语', '热血格斗', 
+          '热血篮球', '热血足球', '热血新纪录', '吞食天地', '重装机兵', '梦幻模拟战', '火焰之纹章', 
+          '大航海时代', '三国志', '信长之野望', '炸弹人', '泡泡龙', '俄罗斯方块', '打砖块', '小蜜蜂', 
+          '大金刚', '吃豆人', '功夫', '影子传说', '淘金者', '越野机车', '马戏团', '南极大冒险', 
+          '高桥名人的冒险岛', '圣斗士星矢', '北斗神拳', '七龙珠', '幽游白书'],
+  suffixes: ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 
+             'EX', 'DX', 'PLUS', 'ULTRA', 'SPECIAL', 'TURBO', 'CHAMPION', 'MASTER', 'LEGEND', 'FINAL']
+}
+
+// 生成随机评估代号
+const generateRandomCode = () => {
+  const randomGame = wordLists.games[Math.floor(Math.random() * wordLists.games.length)]
+  const randomSuffix = wordLists.suffixes[Math.floor(Math.random() * wordLists.suffixes.length)]
+  evaluationCode.value = `${randomGame}${randomSuffix}`
+}
+
+// 修改handleFileUpload方法，使用新的代号生成方式
 const handleFileUpload = async (event) => {
   const file = event.target.files[0]
   if (!file) return
   
   selectedFile.value = file
-  systemMessage.value = `已选择文件: ${file.name}`
+  fieldsConfirmed.value = false
+  selectedFields.value = []
   
-  // 获取文件字段
-  const formData = new FormData()
-  formData.append('file', file)
+  // 自动生成评估代号
+  generateRandomCode()
   
   try {
+    const formData = new FormData()
+    formData.append('file', file)
+    
     const response = await fetch(`${API_BASE_URL}/api/v1/file/columns`, {
       method: 'POST',
       body: formData
     })
     
-    if (!response.ok) throw new Error('获取字段失败')
+    if (!response.ok) throw new Error('获取列名失败')
     
     const data = await response.json()
-    console.log('获取到的字段数据:', data) // 调试输出
-    
-    // 确保字段数据格式正确
-    if (data.columns && Array.isArray(data.columns)) {
-      availableFields.value = data.columns
-      selectedFields.value = [...data.columns] // 默认全选
-      fieldsConfirmed.value = false
-      
-      // 更新系统状态
-      systemStatus.value = `已加载 ${data.columns.length} 个字段`
-    } else {
-      throw new Error('字段数据格式不正确')
-    }
+    availableFields.value = data.columns
   } catch (error) {
-    console.error('获取字段失败:', error)
-    systemMessage.value = `获取字段失败: ${error.message}`
-    systemStatus.value = '字段加载失败'
+    console.error('Error:', error)
+    systemMessage.value = '文件处理失败'
   }
 }
 
+// 修改确认字段方法，添加视觉反馈
 const confirmFields = () => {
-  if (selectedFields.value.length === 0) {
-    systemMessage.value = '请至少选择一个字段'
-    return
-  }
-  showFieldSelector.value = false
+  if (selectedFields.value.length === 0) return
   fieldsConfirmed.value = true
-  systemMessage.value = `已选择 ${selectedFields.value.length} 个字段，可以开始评估`
+  
+  // 添加确认提示
+  const originalMessage = systemMessage.value
+  systemMessage.value = '字段选择已确认 ✓'
+  setTimeout(() => {
+    systemMessage.value = originalMessage
+  }, 2000)
 }
 
 const selectAllFields = () => {
@@ -1004,24 +1026,6 @@ const comparisonColors = ref([
   '#44ff44', '#ff5252', '#52a2ff', '#ffbd52', 
   '#e552ff', '#52ffbd', '#ff52a2', '#bdff52'
 ])
-
-// 生成随机评估代号
-const generateRandomCode = () => {
-  evaluationCode.value = generateRandomCodeValue()
-}
-
-// 生成随机代号的实际逻辑
-const generateRandomCodeValue = () => {
-  const adjectives = ['小', '大', '智能', '温暖', '冷静', '锋利', '柔软', '明亮', '黑暗', '高效'];
-  const nouns = ['熊猫', '狐狸', '机器人', '向日葵', '彗星', '飞船', '风暴', '树叶', '湖泊', '星空'];
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  
-  const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-  const randomLetter = letters[Math.floor(Math.random() * letters.length)];
-  
-  return `${randomAdjective}${randomNoun}${randomLetter}`;
-}
 
 // 切换报告选择状态
 const toggleReportSelection = (reportId) => {
@@ -2033,26 +2037,19 @@ const saveReport = () => {
 }
 
 .field-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  margin-top: 1rem;
+  text-align: right;
 }
 
-.field-btn {
-  flex: 1;
-  font-size: 0.8rem;
-  padding: 0.5rem;
-  background: rgba(40, 40, 50, 0.8);
+.confirm-fields-btn {
+  min-width: 100px;
 }
 
-.confirm-btn {
-  background: rgba(0, 128, 0, 0.5);
-  border: 1px solid #008000;
-  color: #ffffff;
-}
-
-.confirm-btn:hover {
-  background: rgba(0, 128, 0, 0.7);
+.confirm-indicator {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: #44ff44;
+  font-weight: bold;
 }
 
 /* 进度条 */
@@ -2312,19 +2309,24 @@ const saveReport = () => {
 }
 
 .code-input {
-  background: rgba(30, 30, 40, 0.8);
-  border: 1px solid #333;
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(68, 255, 68, 0.3);
   color: #44ff44;
   padding: 0.5rem;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  flex: 1;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.code-input[readonly] {
+  opacity: 0.8;
+  cursor: default;
 }
 
 .small-btn {
-  padding: 0.3rem 0.6rem;
-  font-size: 0.8rem;
-  min-width: 60px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 /* 人设信息输入框样式 */

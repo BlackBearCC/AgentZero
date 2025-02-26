@@ -711,46 +711,94 @@ const getFormattedKeywords = (category, key) => {
   // 保存已放置的元素区域，用于避免重叠
   const placedAreas = [];
   
+  // 从中心向外的分层布局配置
+  const centerX = 50; // 中心点X坐标（百分比）
+  const centerY = 50; // 中心点Y坐标（百分比）
+  
   // 格式化关键词数组
   const result = [];
-  for (const [text, count] of sortedKeywords) {
+  for (let i = 0; i < sortedKeywords.length; i++) {
+    const [text, count] = sortedKeywords[i];
+    
     // 归一化权重 (0.1 - 1.0)
     const normalizedWeight = 0.3 + (count / maxCount) * 0.7;
     
     // 如果该关键词没有缓存位置，创建一个
     if (!keywordPositions.value[cacheKey][text]) {
-      // 尝试找到不重叠的位置
-      let attempts = 0;
-      let position;
-      let overlap = true;
+      // 根据权重和索引计算极坐标
+      // 权重越高，距离中心越近
+      // 同等权重的词按索引顺序分布在不同角度
       
-      while (overlap && attempts < 100) {
-        // 基于词的重要性放置更重要的词接近中心
-        const centeringFactor = normalizedWeight; // 越重要的词越靠近中心
-        const margin = (1 - centeringFactor) * 35; // 边缘距离随重要性减小
+      // 索引角度 - 均匀分布在圆周上，但添加一些随机性
+      const angle = (i * 137.5 + Math.random() * 20) % 360; // 黄金角分布 + 随机偏移
+      
+      // 距离 - 重要的词更靠近中心，不重要的词更远离中心
+      // 1.0是最重要的词，会有一个最小距离
+      // 0.1是最不重要的词，会有一个最大距离
+      const minDistance = 5; // 最小距离（百分比）
+      const maxDistance = 40; // 最大距离（百分比）
+      const distance = minDistance + (1 - normalizedWeight) * (maxDistance - minDistance);
+      
+      // 将极坐标转换为笛卡尔坐标（百分比）
+      const radians = angle * (Math.PI / 180);
+      const x = centerX + distance * Math.cos(radians);
+      const y = centerY + distance * Math.sin(radians);
+      
+      // 创建位置对象
+      const position = {
+        left: `${x}%`,
+        top: `${y}%`,
+        rotation: `${(Math.random() * 20 - 10) + angle * 0.1}deg`, // 旋转角度与位置角度相关
+        delay: `${Math.random() * 2}s`,
+        duration: `${3 + Math.random() * 2}s`
+      };
+      
+      // 估算元素大小
+      const fontSize = getKeywordSize(count);
+      const estimatedWidth = text.length * fontSize * 0.6; // 粗略估算宽度
+      const estimatedHeight = fontSize * 1.5; // 估算高度
+      
+      // 创建此元素的区域对象
+      const area = {
+        left: x - estimatedWidth/2,
+        right: x + estimatedWidth/2,
+        top: y - estimatedHeight/2,
+        bottom: y + estimatedHeight/2
+      };
+      
+      // 检查与已放置元素是否重叠
+      let overlap = placedAreas.some(placed => {
+        return !(
+          area.right < placed.left || 
+          area.left > placed.right || 
+          area.bottom < placed.top || 
+          area.top > placed.bottom
+        );
+      });
+      
+      // 如果重叠，尝试调整位置（最多20次）
+      let attempts = 0;
+      const maxAttempts = 20;
+      
+      while (overlap && attempts < maxAttempts) {
+        // 尝试微调位置，保持相同方向但距离略有不同
+        const adjustedAngle = angle + (Math.random() * 30 - 15);
+        const adjustedDistance = distance * (0.9 + Math.random() * 0.2);
         
-        position = {
-          left: `${margin + Math.random() * (100 - 2 * margin)}%`,
-          top: `${margin + Math.random() * (100 - 2 * margin)}%`,
-          rotation: `${Math.random() * 20 - 10}deg`,
-          delay: `${Math.random() * 2}s`,
-          duration: `${3 + Math.random() * 2}s`
-        };
+        const adjRadians = adjustedAngle * (Math.PI / 180);
+        const adjX = centerX + adjustedDistance * Math.cos(adjRadians);
+        const adjY = centerY + adjustedDistance * Math.sin(adjRadians);
         
-        // 估算元素大小
-        const fontSize = getKeywordSize(count);
-        const estimatedWidth = text.length * fontSize * 0.6; // 粗略估算宽度
-        const estimatedHeight = fontSize * 1.5; // 估算高度
+        position.left = `${adjX}%`;
+        position.top = `${adjY}%`;
         
-        // 创建此元素的区域对象
-        const area = {
-          left: parseFloat(position.left) - estimatedWidth/2,
-          right: parseFloat(position.left) + estimatedWidth/2,
-          top: parseFloat(position.top) - estimatedHeight/2,
-          bottom: parseFloat(position.top) + estimatedHeight/2
-        };
+        // 更新区域
+        area.left = adjX - estimatedWidth/2;
+        area.right = adjX + estimatedWidth/2;
+        area.top = adjY - estimatedHeight/2;
+        area.bottom = adjY + estimatedHeight/2;
         
-        // 检查与已放置元素是否重叠
+        // 重新检查重叠
         overlap = placedAreas.some(placed => {
           return !(
             area.right < placed.left || 
@@ -760,18 +808,12 @@ const getFormattedKeywords = (category, key) => {
           );
         });
         
-        if (!overlap) {
-          placedAreas.push(area);
-          keywordPositions.value[cacheKey][text] = position;
-        }
-        
         attempts++;
       }
       
-      // 如果尝试多次仍然无法找到不重叠的位置，使用最后一个位置
-      if (overlap) {
-        keywordPositions.value[cacheKey][text] = position;
-      }
+      // 无论是否重叠，都添加区域和保存位置
+      placedAreas.push(area);
+      keywordPositions.value[cacheKey][text] = position;
     }
     
     // 从缓存获取位置

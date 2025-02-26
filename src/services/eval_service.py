@@ -34,23 +34,6 @@ class EvalService:
         }
         
         return EvaluationAgent(config=config, llm=llm)
-
-    def _build_messages(self, item: Dict[str, Any], eval_type: str) -> List[Dict[str, str]]:
-        """构建评估消息"""
-        system_prompt = "你是一个专业的对话质量评估专家。请根据以下标准评估对话质量："
-        if eval_type == "memory":
-            system_prompt = "你是一个专业的记忆相关性评估专家。请根据以下标准评估记忆相关性："
-            
-        return [
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            {
-                "role": "user",
-                "content": f"请评估以下对话:\n{json.dumps(item, ensure_ascii=False, indent=2)}"
-            }
-        ]
     
     async def evaluate_data(
         self,
@@ -67,11 +50,8 @@ class EvalService:
             # 首先发送总数信息和评估信息
             yield f"data: {json.dumps({'total': len(data), 'evaluation_code': evaluation_code or '未命名评估'}, ensure_ascii=False)}\n\n"
             
-            # 如果提供了人设信息，更新评估Agent的人设
-            if role_info and role_info.strip():
-                self.eval_agent.role_info = role_info
-            else:
-                self.eval_agent.role_info = None
+            # 将人设信息传递给评估Agent
+            self.eval_agent.role_info = role_info if role_info and role_info.strip() else None
                 
             # 使用evaluate_batch方法进行批量评估
             async for result in self.eval_agent.evaluate_batch(data):

@@ -84,9 +84,6 @@ class EvaluationAgent(BaseAgent):
         - 评估要点：记忆使用、用户特征识别、个性化回应、关系建立
         - 量化指标：0-100分，其中80-100为个性化能力突出
 
-        ## 待评估数据
-        $eval_data
-
         ## 评估方法学
         请采用系统化分析法，遵循以下评估步骤：
         
@@ -139,21 +136,12 @@ class EvaluationAgent(BaseAgent):
 
     async def generate_response(self, input_text: str, user_id: str, remark: str = '', config: Optional[Dict[str, Any]] = None) -> str:
         """生成回复"""
-        try:
-            data = json.loads(input_text)
-            result = await self._evaluate_single(data)
-            return json.dumps(result, ensure_ascii=False)
-        except Exception as e:
-            return json.dumps({"error": str(e)}, ensure_ascii=False)
+        pass
+
 
     async def astream_response(self, input_text: str, user_id: str, remark: str = '', config: Optional[Dict[str, Any]] = None, context: Dict[str, Any] = None) -> AsyncIterator[str]:
         """流式生成回复"""
-        try:
-            data = json.loads(input_text)
-            result = await self._evaluate_single(data)
-            yield json.dumps(result, ensure_ascii=False)
-        except Exception as e:
-            yield json.dumps({"error": str(e)}, ensure_ascii=False)
+        pass
 
     async def update_eval_criteria(self, criteria: str):
         """更新评估标准"""
@@ -170,13 +158,25 @@ class EvaluationAgent(BaseAgent):
         
         for idx, data in enumerate(batch_data):
             try:
-                # 构建提示词
-                prompt = self.eval_prompt.safe_substitute(
-                    criteria=self.config.get("criteria", ""),
-                    eval_data=json.dumps(data, ensure_ascii=False, indent=2)
+                # 构建基础提示词 - 只包含评估框架，不包含具体数据
+                base_prompt = self.eval_prompt.safe_substitute(
+                    criteria=self.config.get("criteria", "")
                 )
                 
-                context = await self._build_eval_context(prompt)
+                # 序列化数据为JSON字符串
+                data_json = json.dumps(data, ensure_ascii=False, indent=2)
+                
+                # 如果有人设信息，将其加入用户消息中
+                user_message = data_json
+                if hasattr(self, 'role_info') and self.role_info:
+                    user_message = f"人设信息：\n{self.role_info}\n\n待评估数据：\n{data_json}"
+                
+                # 构建消息列表
+                messages = [
+                    {"role": "system", "content": base_prompt},
+                    {"role": "user", "content": user_message}
+                ]
+                
                 original_data = json.dumps(data, ensure_ascii=False, indent=2)
                 # 发送评估项开始标记
                 yield f"data: {json.dumps({'index': idx + 1, 'type': 'start', 'original_data': original_data}, ensure_ascii=False)}\n\n"
@@ -184,7 +184,7 @@ class EvaluationAgent(BaseAgent):
                 # 收集完整响应
                 full_response = ""
                 # 流式返回每个chunk
-                async for chunk in self.llm.astream(context["messages"]):
+                async for chunk in self.llm.astream(messages):
                     full_response += chunk
                     yield f"data: {json.dumps({'index': idx + 1, 'type': 'chunk', 'content': chunk}, ensure_ascii=False)}\n\n"
                 
@@ -328,41 +328,16 @@ class EvaluationAgent(BaseAgent):
         
         return stats
 
-    async def _evaluate_single(self, data: Dict) -> Dict:
-        """单条数据评估"""
-        # 构建提示词
-        prompt = self.eval_prompt.safe_substitute(
-            criteria=self.config.get("criteria", ""),
-            eval_data=json.dumps(data, ensure_ascii=False, indent=2)
-        )
-        
-        try:
-            context = await self._build_eval_context(prompt)
-            response = await self.llm.generate(context["messages"])
-            
-            # 清理响应中的markdown格式
-            clean_response = self._extract_json_from_markdown(response)
-            
-            try:
-                evaluation_result = json.loads(clean_response)
-                return evaluation_result
-            except json.JSONDecodeError as e:
-                self._logger.error(f"JSON解析错误: {e}")
-                self._logger.debug(f"原始响应: {response}")
-                self._logger.debug(f"清理后响应: {clean_response}")
-                return {"error": "JSON解析错误"}
-            
-        except Exception as e:
-            self._logger.error(f"评估过程错误: {str(e)}")
-            return {"error": str(e)}
+
 
     async def _build_eval_context(self, prompt: str) -> Dict[str, Any]:
         """构建评估上下文"""
-        system_content = ""
+        system_content = "你是一个专业的AI对话质量评估专家。"
+        user_content = prompt
         
-        # 如果有人设信息，添加到系统提示中
+        # 如果有人设信息，添加到user输入中
         if hasattr(self, 'role_info') and self.role_info:
-            system_content += f"\n\n以下是本次评估相关的角色人设信息：\n{self.role_info}"
+            user_content = f"人设信息：\n{self.role_info}\n\n待评估数据：\n{prompt}"
         
         return {
             "messages": [
@@ -372,7 +347,7 @@ class EvaluationAgent(BaseAgent):
                 },
                 {
                     "role": "user",
-                    "content": prompt
+                    "content": user_content
                 }
             ]
         } 

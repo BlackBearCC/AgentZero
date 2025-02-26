@@ -205,14 +205,25 @@
                       {{ item.label }}
                     </button>
                   </div>
-                  <div class="keyword-cloud">
-                    <div 
-                      v-for="(count, keyword) in getKeywords(activeRoleKeywordTab, 'role_play')" 
-                      :key="keyword"
-                      class="keyword-tag"
-                      :style="{ fontSize: `${getKeywordSize(count)}rem` }"
-                    >
-                      {{ keyword }}
+                  <div class="retro-keyword-cloud">
+                    <div class="scanlines"></div>
+                    <div class="glow-container">
+                      <div 
+                        v-for="(count, keyword) in getKeywords(activeRoleKeywordTab, 'role_play')" 
+                        :key="keyword"
+                        class="retro-keyword-tag"
+                        :style="{ 
+                          fontSize: `${getKeywordSize(count)}rem`,
+                          animationDelay: `${Math.random() * 2}s`,
+                          animationDuration: `${3 + Math.random() * 2}s`,
+                          left: `${Math.random() * 70 + 15}%`,
+                          top: `${Math.random() * 70 + 15}%`,
+                          transform: `rotate(${Math.random() * 20 - 10}deg)`,
+                          opacity: 0.7 + (count / 10) * 0.3
+                        }"
+                      >
+                        {{ keyword }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -245,14 +256,25 @@
                       {{ item.label }}
                     </button>
                   </div>
-                  <div class="keyword-cloud">
-                    <div 
-                      v-for="(count, keyword) in getKeywords(activeDialogueKeywordTab, 'dialogue_experience')" 
-                      :key="keyword"
-                      class="keyword-tag"
-                      :style="{ fontSize: `${getKeywordSize(count)}rem` }"
-                    >
-                      {{ keyword }}
+                  <div class="retro-keyword-cloud">
+                    <div class="scanlines"></div>
+                    <div class="glow-container">
+                      <div 
+                        v-for="(count, keyword) in getKeywords(activeDialogueKeywordTab, 'dialogue_experience')" 
+                        :key="keyword"
+                        class="retro-keyword-tag"
+                        :style="{ 
+                          fontSize: `${getKeywordSize(count)}rem`,
+                          animationDelay: `${Math.random() * 2}s`,
+                          animationDuration: `${3 + Math.random() * 2}s`,
+                          left: `${Math.random() * 70 + 15}%`,
+                          top: `${Math.random() * 70 + 15}%`,
+                          transform: `rotate(${Math.random() * 20 - 10}deg)`,
+                          opacity: 0.7 + (count / 10) * 0.3
+                        }"
+                      >
+                        {{ keyword }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -671,8 +693,10 @@ const getKeywords = (key, category) => {
 
 // 计算关键词大小的辅助函数
 const getKeywordSize = (count) => {
-  // 基础大小为0.8rem，最大为2rem
-  return 0.8 + Math.min(count / 2, 1.2)
+  // 根据关键词出现频率计算字体大小
+  const baseSize = 0.9;
+  const maxSize = 2.2;
+  return Math.min(baseSize + (count / 5) * 0.5, maxSize);
 }
 </script>
 
@@ -1642,34 +1666,165 @@ const getKeywordSize = (count) => {
   color: #44ff44;
 }
 
-.keyword-cloud {
+.retro-keyword-cloud {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  box-shadow: 
+    inset 0 0 30px rgba(68, 255, 68, 0.2),
+    0 0 15px rgba(68, 255, 68, 0.3);
+}
+
+.retro-keyword-cloud .scanlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(0, 0, 0, 0.1) 51%,
+    transparent 51%
+  );
+  background-size: 100% 4px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.glow-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.glow-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(68, 255, 68, 0.2) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.retro-keyword-tag {
+  position: absolute;
+  color: #44ff44;
+  text-shadow: 
+    0 0 5px rgba(68, 255, 68, 0.8),
+    0 0 10px rgba(68, 255, 68, 0.5),
+    0 0 15px rgba(68, 255, 68, 0.3);
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  white-space: nowrap;
+  animation: float 4s ease-in-out infinite alternate, 
+             glow 2s ease-in-out infinite alternate;
+  z-index: 3;
+  transform-origin: center;
+  transition: all 0.3s ease;
+}
+
+.retro-keyword-tag:hover {
+  transform: scale(1.2) !important;
+  color: #ffffff;
+  text-shadow: 
+    0 0 5px rgba(255, 255, 255, 0.8),
+    0 0 10px rgba(68, 255, 68, 0.8),
+    0 0 15px rgba(68, 255, 68, 0.6);
+  z-index: 10;
+}
+
+@keyframes float {
+  0% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-5px) rotate(2deg); }
+  100% { transform: translateY(5px) rotate(-2deg); }
+}
+
+@keyframes glow {
+  0% { text-shadow: 0 0 5px rgba(68, 255, 68, 0.8), 0 0 10px rgba(68, 255, 68, 0.5); }
+  100% { text-shadow: 0 0 10px rgba(68, 255, 68, 1), 0 0 20px rgba(68, 255, 68, 0.8), 0 0 30px rgba(68, 255, 68, 0.6); }
+}
+
+.keywords-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.8rem;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
-  min-height: 100px;
-  align-items: center;
-  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
-.keyword-tag {
-  color: #44ff44;
-  padding: 0.3rem 0.6rem;
-  background: rgba(68, 255, 68, 0.1);
+.keyword-tab {
+  background: rgba(20, 20, 30, 0.8);
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 0.4rem 0.8rem;
   border-radius: 4px;
-  display: inline-block;
+  cursor: pointer;
+  font-size: 0.8rem;
   transition: all 0.2s ease;
-  text-align: center;
-  border: 1px solid rgba(68, 255, 68, 0.3);
-  box-shadow: 0 0 5px rgba(68, 255, 68, 0.2);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
 }
 
-.keyword-tag:hover {
-  transform: scale(1.05);
+.keyword-tab:hover {
+  background: rgba(40, 40, 50, 0.8);
+  box-shadow: 0 0 8px rgba(68, 255, 68, 0.3);
+}
+
+.keyword-tab.active {
   background: rgba(68, 255, 68, 0.2);
-  box-shadow: 0 0 10px rgba(68, 255, 68, 0.4);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+  text-shadow: 0 0 5px rgba(68, 255, 68, 0.5);
+  box-shadow: 0 0 10px rgba(68, 255, 68, 0.3);
+}
+
+.keywords-section h4 {
+  color: #44ff44;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  text-shadow: 0 0 5px rgba(68, 255, 68, 0.5);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* 添加CRT关闭效果 */
+.tv-screen.changing-channel .retro-keyword-cloud {
+  animation: crt-off 0.5s ease-in-out;
+}
+
+@keyframes crt-off {
+  0% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  10% { 
+    transform: scale(1, 0.9) translate(0, 5%);
+    opacity: 0.9;
+  }
+  80% {
+    transform: scale(1, 0.1) translate(0, 50%);
+    opacity: 0.5;
+  }
+  100% { 
+    transform: scale(0, 0.1) translate(0, 100%);
+    opacity: 0;
+  }
 }
 </style>
 

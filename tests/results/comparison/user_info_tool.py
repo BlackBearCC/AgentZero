@@ -4,6 +4,11 @@ import time
 import re
 import requests
 from datetime import datetime
+from tqdm import tqdm  # 导入tqdm库用于显示进度条
+import urllib3
+
+# 禁用SSL警告
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 豆包API配置
 API_KEY = "c9ca6542-afed-4746-b451-b42c4b82b7a6"
@@ -33,7 +38,7 @@ def parse_batches(file_path):
     return result
 
 # 处理单个批次
-def process_batch(batch, prompt_template):
+def process_batch(batch, prompt_template, profile=""):
     # 提取主体和客体
     user_match = re.search(r'"主体":"([^"]+)"', batch["content"])
     character_match = re.search(r'"客体":"([^"]+)"', batch["content"])
@@ -41,8 +46,14 @@ def process_batch(batch, prompt_template):
     user = user_match.group(1) if user_match else ""
     character = character_match.group(1) if character_match else ""
     
+    # 获取当前时间，格式为：YYYY-MM-DD HH:MM
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
     # 替换提示模板中的变量
-    prompt = prompt_template.replace("{{user}}", user).replace("{{character}}", character)
+    prompt = prompt_template.replace("{{user}}", user)\
+                           .replace("{{character}}", character)\
+                           .replace("{{profile}}", profile)\
+                           .replace("{{current_time}}", current_time)
     
     # 构建API请求
     headers = {
@@ -53,26 +64,22 @@ def process_batch(batch, prompt_template):
     data = {
         "model": "ep-20250123090943-fbwr4",  # 替换为您的实际端点ID
         "messages": [
-            {"role": "system", "content": "你是一个专业的用户画像分析助手。"},
-            {"role": "user", "content": prompt + "\n\n下面是需要分析的对话内容：\n" + batch["content"]}
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": batch["content"]}
         ],
         "stream": True,
         "temperature": 0.1
     }
     
     try:
-        # 修改SSL设置，禁用证书验证并增加超时时间
+        # 修改SSL设置，禁用证书验证
         response = requests.post(
             API_URL, 
             headers=headers, 
             json=data, 
             stream=True,
-            verify=False,  # 禁用SSL证书验证
-            timeout=60  # 增加超时时间到60秒
+            verify=False  # 禁用SSL证书验证
         )
-        
-        # 打印请求状态供调试
-        print(f"请求状态码: {response.status_code}")
         
         if response.status_code == 200:
             full_response = ""
@@ -113,9 +120,13 @@ def save_results(results, output_file="画像更新结果.json"):
 
 # 主函数
 def main():
-    prompt_template_path = "src/prompts/tool/user_info_1000token.txt"
-    test_file_path = "tests/results/comparison/画像更新测试.txt"
-    output_file = f"用户画像更新结果_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    # 获取脚本所在目录的绝对路径
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 修改为使用脚本目录的绝对路径
+    prompt_template_path = os.path.join(script_dir, "user_info_1000token.txt")
+    test_file_path = os.path.join(script_dir, "画像更新测试.txt")
+    output_file = os.path.join(script_dir, f"用户画像更新结果_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
     
     # 读取提示模板
     prompt_template = read_prompt_template(prompt_template_path)
@@ -124,11 +135,28 @@ def main():
     batches = parse_batches(test_file_path)
     print(f"共找到 {len(batches)} 个批次")
     
-    # 处理每个批次
+    # 初始化用户画像
+    profile = ""
+    
+    # 处理每个批次，使用tqdm显示进度
     results = []
-    for batch in batches:
-        result = process_batch(batch, prompt_template)
+    for batch in tqdm(batches, desc="处理批次进度"):
+        result = process_batch(batch, prompt_template, profile)
         results.append(result)
+        
+        # 如果成功获取到了响应，更新用户画像
+        if "response" in result and result["response"]:
+            try:
+                # 尝试从响应中提取JSON格式的用户画像
+                json_start = result["response"].find("{")
+                json_end = result["response"].rfind("}") + 1
+                if json_start >= 0 and json_end > json_start:
+                    json_str = result["response"][json_start:json_end]
+                    # 更新用户画像
+                    profile = json_str
+            except Exception as e:
+                print(f"更新用户画像时出错: {str(e)}")
+        
         time.sleep(1)  # 避免API请求过于频繁
     
     # 保存结果

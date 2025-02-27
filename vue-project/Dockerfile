@@ -6,10 +6,6 @@ ENV NODE_OPTIONS=--openssl-legacy-provider
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
-RUN npm install jspdf jspdf-autotable
-
-# 确保字体目录存在
-RUN mkdir -p public/fonts
 
 # 复制所有源文件，包括字体
 COPY . .
@@ -21,7 +17,7 @@ FROM nginx:stable-alpine as production-stage
 COPY --from=build-stage /app/dist /usr/share/nginx/html
 # 确保字体目录存在并复制字体文件
 RUN mkdir -p /usr/share/nginx/html/fonts
-COPY --from=build-stage /app/public/fonts/SourceHanSansSC-Regular.otf /usr/share/nginx/html/fonts/
+
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"] 

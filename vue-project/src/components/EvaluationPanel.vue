@@ -200,9 +200,9 @@
               <div class="report-header">
                 <h2 class="report-title">评估报告</h2>
                 <div class="report-actions">
-                  <button @click="exportReportPDF" class="crt-button export-btn">
-                    <span class="button-text">[ 导出报告 ]</span>
-                    <div class="button-icon">📄</div>
+                  <button @click="exportReportCSV" class="crt-button export-btn">
+                    <span class="button-text">[ 导出报告(CSV) ]</span>
+                    <div class="button-icon">📊</div>
                   </button>
                 </div>
               </div>
@@ -437,8 +437,8 @@
                 </div>
               </div>
               <div v-if="savedReports.length > 0" class="report-actions">
-                <button @click="exportComparisonPDF" class="crt-button export-btn">
-                  <span class="button-text">[ 导出对比报告 ]</span>
+                <button @click="exportComparisonCSV" class="crt-button export-btn">
+                  <span class="button-text">[ 导出对比报告(CSV) ]</span>
                   <div class="button-icon">📊</div>
                 </button>
               </div>
@@ -454,9 +454,6 @@
 import { ref, computed, watch } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-import html2canvas from 'html2canvas'
-import { jsPDF } from 'jspdf'
-import 'jspdf-autotable'
 
 const API_BASE_URL = 'http://localhost:8000' // 修改为你的后端地址
 
@@ -1510,55 +1507,142 @@ const exportReportPDF = async () => {
 }
 
 // 添加导出对比报告函数
-const exportComparisonPDF = () => {
+const exportComparisonCSV = () => {
   if (selectedReports.value.length === 0) {
     systemMessage.value = '请先选择要对比的报告'
     return
   }
 
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  })
+  // 准备CSV数据
+  const headers = [
+    '报告代号',
+    '时间',
+    '总体评分',
+    '角色评分', 
+    '对话评分'
+  ]
 
-  // 添加标题
-  doc.setFontSize(20)
-  doc.setFont('helvetica', 'bold')
-  doc.text('报告对比', 15, 20)
-
-  // 添加基本信息
-  doc.setFontSize(12)
-  doc.setFont('helvetica', 'normal')
-  doc.text(`生成时间: ${new Date().toLocaleString()}`, 15, 30)
-
-  // 添加对比表格
-  let startY = 40
-  selectedReports.value.forEach((reportId, index) => {
+  const rows = selectedReports.value.map(reportId => {
     const report = getReportById(reportId)
-    if (report) {
-      doc.setFontSize(14)
-      doc.text(`报告 ${index + 1}: ${report.evaluation_code}`, 15, startY)
-      
-      // 添加总体评分表格
-      doc.autoTable({
-        startY: startY + 5,
-        head: [['评分类型', '分数']],
-        body: [
-          ['角色评分', report.stats.overall_scores.role_score.toFixed(2)],
-          ['对话评分', report.stats.overall_scores.dialogue_score.toFixed(2)],
-          ['最终评分', report.stats.overall_scores.final_score.toFixed(2)]
-        ],
-        theme: 'striped',
-        headStyles: { fillColor: [68, 255, 68] }
-      })
-
-      startY = doc.autoTable.previous.finalY + 10
-    }
+    return [
+      report.evaluation_code,
+      formatDate(report.timestamp),
+      report.stats.overall_scores.final_score,
+      report.stats.overall_scores.role_score,
+      report.stats.overall_scores.dialogue_score
+    ]
   })
 
-  doc.save(`报告对比_${new Date().toISOString().slice(0, 10)}.pdf`)
-  systemMessage.value = '对比报告已导出为PDF'
+  // 生成CSV内容
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.join(','))
+  ].join('\n')
+
+  // 创建下载链接
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `评估对比报告_${new Date().toISOString().slice(0,10)}.csv`
+  link.click()
+  URL.revokeObjectURL(link.href)
+
+  systemMessage.value = '对比报告已导出为CSV文件'
+}
+
+// 添加导出单个报告为CSV的函数
+const exportReportCSV = () => {
+  if (!evaluationStats.value) {
+    systemMessage.value = '没有可导出的报告数据'
+    return
+  }
+
+  try {
+    // 准备CSV数据
+    const headers = [
+      '评估项目',
+      '平均分',
+      '最低分',
+      '最高分',
+      '类别'
+    ]
+
+    const rows = []
+
+    // 添加总体评分
+    const overallScores = evaluationStats.value.overall_scores
+    rows.push([
+      '总体评分',
+      overallScores.final_score,
+      '',
+      '',
+      '总分'
+    ])
+    rows.push([
+      '角色评分',
+      overallScores.role_score,
+      '',
+      '',
+      '总分'
+    ])
+    rows.push([
+      '对话评分',
+      overallScores.dialogue_score,
+      '',
+      '',
+      '总分'
+    ])
+
+    // 添加角色扮演评分
+    Object.entries(evaluationStats.value.role_play || {}).forEach(([key, value]) => {
+      const item = rolePlayItems[key] || { label: key }
+      rows.push([
+        item.label,
+        value.avg || 0,
+        value.min || 0,
+        value.max || 0,
+        '角色扮演'
+      ])
+    })
+
+    // 添加对话体验评分
+    Object.entries(evaluationStats.value.dialogue_experience || {}).forEach(([key, value]) => {
+      const item = dialogueItems[key] || { label: key }
+      rows.push([
+        item.label,
+        value.avg || 0,
+        value.min || 0,
+        value.max || 0,
+        '对话体验'
+      ])
+    })
+
+    // 生成CSV内容
+    const csvContent = [
+      // 添加基本信息
+      `评估代号,${evaluationCode.value}`,
+      `评估时间,${formatDate(new Date())}`,
+      `角色信息,${roleInfo.value.replace(/,/g, ';')}`, // 替换逗号以避免CSV格式问题
+      '', // 空行分隔
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n')
+
+    // 创建并下载文件
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { 
+      type: 'text/csv;charset=utf-8'
+    })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `评估报告_${evaluationCode.value}_${formatDateForFilename(new Date())}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+
+    systemMessage.value = '报告已导出为CSV文件'
+  } catch (error) {
+    console.error('导出CSV错误:', error)
+    systemMessage.value = '导出失败，请重试'
+  }
 }
 </script>
 

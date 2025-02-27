@@ -3,6 +3,7 @@ import json
 import time
 import re
 import requests
+import csv
 from datetime import datetime
 from tqdm import tqdm  # 导入tqdm库用于显示进度条
 import urllib3
@@ -71,6 +72,8 @@ def process_batch(batch, prompt_template, profile=""):
         "temperature": 0.1
     }
     
+    start_time = time.time()  # 记录开始时间
+    
     try:
         # 修改SSL设置，禁用证书验证
         response = requests.post(
@@ -102,8 +105,20 @@ def process_batch(batch, prompt_template, profile=""):
                         except json.JSONDecodeError:
                             continue
             
+            end_time = time.time()  # 记录结束时间
+            processing_time = int((end_time - start_time) * 1000)  # 计算处理时间（毫秒）
+            
             print("\n")  # 输出完成后换行
-            return {"batch_id": batch["id"], "user": user, "character": character, "response": full_response}
+            return {
+                "batch_id": batch["id"], 
+                "user": user, 
+                "character": character, 
+                "response": full_response,
+                "system_prompt": prompt,
+                "user_input": batch["content"],
+                "extraction_time": current_time,
+                "processing_time_ms": processing_time
+            }
         else:
             print(f"批次【{batch['id']}】处理失败: {response.status_code}, {response.text}")
             return {"batch_id": batch["id"], "error": f"HTTP错误: {response.status_code}"}
@@ -112,11 +127,55 @@ def process_batch(batch, prompt_template, profile=""):
         print(f"批次【{batch['id']}】处理出错: {str(e)}")
         return {"batch_id": batch["id"], "error": str(e)}
 
-# 保存结果
+# 保存结果到JSON
 def save_results(results, output_file="画像更新结果.json"):
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     print(f"结果已保存到 {output_file}")
+
+# 保存用户画像到CSV
+def save_profile_to_csv(result, profile_json, csv_file):
+    # 检查文件是否存在，不存在则创建并写入表头
+    file_exists = os.path.isfile(csv_file)
+    
+    try:
+        # 解析JSON字符串为字典
+        profile_dict = json.loads(profile_json)
+        
+        # 准备CSV行数据
+        row = {
+            "批次ID": result["batch_id"],
+            "原始JSON": profile_json,
+            "系统提示词": result["system_prompt"],
+            "用户输入": result["user_input"],
+            "提取时间": result["extraction_time"],
+            "处理耗时(ms)": result["processing_time_ms"],
+        }
+        
+        # 将画像属性添加到行数据中
+        for key, value in profile_dict.items():
+            row[key] = value
+        
+        # 写入CSV
+        with open(csv_file, 'a', newline='', encoding='utf-8') as f:
+            # 确定字段名（表头）
+            fieldnames = ["批次ID","原始JSON",] + list(profile_dict.keys())+["系统提示词","用户输入","提取时间","处理耗时(ms)"]
+            
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            
+            # 如果文件不存在，写入表头
+            if not file_exists:
+                writer.writeheader()
+            
+            # 写入数据行
+            writer.writerow(row)
+        
+        print(f"用户画像已保存到CSV: {csv_file}")
+        return True
+    
+    except Exception as e:
+        print(f"保存用户画像到CSV时出错: {str(e)}")
+        return False
 
 # 主函数
 def main():
@@ -127,6 +186,7 @@ def main():
     prompt_template_path = os.path.join(script_dir, "user_info_1000token.txt")
     test_file_path = os.path.join(script_dir, "画像更新测试.txt")
     output_file = os.path.join(script_dir, f"用户画像更新结果_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+    csv_file = os.path.join(script_dir, f"用户画像变化记录_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
     
     # 读取提示模板
     prompt_template = read_prompt_template(prompt_template_path)
@@ -154,6 +214,8 @@ def main():
                     json_str = result["response"][json_start:json_end]
                     # 更新用户画像
                     profile = json_str
+                    # 保存到CSV
+                    save_profile_to_csv(result, json_str, csv_file)
             except Exception as e:
                 print(f"更新用户画像时出错: {str(e)}")
         

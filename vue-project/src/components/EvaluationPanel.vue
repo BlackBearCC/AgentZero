@@ -1329,6 +1329,18 @@ const exportReportChart = () => {
   })
 }
 
+// 添加字体加载函数
+const loadChineseFont = async () => {
+  try {
+    const response = await fetch('/fonts/SourceHanSansSC-Regular.otf')
+    const fontBuffer = await response.arrayBuffer()
+    return fontBuffer
+  } catch (error) {
+    console.error('加载字体失败:', error)
+    throw error
+  }
+}
+
 // 修改导出报告函数
 const exportReportPDF = async () => {
   try {
@@ -1337,12 +1349,13 @@ const exportReportPDF = async () => {
       return
     }
 
-    // 创建PDF文档
+    // 创建PDF文档，使用内置的中文支持
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4',
-      putOnlyUsedFonts: true
+      putOnlyUsedFonts: true,
+      language: 'zh-CN'
     })
 
     // 使用内置字体
@@ -1356,28 +1369,28 @@ const exportReportPDF = async () => {
 
     // 添加标题
     doc.setFontSize(16)
-    doc.text(`Evaluation Report - ${safeText(evaluationCode.value)}`, 15, 20)
+    doc.text(`评估报告 - ${safeText(evaluationCode.value)}`, 15, 20, { charSpace: 0.5 })
 
     // 添加基本信息
     doc.setFontSize(10)
-    doc.text(`Time: ${new Date().toLocaleString()}`, 15, 30)
-    doc.text(`Code: ${safeText(evaluationCode.value)}`, 15, 35)
-    doc.text(`Role Info: ${safeText(roleInfo.value)}`, 15, 40)
+    doc.text(`生成时间：${new Date().toLocaleString('zh-CN')}`, 15, 30)
+    doc.text(`评估代号：${safeText(evaluationCode.value)}`, 15, 35)
+    doc.text(`角色信息：${safeText(roleInfo.value)}`, 15, 40)
 
     // 准备总体评分数据
     const scores = evaluationStats.value.overall_scores || {}
     const overallScores = [
-      ['Overall Score', safeNumber(scores.final_score)],
-      ['Role Score', safeNumber(scores.role_score)],
-      ['Dialogue Score', safeNumber(scores.dialogue_score)]
+      ['总体评分', safeNumber(scores.final_score)],
+      ['角色评分', safeNumber(scores.role_score)],
+      ['对话评分', safeNumber(scores.dialogue_score)]
     ]
 
     // 添加总体评分表格
     doc.setFontSize(12)
-    doc.text('Overall Scores', 15, 50)
+    doc.text('总体评分', 15, 50)
     const overallTable = doc.autoTable({
       startY: 55,
-      head: [['Type', 'Score']],
+      head: [['评分类型', '分数']],
       body: overallScores.map(([label, score]) => [
         label,
         score.toFixed(2)
@@ -1385,14 +1398,19 @@ const exportReportPDF = async () => {
       theme: 'grid',
       styles: {
         fontSize: 10,
-        font: 'helvetica'
+        font: 'helvetica',
+        cellPadding: 3
       },
       headStyles: {
         fillColor: [68, 255, 68],
         textColor: [0, 0, 0],
         fontSize: 10,
-        font: 'helvetica',
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      columnStyles: {
+        0: { halign: 'left' },
+        1: { halign: 'center' }
       }
     })
 
@@ -1410,24 +1428,31 @@ const exportReportPDF = async () => {
 
     // 添加角色扮演评分表格
     const rolePlayY = (overallTable.finalY || 55) + 10
-    doc.text('Role Play Scores', 15, rolePlayY)
+    doc.text('角色扮演评分', 15, rolePlayY)
     const rolePlayTable = doc.autoTable({
       startY: rolePlayY + 5,
-      head: [['Dimension', 'Average', 'Min', 'Max']],
+      head: [['维度', '平均分', '最低分', '最高分']],
       body: rolePlayData.map(row => row.map(val => 
         typeof val === 'number' ? val.toFixed(2) : val
       )),
       theme: 'grid',
       styles: {
         fontSize: 10,
-        font: 'helvetica'
+        font: 'helvetica',
+        cellPadding: 3
       },
       headStyles: {
         fillColor: [68, 255, 68],
         textColor: [0, 0, 0],
         fontSize: 10,
-        font: 'helvetica',
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      columnStyles: {
+        0: { halign: 'left' },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'center' }
       }
     })
 
@@ -1445,29 +1470,36 @@ const exportReportPDF = async () => {
 
     // 添加对话体验评分表格
     const dialogueY = (rolePlayTable.finalY || rolePlayY + 50) + 10
-    doc.text('Dialogue Experience Scores', 15, dialogueY)
+    doc.text('对话体验评分', 15, dialogueY)
     doc.autoTable({
       startY: dialogueY + 5,
-      head: [['Dimension', 'Average', 'Min', 'Max']],
+      head: [['维度', '平均分', '最低分', '最高分']],
       body: dialogueData.map(row => row.map(val => 
         typeof val === 'number' ? val.toFixed(2) : val
       )),
       theme: 'grid',
       styles: {
         fontSize: 10,
-        font: 'helvetica'
+        font: 'helvetica',
+        cellPadding: 3
       },
       headStyles: {
         fillColor: [68, 255, 68],
         textColor: [0, 0, 0],
         fontSize: 10,
-        font: 'helvetica',
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      columnStyles: {
+        0: { halign: 'left' },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'center' }
       }
     })
 
     // 保存PDF
-    const filename = `Report_${safeText(evaluationCode.value)}_${new Date().getTime()}.pdf`
+    const filename = `评估报告_${safeText(evaluationCode.value)}_${new Date().getTime()}.pdf`
     doc.save(filename)
     systemMessage.value = '报告已导出为PDF'
 

@@ -1,19 +1,41 @@
-import os
 import json
 import time
 import re
 import requests
 import csv
+import os
 from datetime import datetime
-from tqdm import tqdm  # 导入tqdm库用于显示进度条
+from tqdm import tqdm
 import urllib3
+
+"""
+用户画像提取工具
+
+使用说明:
+1. 将 user_info_1000token.txt 和 画像更新测试.txt 放在与本脚本同一目录下
+2. 运行脚本即可自动处理批次并生成用户画像
+3. 结果将保存为JSON和CSV文件
+
+支持的模型:
+- doubao-1.5-pro: 更强大的模型，适合复杂场景
+- doubao-1.5-lite: 轻量级模型，处理速度更快
+"""
 
 # 禁用SSL警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 豆包API配置
 API_KEY = "c9ca6542-afed-4746-b451-b42c4b82b7a6"
-API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"  # 完整的API端点URL
+API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+
+# 豆包模型配置
+MODELS = {
+    "doubao-1.5-pro": "ep-20250123090943-fbwr4",
+    "doubao-1.5-lite": "ep-20250124091428-qvld6"
+}
+
+# 选择要使用的模型
+SELECTED_MODEL = "doubao-1.5-pro"
 
 # 读取提示模板
 def read_prompt_template(file_path):
@@ -63,7 +85,7 @@ def process_batch(batch, prompt_template, profile=""):
     }
     
     data = {
-        "model": "ep-20250123090943-fbwr4",  # 替换为您的实际端点ID
+        "model": MODELS[SELECTED_MODEL],
         "messages": [
             {"role": "system", "content": prompt},
             {"role": "user", "content": batch["content"]}
@@ -106,9 +128,9 @@ def process_batch(batch, prompt_template, profile=""):
                             continue
             
             end_time = time.time()  # 记录结束时间
-            processing_time = int((end_time - start_time) * 1000)  # 计算处理时间（毫秒）
+            processing_time = int((end_time - start_time) * 1000)  
             
-            print("\n")  # 输出完成后换行
+            print("\n")  
             return {
                 "batch_id": batch["id"], 
                 "user": user, 
@@ -135,14 +157,10 @@ def save_results(results, output_file="画像更新结果.json"):
 
 # 保存用户画像到CSV
 def save_profile_to_csv(result, profile_json, csv_file):
-    # 检查文件是否存在，不存在则创建并写入表头
     file_exists = os.path.isfile(csv_file)
-    
     try:
-        # 解析JSON字符串为字典
         profile_dict = json.loads(profile_json)
         
-        # 准备CSV行数据
         row = {
             "批次ID": result["batch_id"],
             "原始JSON": profile_json,
@@ -152,18 +170,15 @@ def save_profile_to_csv(result, profile_json, csv_file):
             "处理耗时(ms)": result["processing_time_ms"],
         }
         
-        # 将画像属性添加到行数据中
         for key, value in profile_dict.items():
             row[key] = value
         
         # 写入CSV
         with open(csv_file, 'a', newline='', encoding='utf-8') as f:
-            # 确定字段名（表头）
             fieldnames = ["批次ID","原始JSON",] + list(profile_dict.keys())+["系统提示词","用户输入","提取时间","处理耗时(ms)"]
             
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             
-            # 如果文件不存在，写入表头
             if not file_exists:
                 writer.writeheader()
             
@@ -179,14 +194,12 @@ def save_profile_to_csv(result, profile_json, csv_file):
 
 # 主函数
 def main():
-    # 获取脚本所在目录的绝对路径
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # 修改为使用脚本目录的绝对路径
     prompt_template_path = os.path.join(script_dir, "user_info_1000token.txt")
     test_file_path = os.path.join(script_dir, "画像更新测试.txt")
-    output_file = os.path.join(script_dir, f"用户画像更新结果_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
-    csv_file = os.path.join(script_dir, f"用户画像变化记录_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+    output_file = os.path.join(script_dir, f"用户画像更新结果_{SELECTED_MODEL}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+    csv_file = os.path.join(script_dir, f"用户画像变化记录_{SELECTED_MODEL}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
     
     # 读取提示模板
     prompt_template = read_prompt_template(prompt_template_path)
@@ -194,6 +207,7 @@ def main():
     # 解析测试文件
     batches = parse_batches(test_file_path)
     print(f"共找到 {len(batches)} 个批次")
+    print(f"使用模型: {SELECTED_MODEL}")
     
     # 初始化用户画像
     profile = ""

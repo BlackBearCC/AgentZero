@@ -196,7 +196,7 @@ def save_profile_to_csv(result, profile_json, csv_file):
 def main():
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    prompt_template_path = os.path.join(script_dir, "user_info_1000token.txt")
+    prompt_template_path = os.path.join(script_dir, "记忆提炼大师24.3.txt")
     test_file_path = os.path.join(script_dir, "画像更新测试.txt")
     output_file = os.path.join(script_dir, f"用户画像更新结果_{SELECTED_MODEL}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
     csv_file = os.path.join(script_dir, f"用户画像变化记录_{SELECTED_MODEL}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")

@@ -1,0 +1,33 @@
+:root {
+  /* 颜色 */
+  --primary-color: #44ff44;
+  --primary-shadow: rgba(68, 255, 68, 0.5);
+  --background-dark: #1a1a2e;
+  --panel-bg: #2a2a3a;
+  --text-light: #ffffff;
+  --text-muted: #8a8a9a;
+  
+  /* 尺寸 */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+  
+  /* 圆角 */
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 10px;
+  
+  /* 动画时间 */
+  --transition-speed: 0.3s;
+  --animation-duration: 2s;
+  
+  /* 阴影 */
+  --box-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --box-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+  --box-shadow-lg: 0 6px 12px rgba(0, 0, 0, 0.5);
+  
+  /* 透明度 */
+  --opacity-disabled: 0.5;
+  --opacity-hover: 0.8;
+} 

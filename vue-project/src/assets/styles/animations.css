@@ -1,0 +1,101 @@
+/* 动画相关样式 */
+@keyframes channel-change {
+  0% { transform: translateY(-100%); opacity: 0.8; }
+  50% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0.8; }
+}
+
+@keyframes static {
+  0% { transform: translate(0, 0); }
+  10% { transform: translate(-5%, -5%); }
+  20% { transform: translate(10%, 5%); }
+  30% { transform: translate(-5%, 10%); }
+  40% { transform: translate(5%, -10%); }
+  50% { transform: translate(-10%, 5%); }
+  60% { transform: translate(10%, 10%); }
+  70% { transform: translate(-10%, -10%); }
+  80% { transform: translate(5%, 5%); }
+  90% { transform: translate(-5%, -5%); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes flicker {
+  0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100% {
+    opacity: 0.99;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5), 0 0 20px rgba(255, 255, 255, 0.4);
+  }
+  20%, 21.999%, 63%, 63.999%, 65%, 69.999% {
+    opacity: 0.4;
+    text-shadow: none;
+  }
+}
+
+@keyframes scanning-line {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-20px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+@keyframes float {
+  0% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-5px) rotate(2deg); }
+  100% { transform: translateY(5px) rotate(-2deg); }
+}
+
+@keyframes glow {
+  0% { text-shadow: 0 0 5px rgba(68, 255, 68, 0.8), 0 0 10px rgba(68, 255, 68, 0.5); }
+  100% { text-shadow: 0 0 10px rgba(68, 255, 68, 1), 0 0 20px rgba(68, 255, 68, 0.8), 0 0 30px rgba(68, 255, 68, 0.6); }
+}
+
+@keyframes crt-off {
+  0% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  10% { 
+    transform: scale(1, 0.9) translate(0, 5%);
+    opacity: 0.9;
+  }
+  80% {
+    transform: scale(1, 0.1) translate(0, 50%);
+    opacity: 0.5;
+  }
+  100% { 
+    transform: scale(0, 0.1) translate(0, 100%);
+    opacity: 0;
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes scanlines {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 100%;
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+} 

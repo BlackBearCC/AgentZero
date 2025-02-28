@@ -26,4 +26,19 @@
   background: #44ff44;
   box-shadow: 0 0 10px #44ff44;
   animation: blink 1s infinite;
+}
+
+/* 确认指示器 */
+.confirm-indicator {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: var(--primary-color);
+  font-weight: bold;
+}
+
+/* 进度文本 */
+.progress-text {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 } 

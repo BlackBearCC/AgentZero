@@ -1,0 +1,133 @@
+/* 关键词云相关样式 */
+.retro-keyword-cloud {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  box-shadow: 
+    inset 0 0 30px rgba(68, 255, 68, 0.2),
+    0 0 15px rgba(68, 255, 68, 0.3);
+}
+
+/* 词云容器 */
+.keyword-cloud-container {
+  position: relative;
+  height: 100%;
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 词云项目 */
+.keyword-item {
+  position: absolute;
+  color: var(--primary-color);
+  text-shadow: 0 0 5px var(--primary-shadow);
+  font-family: 'VT323', monospace;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: float 3s ease-in-out infinite;
+  user-select: none;
+}
+
+.keyword-item:hover {
+  transform: scale(1.1);
+  text-shadow: 0 0 10px var(--primary-shadow);
+}
+
+/* 词云大小变化 */
+.keyword-size-1 { font-size: 0.8rem; opacity: 0.7; }
+.keyword-size-2 { font-size: 1rem; opacity: 0.8; }
+.keyword-size-3 { font-size: 1.2rem; opacity: 0.9; }
+.keyword-size-4 { font-size: 1.4rem; opacity: 0.95; }
+.keyword-size-5 { font-size: 1.6rem; opacity: 1; }
+
+/* 关键词部分 */
+.keywords-section {
+  margin-top: 1.5rem;
+  background: rgba(20, 20, 30, 0.5);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid rgba(68, 255, 68, 0.2);
+}
+
+.keywords-section h4 {
+  color: var(--primary-color);
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  text-shadow: 0 0 5px var(--primary-shadow);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* 关键词列表 */
+.keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.keyword-tag {
+  background: rgba(68, 255, 68, 0.1);
+  border: 1px solid var(--primary-color);
+  color: var(--primary-color);
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.keyword-tag:hover {
+  background: rgba(68, 255, 68, 0.2);
+  box-shadow: 0 0 10px rgba(68, 255, 68, 0.3);
+}
+
+.keyword-frequency {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  padding-left: 0.3rem;
+  border-left: 1px solid rgba(68, 255, 68, 0.3);
+}
+
+/* 扫描线效果 */
+.retro-keyword-cloud::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(68, 255, 68, 0.03) 50%,
+    transparent
+  );
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* 词云加载动画 */
+.keyword-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--primary-color);
+  font-family: 'VT323', monospace;
+  font-size: 1.2rem;
+  text-shadow: 0 0 5px var(--primary-shadow);
+  animation: blink 1s infinite;
+} 

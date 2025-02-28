@@ -27,4 +27,23 @@
   background: linear-gradient(90deg, #44ff44, #7cff7c);
   border-radius: 6px;
   transition: width 1s ease-out;
+}
+
+.comparison-bar-container {
+  flex: 1;
+  height: 15px;
+  background: rgba(40, 40, 50, 0.8);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.comparison-bar {
+  height: 100%;
+  border-radius: 8px;
+}
+
+.comparison-value {
+  width: 40px;
+  color: var(--text-light);
+  font-size: 0.9rem;
 } 

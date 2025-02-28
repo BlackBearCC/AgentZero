@@ -1,0 +1,37 @@
+/* 文字排版样式 */
+.panel-title {
+  text-align: center;
+  color: #44ff44;
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+  margin-bottom: 1rem;
+  border-bottom: 2px solid rgba(68, 255, 68, 0.3);
+  padding-bottom: 0.5rem;
+}
+
+.control-label {
+  color: #8a8a9a;
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.status-label {
+  color: #8a8a9a;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.status-value {
+  color: #44ff44;
+  font-family: monospace;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px rgba(68, 255, 68, 0.5);
+  word-break: break-word;
+} 

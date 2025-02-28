@@ -44,4 +44,55 @@
   padding: 0.25rem 0.5rem;
   font-size: 0.9rem;
   white-space: nowrap;
+}
+
+/* 迷你按钮 */
+.mini-btn {
+  background: rgba(40, 40, 50, 0.8);
+  border: 1px solid #333;
+  color: var(--text-light);
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.mini-btn:hover {
+  background: rgba(50, 50, 60, 0.8);
+  color: var(--text-light);
+}
+
+.mini-btn.delete {
+  color: #ff5252;
+}
+
+.mini-btn.delete:hover {
+  background: rgba(80, 30, 30, 0.8);
+}
+
+/* 确认按钮 */
+.confirm-fields-btn {
+  min-width: 100px;
+}
+
+/* 开始按钮 */
+.start-btn {
+  background: linear-gradient(to bottom, #3a3a4a, #2a2a3a);
+  border: 1px solid #4a4a5a;
+  font-weight: bold;
+  letter-spacing: 1px;
+  height: 50px;
+}
+
+.start-btn:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #4a4a5a, #3a3a4a);
+}
+
+.upload-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-button:hover {
+  background: rgba(68, 255, 68, 0.1);
 } 

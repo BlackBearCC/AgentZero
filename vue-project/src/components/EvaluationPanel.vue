@@ -1742,83 +1742,11 @@ const exportReportCSV = () => {
   margin-bottom: 0.5rem;
 }
 
-.control-button {
-  background: #3a3a4a;
-  border: none;
-  border-radius: 4px;
-  padding: 0.8rem;
-  color: #fff;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 
-    0 2px 4px rgba(0, 0, 0, 0.3),
-    inset 0 1px 1px rgba(255, 255, 255, 0.1);
-}
-
-.control-button:hover {
-  background: #4a4a5a;
-  transform: translateY(-2px);
-  box-shadow: 
-    0 4px 8px rgba(0, 0, 0, 0.4),
-    inset 0 1px 1px rgba(255, 255, 255, 0.2);
-}
-
-.control-button:active {
-  transform: translateY(1px);
-  box-shadow: 
-    0 1px 2px rgba(0, 0, 0, 0.4),
-    inset 0 1px 1px rgba(255, 255, 255, 0.1);
-}
-
-.control-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
 .button-face {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-}
-
-/* 电源指示灯 */
-.power-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #ff4444;
-  transition: all 0.3s ease;
-  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.5);
-}
-
-.power-indicator.active {
-  background: #44ff44;
-  box-shadow: 0 0 10px #44ff44, inset 0 0 2px rgba(0, 0, 0, 0.3);
-}
-
-/* 操作指示灯 */
-.operation-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #8a8a9a;
-  transition: all 0.3s ease;
-}
-
-.operation-indicator.active {
-  background: #44ff44;
-  box-shadow: 0 0 10px #44ff44;
-  animation: blink 1s infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
 }
 
 /* 频道按钮 */
@@ -1895,19 +1823,6 @@ const exportReportCSV = () => {
   color: #44ff44;
 }
 
-/* 开始按钮 */
-.start-btn {
-  background: linear-gradient(to bottom, #3a3a4a, #2a2a3a);
-  border: 1px solid #4a4a5a;
-  font-weight: bold;
-  letter-spacing: 1px;
-  height: 50px;
-}
-
-.start-btn:hover:not(:disabled) {
-  background: linear-gradient(to bottom, #4a4a5a, #3a3a4a);
-}
-
 /* 系统状态 */
 .system-status {
   margin-top: auto;
@@ -1943,7 +1858,6 @@ const exportReportCSV = () => {
   overflow: hidden;
   height: calc(100vh - 4rem);
   min-width: 0;
-  /* 外壳立体效果 */
   box-shadow: 
     -5px -5px 15px rgba(255,255,255,0.1),
     5px 5px 15px rgba(0,0,0,0.4);

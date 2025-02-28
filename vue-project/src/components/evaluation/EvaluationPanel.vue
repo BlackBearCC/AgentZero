@@ -1,5 +1,5 @@
 <template>
-  <div class="tv-container" v-if="isPoweredOn">
+  <div class="tv-container crt-effect" v-if="isPoweredOn">
     <!-- 左侧控制面板 -->
     <div class="control-panel">
       <div class="panel-title">控制中心</div>
@@ -199,6 +199,7 @@ const handleExportComparison = () => {
 </script>
 
 <style scoped>
+/* 布局相关样式 */
 .tv-container {
   display: flex;
   gap: 2rem;
@@ -242,48 +243,5 @@ const handleExportComparison = () => {
   flex-direction: column;
   position: relative;
   overflow: hidden;
-}
-
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(68, 255, 68, 0.3);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(68, 255, 68, 0.5);
-}
-
-/* CRT效果 */
-.tv-container::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    linear-gradient(
-      rgba(18, 16, 16, 0) 50%, 
-      rgba(0, 0, 0, 0.25) 50%
-    ),
-    linear-gradient(
-      90deg,
-      rgba(255, 0, 0, 0.06),
-      rgba(0, 255, 0, 0.02),
-      rgba(0, 0, 255, 0.06)
-    );
-  background-size: 100% 2px, 3px 100%;
-  pointer-events: none;
-  z-index: 10;
-  opacity: 0.15;
 }
 </style>

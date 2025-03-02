@@ -39,14 +39,15 @@ class TransformerBacktester:
                     transaction_cost: float = 0.0004,
                     position_limit: float = 0.5,      # 最大仓位
                     volatility_threshold: float = 0.015,  # 波动率阈值
-                    signal_threshold: float = 0.2243,    # 信号阈值
-                    smoothing_factor: float = 0.5,    # 平滑因子
+                    signal_threshold: float = 0.3,    # 信号阈值
+                    smoothing_factor: float = 0.7,    # 平滑因子
                     prediction_horizon: int = 14,
                     verbose: bool = False,  # 默认关闭详细输出以提高速度
                     dynamic_position_sizing: bool = True,  # 动态仓位控制
-                    stop_loss_pct: float = 0.01,      # 止损百分比
+                    stop_loss_pct: float = 0.02,      # 止损百分比
                     take_profit_pct: float = 0.05,    # 止盈百分比
                     print_trades: bool = True,        # 打印交易细节
+                    export_trades: bool = True,       # 导出交易详情到CSV
                     ) -> Dict:
         """运行回测 - 性能优化版"""
         if verbose:
@@ -309,6 +310,185 @@ class TransformerBacktester:
         if trades:  # 如果有交易
             trade_df = pd.DataFrame(trades)
             trade_df['time'] = pd.to_datetime(trade_df['time'])
+            
+            # 添加更多交易分析字段
+            trade_df['month'] = trade_df['time'].dt.strftime('%Y-%m')
+            trade_df['hour'] = trade_df['time'].dt.hour
+            trade_df['weekday'] = trade_df['time'].dt.day_name()
+            trade_df['is_win'] = trade_df['pnl'] > 0
+            
+            # 计算持仓时间和退出价格
+            entry_prices = {}
+            entry_times = {}
+            
+            for idx, row in trade_df.iterrows():
+                if row['size'] > 0:  # 开多仓
+                    entry_prices[1] = row['price']
+                    entry_times[1] = row['time']
+                elif row['size'] < 0 and row['size'] > -0.9:  # 开空仓
+                    entry_prices[-1] = row['price']
+                    entry_times[-1] = row['time']
+                
+                # 平仓情况
+                if row['size'] < 0 and 1 in entry_prices:  # 平多仓
+                    trade_df.at[idx, 'entry_price'] = entry_prices[1]
+                    trade_df.at[idx, 'entry_time'] = entry_times[1]
+                    trade_df.at[idx, 'exit_price'] = row['price']
+                    trade_df.at[idx, 'holding_hours'] = (row['time'] - entry_times[1]).total_seconds() / 3600
+                    trade_df.at[idx, 'direction'] = '多'
+                    # 清除记录
+                    entry_prices.pop(1, None)
+                    entry_times.pop(1, None)
+                elif row['size'] > 0 and -1 in entry_prices:  # 平空仓
+                    trade_df.at[idx, 'entry_price'] = entry_prices[-1]
+                    trade_df.at[idx, 'entry_time'] = entry_times[-1]
+                    trade_df.at[idx, 'exit_price'] = row['price']
+                    trade_df.at[idx, 'holding_hours'] = (row['time'] - entry_times[-1]).total_seconds() / 3600
+                    trade_df.at[idx, 'direction'] = '空'
+                    # 清除记录
+                    entry_prices.pop(-1, None)
+                    entry_times.pop(-1, None)
+            
+            # 导出交易详情到CSV
+            if export_trades:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                csv_filename = f"trade_details_{timestamp}.csv"
+                
+                # 确保所有列都有值
+                for col in ['entry_price', 'exit_price', 'holding_hours', 'direction']:
+                    if col not in trade_df.columns:
+                        trade_df[col] = None
+                
+                # 选择要导出的列并重命名
+                export_columns = {
+                    'time': '交易时间',
+                    'type': '交易类型',
+                    'price': '价格',
+                    'size': '仓位大小',
+                    'pnl': '盈亏',
+                    'cost': '交易成本',
+                    'short_term': '短期预测',
+                    'medium_term': '中期预测',
+                    'long_term': '长期预测',
+                    'month': '月份',
+                    'hour': '小时',
+                    'weekday': '星期',
+                    'is_win': '是否盈利',
+                    'entry_price': '进入价格',
+                    'exit_price': '退出价格',
+                    'holding_hours': '持仓时间(小时)',
+                    'direction': '方向'
+                }
+                
+                # 创建导出DataFrame
+                export_df = trade_df.copy()
+                export_df = export_df.rename(columns=export_columns)
+                
+                # 导出到CSV
+                export_df.to_csv(csv_filename, index=False, encoding='utf-8-sig')
+                print(f"\n交易详情已导出到: {csv_filename}")
+                
+                # 导出月度最佳/最差交易
+                monthly_best_worst = []
+                
+                for month, group in trade_df.groupby('month'):
+                    if group.empty:
+                        continue
+                    
+                    # 找出最佳交易
+                    best_idx = group['pnl'].idxmax()
+                    best_trade = group.loc[best_idx].copy()
+                    best_trade['trade_rank'] = '最佳'
+                    
+                    # 找出最差交易
+                    worst_idx = group['pnl'].idxmin()
+                    worst_trade = group.loc[worst_idx].copy()
+                    worst_trade['trade_rank'] = '最差'
+                    
+                    monthly_best_worst.append(best_trade)
+                    monthly_best_worst.append(worst_trade)
+                
+                if monthly_best_worst:
+                    monthly_df = pd.DataFrame(monthly_best_worst)
+                    monthly_columns = {
+                        'month': '月份',
+                        'trade_rank': '类型',
+                        'entry_price': '进入价格',
+                        'exit_price': '退出价格',
+                        'pnl': '盈亏',
+                        'short_term': '短期预测',
+                        'medium_term': '中期预测',
+                        'long_term': '长期预测',
+                        'holding_hours': '持仓时间(小时)',
+                        'direction': '方向'
+                    }
+                    
+                    monthly_df = monthly_df.rename(columns=monthly_columns)
+                    monthly_df = monthly_df[list(monthly_columns.values())]
+                    
+                    monthly_csv = f"monthly_best_worst_{timestamp}.csv"
+                    monthly_df.to_csv(monthly_csv, index=False, encoding='utf-8-sig')
+                    print(f"月度最佳/最差交易已导出到: {monthly_csv}")
+                
+                # 导出交易时间分析
+                hour_stats = trade_df.groupby('hour').agg({
+                    'pnl': ['count', 'mean', 'sum'],
+                })
+                
+                hour_win_rates = {}
+                for hour, group in trade_df.groupby('hour'):
+                    hour_win_rates[hour] = (group['pnl'] > 0).mean() * 100
+                
+                hour_df = pd.DataFrame({
+                    '小时': hour_stats.index,
+                    '交易数': hour_stats[('pnl', 'count')].values,
+                    '平均盈亏': hour_stats[('pnl', 'mean')].values,
+                    '总盈亏': hour_stats[('pnl', 'sum')].values,
+                    '胜率(%)': [hour_win_rates.get(hour, 0) for hour in hour_stats.index]
+                })
+                
+                hour_csv = f"hourly_analysis_{timestamp}.csv"
+                hour_df.to_csv(hour_csv, index=False, encoding='utf-8-sig')
+                print(f"小时交易分析已导出到: {hour_csv}")
+                
+                # 导出预测强度分析
+                def get_strength_bin(row):
+                    max_signal = max(row['short_term'], row['medium_term'], row['long_term'])
+                    if max_signal < 0.2:
+                        return "很弱 (<0.2)"
+                    elif max_signal < 0.4:
+                        return "弱 (0.2-0.4)"
+                    elif max_signal < 0.6:
+                        return "中等 (0.4-0.6)"
+                    elif max_signal < 0.8:
+                        return "强 (0.6-0.8)"
+                    else:
+                        return "很强 (>0.8)"
+                
+                trade_df['signal_strength'] = trade_df.apply(get_strength_bin, axis=1)
+                
+                strength_analysis = trade_df.groupby('signal_strength').agg({
+                    'pnl': ['count', 'mean', 'sum'],
+                })
+                
+                def win_rate(group):
+                    return (group > 0).mean() * 100
+                
+                strength_win_rates = {}
+                for strength, group in trade_df.groupby('signal_strength'):
+                    strength_win_rates[strength] = (group['pnl'] > 0).mean() * 100
+                
+                strength_df = pd.DataFrame({
+                    '预测强度': strength_analysis.index,
+                    '交易数': strength_analysis[('pnl', 'count')].values,
+                    '平均盈亏': strength_analysis[('pnl', 'mean')].values,
+                    '总盈亏': strength_analysis[('pnl', 'sum')].values,
+                    '胜率(%)': [strength_win_rates.get(strength, 0) for strength in strength_analysis.index]
+                })
+                
+                strength_csv = f"signal_strength_analysis_{timestamp}.csv"
+                strength_df.to_csv(strength_csv, index=False, encoding='utf-8-sig')
+                print(f"预测强度分析已导出到: {strength_csv}")
         else:  # 如果没有交易
             trade_df = pd.DataFrame(columns=['time', 'type', 'price', 'size', 'pnl', 'cost'])
         
@@ -403,7 +583,7 @@ class TransformerBacktester:
             monthly_groups = trade_df.groupby('month')
             
             # 创建详细交易表格边框
-            detail_border = "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+"
+            detail_border = "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+"
             
             print(detail_border)
             print("| {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} |".format(

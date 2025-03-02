@@ -1298,7 +1298,7 @@ def run_optimization_comparison(data_path: str = None):
         data = data_mgr.get_feed(
             symbol='BTC/USDT',
             timeframe='15m',
-            start=datetime(2025, 1, 1),
+            start=datetime(2024, 1, 1),
             end=datetime(2025, 3, 1)
         )['indicator']
         # 保存数据以便重用

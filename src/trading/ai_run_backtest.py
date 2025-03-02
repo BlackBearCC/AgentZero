@@ -1298,7 +1298,7 @@ def run_optimization_comparison(data_path: str = None):
         data = data_mgr.get_feed(
             symbol='BTC/USDT',
             timeframe='15m',
-            start=datetime(2024, 1, 1),
+            start=datetime(2025, 1, 1),
             end=datetime(2025, 3, 1)
         )['indicator']
         # 保存数据以便重用
@@ -1312,7 +1312,7 @@ def run_optimization_comparison(data_path: str = None):
     print("运行默认参数回测...")
     default_results = backtester.run_backtest(
         data=data,
-        initial_capital=1_000_000,
+        initial_capital=1000,
         transaction_cost=0.0004,
         position_limit=0.6217296565132786,
         volatility_threshold=0.01364604981391187,

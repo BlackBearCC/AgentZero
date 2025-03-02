@@ -39,13 +39,14 @@ class TransformerBacktester:
                     transaction_cost: float = 0.0004,
                     position_limit: float = 0.5,      # 最大仓位
                     volatility_threshold: float = 0.015,  # 波动率阈值
-                    signal_threshold: float = 0.3,    # 信号阈值
-                    smoothing_factor: float = 0.7,    # 平滑因子
+                    signal_threshold: float = 0.2243,    # 信号阈值
+                    smoothing_factor: float = 0.5,    # 平滑因子
                     prediction_horizon: int = 14,
                     verbose: bool = False,  # 默认关闭详细输出以提高速度
                     dynamic_position_sizing: bool = True,  # 动态仓位控制
-                    stop_loss_pct: float = 0.02,      # 止损百分比
+                    stop_loss_pct: float = 0.01,      # 止损百分比
                     take_profit_pct: float = 0.05,    # 止盈百分比
+                    print_trades: bool = True,        # 打印交易细节
                     ) -> Dict:
         """运行回测 - 性能优化版"""
         if verbose:
@@ -255,6 +256,12 @@ class TransformerBacktester:
                         'long_term': long_term
                     })
                     
+                    # 打印交易细节
+                    if print_trades:
+                        trade_direction = "买入" if position_change > 0 else "卖出"
+                        position_type = "多头" if target_position > 0 else "空头" if target_position < 0 else "平仓"
+
+                    
                     current_position = target_position
                     if current_position != 0:
                         entry_price = current_price
@@ -291,17 +298,7 @@ class TransformerBacktester:
                     equity_series_temp = pd.Series(equity[:idx-window_size+2])
                     max_drawdown = ((equity_series_temp.cummax() - equity_series_temp) / equity_series_temp.cummax()).max() * 100
                     
-                    print(f"""
-======== 回测状态更新 ========
-时间: {current_time}
-价格: {current_price:.2f}
-账户资金: {equity[idx-window_size+1]:,.2f} USDT
-当前收益率: {current_return:.2f}%
-最大回撤: {max_drawdown:.2f}%
-当前仓位: {current_position:.2f}
-交易次数: {len(trades)}
-==============================
-                    """)
+
         
         # 在回测循环结束后，创建返回数据结构
         dates = data.index[window_size:window_size+len(equity)]
@@ -324,10 +321,9 @@ class TransformerBacktester:
         if verbose:
             end_time = time.time()
             print(f"回测完成，耗时: {end_time - start_time:.2f}秒")
-            print(f"总收益率: {metrics['total_return']:.2f}%")
-            print(f"年化收益率: {metrics['annual_return']*100:.2f}%")
-            print(f"最大回撤: {metrics['max_drawdown']:.2f}%")
-            print(f"夏普比率: {metrics['sharpe']:.2f}")
+            
+            # 打印交易统计表格
+            self._print_trade_statistics(metrics, trade_df)
         
         return {
             'equity': equity_series,
@@ -336,6 +332,316 @@ class TransformerBacktester:
             'signals': signal_df,
             'metrics': metrics
         }
+    
+    def _print_trade_statistics(self, metrics: Dict, trade_df: pd.DataFrame):
+        """打印交易统计表格"""
+        # 创建表格边框
+        border = "+" + "-" * 30 + "+" + "-" * 20 + "+"
+        
+        print("\n\n")
+        print("=" * 60)
+        print("                   交易统计报告                   ")
+        print("=" * 60)
+        
+        # 基本统计
+        print(border)
+        print("| {:<28} | {:<18} |".format("指标", "数值"))
+        print(border)
+        print("| {:<28} | {:<18.2f} |".format("总收益率(%)", metrics['total_return']))
+        print("| {:<28} | {:<18.2f} |".format("年化收益率(%)", metrics['annual_return']*100))
+        print("| {:<28} | {:<18.2f} |".format("最大回撤(%)", metrics['max_drawdown']))
+        print("| {:<28} | {:<18.2f} |".format("夏普比率", metrics['sharpe']))
+        print("| {:<28} | {:<18.2f} |".format("年化波动率(%)", metrics['annual_vol']*100))
+        print("| {:<28} | {:<18.2f} |".format("卡尔玛比率", metrics['annual_return']/(metrics['max_drawdown']/100) if metrics['max_drawdown'] > 0 else float('inf')))
+        print(border)
+        
+        # 交易统计
+        print("\n交易详情:")
+        print(border)
+        print("| {:<28} | {:<18} |".format("指标", "数值"))
+        print(border)
+        print("| {:<28} | {:<18d} |".format("总交易次数", metrics['trade_count']))
+        print("| {:<28} | {:<18.2f} |".format("胜率(%)", metrics['win_rate']*100))
+        print("| {:<28} | {:<18.2f} |".format("平均盈利交易(%)", metrics['avg_win']))
+        print("| {:<28} | {:<18.2f} |".format("平均亏损交易(%)", metrics['avg_loss']))
+        print("| {:<28} | {:<18.2f} |".format("盈亏比", metrics['profit_factor']))
+        print("| {:<28} | {:<18.2f} |".format("平均持仓时间(小时)", metrics.get('avg_holding_time', 0)))
+        print("| {:<28} | {:<18.2f} |".format("总交易成本", metrics['total_cost']))
+        print(border)
+        
+        # 交易类型分布
+        if not trade_df.empty and 'type' in trade_df.columns:
+            trade_types = trade_df['type'].value_counts()
+            print("\n交易类型分布:")
+            print(border)
+            print("| {:<28} | {:<18} |".format("类型", "次数"))
+            print(border)
+            for trade_type, count in trade_types.items():
+                print("| {:<28} | {:<18d} |".format(trade_type, count))
+            print(border)
+        
+        # 月度收益表
+        if 'monthly_returns' in metrics:
+            print("\n月度收益表(%):")
+            monthly_returns = metrics['monthly_returns']
+            if not monthly_returns.empty:
+                print(monthly_returns.to_string())
+        
+        # 月度最佳/最差交易详细分析
+        if not trade_df.empty and 'time' in trade_df.columns and 'pnl' in trade_df.columns:
+            print("\n\n月度最佳/最差交易详细分析:")
+            
+            # 确保时间列是datetime类型
+            if not pd.api.types.is_datetime64_any_dtype(trade_df['time']):
+                trade_df['time'] = pd.to_datetime(trade_df['time'])
+            
+            # 添加月份列
+            trade_df['month'] = trade_df['time'].dt.strftime('%Y-%m')
+            trade_df['month_dt'] = pd.to_datetime(trade_df['time']).dt.to_period('M')
+            
+            # 按月份分组
+            monthly_groups = trade_df.groupby('month')
+            
+            # 创建详细交易表格边框
+            detail_border = "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+"
+            
+            print(detail_border)
+            print("| {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} |".format(
+                "月份", "类型", "进入价", "退出价", "收益", "预测值", "持仓(小时)", "方向"))
+            print(detail_border)
+            
+            # 处理每个月的交易
+            for month, group in monthly_groups:
+                if group.empty:
+                    continue
+                
+                # 找出最佳交易
+                best_idx = group['pnl'].idxmax()
+                best_trade = group.loc[best_idx]
+                
+                # 找出最差交易
+                worst_idx = group['pnl'].idxmin()
+                worst_trade = group.loc[worst_idx]
+                
+                # 计算持仓时间 (需要找到对应的平仓交易)
+                def calculate_holding_time(trade_row, all_trades):
+                    # 如果是平仓交易，跳过
+                    if trade_row['size'] <= 0:
+                        return 0
+                    
+                    # 找到之后的平仓交易
+                    entry_time = trade_row['time']
+                    later_trades = all_trades[all_trades['time'] > entry_time]
+                    
+                    if later_trades.empty:
+                        return 0
+                    
+                    # 找到第一个方向相反的交易
+                    for idx, exit_trade in later_trades.iterrows():
+                        if (exit_trade['size'] < 0 and trade_row['size'] > 0) or \
+                           (exit_trade['size'] > 0 and trade_row['size'] < 0):
+                            exit_time = exit_trade['time']
+                            holding_hours = (exit_time - entry_time).total_seconds() / 3600
+                            return holding_hours
+                    
+                    return 0
+                
+                # 获取最佳交易的持仓时间和退出价格
+                best_holding_time = calculate_holding_time(best_trade, trade_df)
+                best_exit_price = 0
+                
+                # 获取最差交易的持仓时间和退出价格
+                worst_holding_time = calculate_holding_time(worst_trade, trade_df)
+                worst_exit_price = 0
+                
+                # 尝试找到退出价格
+                if best_trade['size'] > 0:  # 多头交易
+                    later_trades = trade_df[(trade_df['time'] > best_trade['time']) & (trade_df['size'] < 0)]
+                    if not later_trades.empty:
+                        best_exit_price = later_trades.iloc[0]['price']
+                elif best_trade['size'] < 0:  # 空头交易
+                    later_trades = trade_df[(trade_df['time'] > best_trade['time']) & (trade_df['size'] > 0)]
+                    if not later_trades.empty:
+                        best_exit_price = later_trades.iloc[0]['price']
+                
+                if worst_trade['size'] > 0:  # 多头交易
+                    later_trades = trade_df[(trade_df['time'] > worst_trade['time']) & (trade_df['size'] < 0)]
+                    if not later_trades.empty:
+                        worst_exit_price = later_trades.iloc[0]['price']
+                elif worst_trade['size'] < 0:  # 空头交易
+                    later_trades = trade_df[(trade_df['time'] > worst_trade['time']) & (trade_df['size'] > 0)]
+                    if not later_trades.empty:
+                        worst_exit_price = later_trades.iloc[0]['price']
+                
+                # 获取预测值 (使用三个时间周期的最大值)
+                best_prediction = max(best_trade['short_term'], best_trade['medium_term'], best_trade['long_term'])
+                worst_prediction = max(worst_trade['short_term'], worst_trade['medium_term'], worst_trade['long_term'])
+                
+                # 确定交易方向
+                best_direction = "多" if best_trade['size'] > 0 else "空" if best_trade['size'] < 0 else "平"
+                worst_direction = "多" if worst_trade['size'] > 0 else "空" if worst_trade['size'] < 0 else "平"
+                
+                # 打印最佳交易
+                print("| {:<8} | {:<8} | {:<8.2f} | {:<8.2f} | {:<8.2f} | {:<8.2f} | {:<8.1f} | {:<8} |".format(
+                    month,
+                    "最佳",
+                    best_trade['price'],
+                    best_exit_price if best_exit_price > 0 else 0,
+                    best_trade['pnl'],
+                    best_prediction,
+                    best_holding_time,
+                    best_direction
+                ))
+                
+                # 打印最差交易
+                print("| {:<8} | {:<8} | {:<8.2f} | {:<8.2f} | {:<8.2f} | {:<8.2f} | {:<8.1f} | {:<8} |".format(
+                    month,
+                    "最差",
+                    worst_trade['price'],
+                    worst_exit_price if worst_exit_price > 0 else 0,
+                    worst_trade['pnl'],
+                    worst_prediction,
+                    worst_holding_time,
+                    worst_direction
+                ))
+                
+                print(detail_border)
+        
+        # 连续盈利/亏损分析
+        if not trade_df.empty and 'pnl' in trade_df.columns:
+            print("\n\n连续盈利/亏损分析:")
+            
+            # 标记每笔交易是盈利还是亏损
+            trade_df['is_win'] = trade_df['pnl'] > 0
+            
+            # 计算连续盈利和亏损的次数
+            win_streaks = []
+            loss_streaks = []
+            
+            current_streak = 1
+            current_type = trade_df.iloc[0]['is_win'] if not trade_df.empty else None
+            
+            for i in range(1, len(trade_df)):
+                if trade_df.iloc[i]['is_win'] == current_type:
+                    current_streak += 1
+                else:
+                    if current_type:
+                        win_streaks.append(current_streak)
+                    else:
+                        loss_streaks.append(current_streak)
+                    current_streak = 1
+                    current_type = trade_df.iloc[i]['is_win']
+            
+            # 添加最后一个连续序列
+            if current_type is not None:
+                if current_type:
+                    win_streaks.append(current_streak)
+                else:
+                    loss_streaks.append(current_streak)
+            
+            # 打印连续交易统计
+            streak_border = "+" + "-" * 20 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+"
+            
+            print(streak_border)
+            print("| {:<18} | {:<8} | {:<8} | {:<8} |".format("类型", "最大连续", "平均连续", "次数"))
+            print(streak_border)
+            
+            max_win_streak = max(win_streaks) if win_streaks else 0
+            avg_win_streak = sum(win_streaks) / len(win_streaks) if win_streaks else 0
+            
+            max_loss_streak = max(loss_streaks) if loss_streaks else 0
+            avg_loss_streak = sum(loss_streaks) / len(loss_streaks) if loss_streaks else 0
+            
+            print("| {:<18} | {:<8d} | {:<8.2f} | {:<8d} |".format(
+                "连续盈利", max_win_streak, avg_win_streak, len(win_streaks)))
+            print("| {:<18} | {:<8d} | {:<8.2f} | {:<8d} |".format(
+                "连续亏损", max_loss_streak, avg_loss_streak, len(loss_streaks)))
+            print(streak_border)
+        
+        # 交易时间分布分析
+        if not trade_df.empty and 'time' in trade_df.columns:
+            print("\n\n交易时间分布分析:")
+            
+            # 确保时间列是datetime类型
+            if not pd.api.types.is_datetime64_any_dtype(trade_df['time']):
+                trade_df['time'] = pd.to_datetime(trade_df['time'])
+            
+            # 添加小时和星期几
+            trade_df['hour'] = trade_df['time'].dt.hour
+            trade_df['weekday'] = trade_df['time'].dt.day_name()
+            
+            # 按小时分组
+            hour_stats = trade_df.groupby('hour').agg({
+                'pnl': ['count', 'mean', 'sum'],
+            })
+            
+            # 计算每个小时的胜率
+            hour_win_rates = {}
+            for hour, group in trade_df.groupby('hour'):
+                hour_win_rates[hour] = (group['pnl'] > 0).mean() * 100
+            
+            # 按星期几分组
+            weekday_stats = trade_df.groupby('weekday').agg({
+                'pnl': ['count', 'mean', 'sum'],
+            })
+            
+            # 计算每个星期几的胜率
+            weekday_win_rates = {}
+            for weekday, group in trade_df.groupby('weekday'):
+                weekday_win_rates[weekday] = (group['pnl'] > 0).mean() * 100
+            
+            # 打印小时分布
+            print("\n交易小时分布:")
+            hour_border = "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+"
+            
+            print(hour_border)
+            print("| {:<8} | {:<8} | {:<8} | {:<8} | {:<8} |".format("小时", "交易数", "平均盈亏", "总盈亏", "胜率(%)"))
+            print(hour_border)
+            
+            for hour in sorted(hour_stats.index):
+                count = hour_stats.loc[hour, ('pnl', 'count')]
+                avg_pnl = hour_stats.loc[hour, ('pnl', 'mean')]
+                sum_pnl = hour_stats.loc[hour, ('pnl', 'sum')]
+                win_rate = hour_win_rates.get(hour, 0)
+                
+                print("| {:<8d} | {:<8d} | {:<8.2f} | {:<8.2f} | {:<8.2f} |".format(
+                    hour, count, avg_pnl, sum_pnl, win_rate))
+            
+            print(hour_border)
+            
+            # 打印星期几分布
+            print("\n交易星期分布:")
+            weekday_border = "+" + "-" * 15 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+"
+            
+            print(weekday_border)
+            print("| {:<13} | {:<8} | {:<8} | {:<8} | {:<8} |".format("星期", "交易数", "平均盈亏", "总盈亏", "胜率(%)"))
+            print(weekday_border)
+            
+            # 星期几顺序
+            weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            weekday_names = {
+                'Monday': '星期一',
+                'Tuesday': '星期二',
+                'Wednesday': '星期三',
+                'Thursday': '星期四',
+                'Friday': '星期五',
+                'Saturday': '星期六',
+                'Sunday': '星期日'
+            }
+            
+            for weekday in weekday_order:
+                if weekday in weekday_stats.index:
+                    count = weekday_stats.loc[weekday, ('pnl', 'count')]
+                    avg_pnl = weekday_stats.loc[weekday, ('pnl', 'mean')]
+                    sum_pnl = weekday_stats.loc[weekday, ('pnl', 'sum')]
+                    win_rate = weekday_win_rates.get(weekday, 0)
+                    
+                    print("| {:<13} | {:<8d} | {:<8.2f} | {:<8.2f} | {:<8.2f} |".format(
+                        weekday_names.get(weekday, weekday), count, avg_pnl, sum_pnl, win_rate))
+            
+            print(weekday_border)
+        
+        print("\n" + "=" * 60)
     
     def _calculate_metrics(self, equity, positions, trades, dates) -> Dict:
         """计算回测指标"""
@@ -366,12 +672,28 @@ class TransformerBacktester:
             losing_trades = trade_df[trade_df['pnl'] <= 0]
             
             win_rate = len(winning_trades) / len(trade_df) if len(trade_df) > 0 else 0
-            avg_win = winning_trades['pnl'].mean() if len(winning_trades) > 0 else 0
-            avg_loss = losing_trades['pnl'].mean() if len(losing_trades) > 0 else 0
+            avg_win = winning_trades['pnl'].mean() / equity[0] * 100 if len(winning_trades) > 0 else 0
+            avg_loss = losing_trades['pnl'].mean() / equity[0] * 100 if len(losing_trades) > 0 else 0
             profit_factor = abs(winning_trades['pnl'].sum() / losing_trades['pnl'].sum()) if len(losing_trades) > 0 and losing_trades['pnl'].sum() != 0 else float('inf')
             
-            avg_trade_return = trade_df['pnl'].mean() if len(trade_df) > 0 else 0
+            avg_trade_return = trade_df['pnl'].mean() / equity[0] * 100 if len(trade_df) > 0 else 0
             total_cost = trade_df['cost'].sum()
+            
+            # 计算平均持仓时间
+            if 'time' in trade_df.columns and len(trade_df) > 1:
+                trade_df = trade_df.sort_values('time')
+                entry_times = trade_df[trade_df['size'] > 0]['time'].reset_index(drop=True)
+                exit_times = trade_df[trade_df['size'] < 0]['time'].reset_index(drop=True)
+                
+                if len(entry_times) > 0 and len(exit_times) > 0:
+                    # 确保长度匹配
+                    min_len = min(len(entry_times), len(exit_times))
+                    holding_times = [(exit_times[i] - entry_times[i]).total_seconds() / 3600 for i in range(min_len)]
+                    avg_holding_time = np.mean(holding_times) if holding_times else 0
+                else:
+                    avg_holding_time = 0
+            else:
+                avg_holding_time = 0
         else:
             win_rate = 0
             avg_win = 0
@@ -379,6 +701,20 @@ class TransformerBacktester:
             profit_factor = 0
             avg_trade_return = 0
             total_cost = 0
+            avg_holding_time = 0
+        
+        # 计算月度收益
+        equity_series = pd.Series(equity, index=dates)
+        monthly_returns = equity_series.resample('M').last().pct_change() * 100
+        monthly_returns = monthly_returns.dropna()
+        
+        # 整理成月度表格
+        if not monthly_returns.empty:
+            monthly_table = pd.DataFrame(index=range(1, 13), columns=monthly_returns.index.year.unique())
+            for date, value in monthly_returns.items():
+                monthly_table.loc[date.month, date.year] = value
+        else:
+            monthly_table = pd.DataFrame()
         
         return {
             'total_return': total_return,
@@ -392,7 +728,9 @@ class TransformerBacktester:
             'avg_trade_return': avg_trade_return,
             'total_cost': total_cost,
             'trade_count': len(trades),
-            'annual_vol': annual_vol
+            'annual_vol': annual_vol,
+            'avg_holding_time': avg_holding_time,
+            'monthly_returns': monthly_table
         }
 
 class FastHyperparameterOptimizer:
@@ -781,7 +1119,7 @@ def run_optimization_comparison(data_path: str = None):
             symbol='BTC/USDT',
             timeframe='15m',
             start=datetime(2024, 1, 1),
-            end=datetime(2024, 5, 24)
+            end=datetime(2025, 3, 1)
         )['indicator']
         # 保存数据以便重用
         data.to_pickle('backtest_data.pkl')
@@ -796,10 +1134,10 @@ def run_optimization_comparison(data_path: str = None):
         data=data,
         initial_capital=1_000_000,
         transaction_cost=0.0004,
-        position_limit=0.5,
+        position_limit=0.45,
         volatility_threshold=0.015,
-        signal_threshold=0.3,
-        smoothing_factor=0.7,
+        signal_threshold=0.2243,
+        smoothing_factor=0.5,
         prediction_horizon=14,
         verbose=True
     )

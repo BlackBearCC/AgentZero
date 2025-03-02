@@ -52,6 +52,70 @@ services:
       - redis
       - mysql
 
+  # 新增 Freqtrade 回测服务
+  freqtrade:
+    image: freqtradeorg/freqtrade:stable
+    restart: unless-stopped
+    container_name: freqtrade
+    volumes:
+      - ./freqtrade/user_data:/freqtrade/user_data
+      - ./models:/freqtrade/user_data/models  # 挂载模型目录
+      - ./freqtrade/config.json:/freqtrade/config.json
+    ports:
+      - "8080:8080"  # Freqtrade API 端口
+    command: >
+      trade
+      --logfile /freqtrade/user_data/logs/freqtrade.log
+      --db-url sqlite:////freqtrade/user_data/tradesv3.sqlite
+      --config /freqtrade/config.json
+      --strategy TransformerStrategy
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONIOENCODING=UTF-8
+      - FORCE_COLOR=1
+      - TZ=UTC
+
+  # 数据下载服务
+  freqtrade-download:
+    image: freqtradeorg/freqtrade:stable_freqaitorch
+    container_name: freqtrade-download
+    volumes:
+      - ./freqtrade/user_data:/freqtrade/user_data
+      - ./freqtrade/config.json:/freqtrade/config.json
+
+    command: >
+      download-data
+      --exchange binance
+      --timeframes 5m 15m 30m 1h 4h 8h 1d
+      --days 365
+
+
+
+  # 回测服务
+  freqtrade-backtest:
+    image: freqtradeorg/freqtrade:stable_freqaitorch
+    container_name: freqtrade-backtest
+    volumes:
+      - ./freqtrade/user_data:/freqtrade/user_data
+      - ./models:/freqtrade/user_data/models
+      - ./freqtrade/config.json:/freqtrade/config.json
+    command:
+      - "backtesting"
+      - "--config"
+      - "/freqtrade/config.json"
+      - "--strategy"
+      - "TransformerStrategy"
+      - "--timerange"
+      - "20240101-20250101"
+      - "--timeframe"
+      - "15m"
+      - "--export"
+      - "trades"
+      - "--export-filename"
+      - "/freqtrade/user_data/backtest_results/backtest-result.json"
+
+
+
   redis:
     image: redis:alpine
     ports:

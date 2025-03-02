@@ -116,8 +116,8 @@ if __name__ == "__main__":
     data = data_mgr.get_feed(
         symbol='BTC/USDT',
         timeframe='15m',
-        start=datetime(2024, 1, 1),
-        end=datetime(2025, 2, 1)
+        start=datetime(2022, 1, 1),
+        end=datetime(2025, 3, 1)
     )['indicator']
     
     # 划分训练集和验证集
@@ -126,5 +126,5 @@ if __name__ == "__main__":
     val_data = data[train_size:]
     
     # 训练模型
-    trainer = ModelTrainer('alpha_v1')
-    trainer.train(train_data, val_data, epochs=100) 
+    trainer = ModelTrainer('alpha_v1.1')
+    trainer.train(train_data, val_data, epochs=500) 

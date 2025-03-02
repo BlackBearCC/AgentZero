@@ -1134,109 +1134,110 @@ def run_optimization_comparison(data_path: str = None):
         data=data,
         initial_capital=1_000_000,
         transaction_cost=0.0004,
-        position_limit=0.45,
-        volatility_threshold=0.015,
-        signal_threshold=0.2243,
-        smoothing_factor=0.5,
+        position_limit=0.6217296565132786,
+        volatility_threshold=0.01364604981391187,
+        signal_threshold=0.244313868705759,
+        smoothing_factor=0.7607211409966947,
         prediction_horizon=14,
+        stop_loss_pct=0.010137904412717525,
+        take_profit_pct=0.055370509955518045,
         verbose=True
     )
+    # # 创建优化器
+    # optimizer = FastHyperparameterOptimizer(model_path, data)
     
-    # 创建优化器
-    optimizer = FastHyperparameterOptimizer(model_path, data)
+    # # 定义参数范围
+    # param_ranges = {
+    #     'position_limit': (0.3, 0.7),
+    #     'signal_threshold': (0.2, 0.4),
+    #     'volatility_threshold': (0.01, 0.02),
+    #     'smoothing_factor': (0.5, 0.9),
+    #     'stop_loss_pct': (0.01, 0.03),
+    #     'take_profit_pct': (0.03, 0.07)
+    # }
     
-    # 定义参数范围
-    param_ranges = {
-        'position_limit': (0.3, 0.7),
-        'signal_threshold': (0.2, 0.4),
-        'volatility_threshold': (0.01, 0.02),
-        'smoothing_factor': (0.5, 0.9),
-        'stop_loss_pct': (0.01, 0.03),
-        'take_profit_pct': (0.03, 0.07)
-    }
+    # # 运行标准贝叶斯优化
+    # print("\n\n运行标准贝叶斯优化...")
+    # bayes_results = optimizer.bayesian_optimization(
+    #     param_ranges=param_ranges,
+    #     n_trials=50,
+    #     metric='sharpe'
+    # )
     
-    # 运行标准贝叶斯优化
-    print("\n\n运行标准贝叶斯优化...")
-    bayes_results = optimizer.bayesian_optimization(
-        param_ranges=param_ranges,
-        n_trials=50,
-        metric='sharpe'
-    )
+    # # 运行前推式贝叶斯优化
+    # print("\n\n运行前推式贝叶斯优化...")
+    # wf_bayes_results = optimizer.walk_forward_bayesian(
+    #     param_ranges=param_ranges,
+    #     window_size=30,  # 30天训练窗口
+    #     step_size=15,    # 15天测试窗口
+    #     n_trials=30,     # 每个窗口30次尝试
+    #     metric='sharpe'
+    # )
     
-    # 运行前推式贝叶斯优化
-    print("\n\n运行前推式贝叶斯优化...")
-    wf_bayes_results = optimizer.walk_forward_bayesian(
-        param_ranges=param_ranges,
-        window_size=30,  # 30天训练窗口
-        step_size=15,    # 15天测试窗口
-        n_trials=30,     # 每个窗口30次尝试
-        metric='sharpe'
-    )
+    # # 生成对比报告
+    # print("\n\n============= 优化方法对比报告 =============")
     
-    # 生成对比报告
-    print("\n\n============= 优化方法对比报告 =============")
+    # # 提取各方法的关键指标
+    # methods = ["默认参数", "标准贝叶斯优化", "前推式贝叶斯优化"]
+    # results_list = [
+    #     default_results, 
+    #     bayes_results['final_results'], 
+    #     wf_bayes_results['final_results']
+    # ]
     
-    # 提取各方法的关键指标
-    methods = ["默认参数", "标准贝叶斯优化", "前推式贝叶斯优化"]
-    results_list = [
-        default_results, 
-        bayes_results['final_results'], 
-        wf_bayes_results['final_results']
-    ]
+    # # 创建对比表格
+    # comparison_data = []
+    # for method, result in zip(methods, results_list):
+    #     metrics = result['metrics']
+    #     comparison_data.append({
+    #         "方法": method,
+    #         "总收益率(%)": metrics['total_return'],
+    #         "年化收益率(%)": metrics['annual_return'] * 100,
+    #         "最大回撤(%)": metrics['max_drawdown'],
+    #         "夏普比率": metrics['sharpe'],
+    #         "胜率(%)": metrics['win_rate'] * 100,
+    #         "交易次数": metrics['trade_count'],
+    #         "平均收益": metrics['avg_trade_return']
+    #     })
     
-    # 创建对比表格
-    comparison_data = []
-    for method, result in zip(methods, results_list):
-        metrics = result['metrics']
-        comparison_data.append({
-            "方法": method,
-            "总收益率(%)": metrics['total_return'],
-            "年化收益率(%)": metrics['annual_return'] * 100,
-            "最大回撤(%)": metrics['max_drawdown'],
-            "夏普比率": metrics['sharpe'],
-            "胜率(%)": metrics['win_rate'] * 100,
-            "交易次数": metrics['trade_count'],
-            "平均收益": metrics['avg_trade_return']
-        })
+    # comparison_df = pd.DataFrame(comparison_data)
+    # print(comparison_df.to_string(index=False))
     
-    comparison_df = pd.DataFrame(comparison_data)
-    print(comparison_df.to_string(index=False))
+    # # 绘制权益曲线对比
+    # plt.figure(figsize=(12, 6))
+    # for method, result in zip(methods, results_list):
+    #     plt.plot(result['equity'], label=method)
     
-    # 绘制权益曲线对比
-    plt.figure(figsize=(12, 6))
-    for method, result in zip(methods, results_list):
-        plt.plot(result['equity'], label=method)
+    # plt.title('不同优化方法的权益曲线对比', fontsize=14)
+    # plt.xlabel('日期', fontsize=12)
+    # plt.ylabel('权益', fontsize=12)
+    # plt.legend(fontsize=10)
+    # plt.grid(True)
+    # plt.tight_layout()
+    # plt.savefig('optimization_comparison.png', dpi=300)
+    # plt.show()
     
-    plt.title('不同优化方法的权益曲线对比', fontsize=14)
-    plt.xlabel('日期', fontsize=12)
-    plt.ylabel('权益', fontsize=12)
-    plt.legend(fontsize=10)
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig('optimization_comparison.png', dpi=300)
-    plt.show()
+    # # 绘制回撤对比
+    # plt.figure(figsize=(12, 6))
+    # for method, result in zip(methods, results_list):
+    #     equity = result['equity']
+    #     drawdown = (equity.cummax() - equity) / equity.cummax() * 100
+    #     plt.plot(drawdown, label=method)
     
-    # 绘制回撤对比
-    plt.figure(figsize=(12, 6))
-    for method, result in zip(methods, results_list):
-        equity = result['equity']
-        drawdown = (equity.cummax() - equity) / equity.cummax() * 100
-        plt.plot(drawdown, label=method)
+    # plt.title('不同优化方法的回撤对比', fontsize=14)
+    # plt.xlabel('日期', fontsize=12)
+    # plt.ylabel('回撤(%)', fontsize=12)
+    # plt.legend(fontsize=10)
+    # plt.grid(True)
+    # plt.tight_layout()
+    # plt.savefig('drawdown_comparison.png', dpi=300)
+    # plt.show()
     
-    plt.title('不同优化方法的回撤对比', fontsize=14)
-    plt.xlabel('日期', fontsize=12)
-    plt.ylabel('回撤(%)', fontsize=12)
-    plt.legend(fontsize=10)
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig('drawdown_comparison.png', dpi=300)
-    plt.show()
+    # # 保存对比结果到CSV
+    # comparison_df.to_csv('optimization_comparison.csv', index=False)
     
-    # 保存对比结果到CSV
-    comparison_df.to_csv('optimization_comparison.csv', index=False)
-    
-    print("\n对比报告已生成，图表已保存。")
-    print("============================================")
+    # print("\n对比报告已生成，图表已保存。")
+    # print("============================================")
 
 if __name__ == "__main__":
     # 运行优化对比

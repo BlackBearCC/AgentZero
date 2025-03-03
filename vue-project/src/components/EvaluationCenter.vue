@@ -153,8 +153,16 @@
         </div>
         
         <!-- 步骤5: 评估报告 -->
-        <div v-else-if="evaluationStats" class="step-container evaluation-report">
-          <!-- 报告标签页 -->
+        <div v-else-if="evaluationStats" class="step-container report-view">
+          <div class="report-header">
+            <div class="report-title">评估报告：{{ evaluationStats.evaluation_code }}</div>
+            <div class="report-meta">
+              <span>生成时间：{{ new Date().toLocaleString() }}</span>
+              <span>评估条目：{{ evaluationStats.total_items }}条</span>
+            </div>
+          </div>
+          
+          <!-- 报告内容 -->
           <div class="report-tabs">
             <button 
               @click="activeReportTab = 'details'" 
@@ -505,7 +513,7 @@
     
     try {
       isEvaluating.value = true
-      evaluationStats.value = null // 清空之前的报告数据
+      evaluationStats.value = null
       systemMessage.value = '正在准备评估...'
       
       const formData = new FormData()
@@ -590,18 +598,23 @@
                 
               case 'end':
                 processed.value = data.processed
-                // 评估完成
-                if (data.processed === data.total) {
+                // 新增complete类型处理
+                if (data.complete) {
                   systemMessage.value = '评估完成!'
-                  
-                  // 获取统计报告
-                  if (data.stats) {
-                    evaluationStats.value = data.stats
-                    saveReportToLocalStorage(data.stats)
-                    // 自动添加到对比列表
-                    savedReports.value.push(data.stats)
-                  }
+                  evaluationStats.value = data.stats
+                  saveReportToLocalStorage(data.stats)
+                  savedReports.value.push(data.stats)
+                  isEvaluating.value = false
                 }
+                break
+
+              // 新增complete类型单独处理
+              case 'complete':
+                systemMessage.value = '评估完成!'
+                evaluationStats.value = data.stats
+                saveReportToLocalStorage(data.stats)
+                savedReports.value.push(data.stats)
+                isEvaluating.value = false
                 break
             }
           } catch (e) {
@@ -609,8 +622,6 @@
           }
         }
       }
-      
-      isEvaluating.value = false
       
     } catch (error) {
       console.error('Error:', error)

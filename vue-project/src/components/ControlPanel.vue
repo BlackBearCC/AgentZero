@@ -150,4 +150,4 @@ const updateSystemStatus = (status) => {
 }
 </script>
 
-<style src="./styles/EvaluationPanel.css"></style>
+<style src="./styles/ControlPanel.css"></style>

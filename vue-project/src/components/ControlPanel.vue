@@ -30,12 +30,37 @@
         </div>
       </div>
       
-      <!-- 动态加载当前频道的控制面板 -->
-      <component 
-        :is="currentControlComponent" 
-        v-if="isPoweredOn" 
-        @update:status="updateSystemStatus" 
-      />
+      <!-- 音量控制 -->
+      <div class="control-group">
+        <div class="control-label">VOLUME</div>
+        <div class="volume-control">
+          <input 
+            type="range" 
+            min="0" 
+            max="100" 
+            v-model="volume" 
+            class="volume-slider"
+            :disabled="!isPoweredOn"
+          />
+          <div class="volume-value">{{ volume }}</div>
+        </div>
+      </div>
+      
+      <!-- 亮度控制 -->
+      <div class="control-group">
+        <div class="control-label">BRIGHTNESS</div>
+        <div class="brightness-control">
+          <input 
+            type="range" 
+            min="0" 
+            max="100" 
+            v-model="brightness" 
+            class="brightness-slider"
+            :disabled="!isPoweredOn"
+          />
+          <div class="brightness-value">{{ brightness }}</div>
+        </div>
+      </div>
       
       <!-- 系统状态 -->
       <div class="system-status">
@@ -45,7 +70,7 @@
     </div>
 
     <!-- 电视屏幕 -->
-    <div class="tv-screen">
+    <div class="tv-screen" :style="{ filter: `brightness(${brightness}%)` }">
       <div class="screen-frame" :class="{ 'scanning': isScanning, 'changing-channel': isChangingChannel }">
         <div class="screen-content">
           <!-- 未开机状态 -->
@@ -58,7 +83,8 @@
             v-if="isPoweredOn" 
             :is="currentScreenComponent" 
             @scanning:start="startScanning" 
-            @scanning:stop="stopScanning" 
+            @scanning:stop="stopScanning"
+            @update:status="updateSystemStatus"
           />
         </div>
       </div>
@@ -71,26 +97,15 @@ import { ref, computed } from 'vue'
 import CharacterGenerator from './CharacterGenerator.vue'
 import BatchDialogue from './BatchDialogue.vue'
 import EvaluationCenter from './EvaluationCenter.vue'
-import CharacterGeneratorControls from './controls/CharacterGeneratorControls.vue'
-import BatchDialogueControls from './controls/BatchDialogueControls.vue'
-import EvaluationControls from './controls/EvaluationControls.vue'
 
 // 频道相关变量
-const activeChannel = ref(3) // 默认显示评估中心
+const activeChannel = ref(1) // 默认显示角色生成器
 const isChangingChannel = ref(false) // 是否正在换台
 const isScanning = ref(false) // 扫描效果
 const isPoweredOn = ref(true) // 电源状态
 const systemStatus = ref('系统就绪') // 系统状态
-
-// 计算当前应该显示的控制组件
-const currentControlComponent = computed(() => {
-  switch (activeChannel.value) {
-    case 1: return CharacterGeneratorControls
-    case 2: return BatchDialogueControls
-    case 3: return EvaluationControls
-    default: return null
-  }
-})
+const volume = ref(50) // 音量控制
+const brightness = ref(100) // 亮度控制
 
 // 计算当前应该显示的屏幕组件
 const currentScreenComponent = computed(() => {
@@ -109,6 +124,7 @@ const changeChannel = (channel) => {
   // 开始换台效果
   isChangingChannel.value = true
   isScanning.value = true
+  systemStatus.value = `切换至频道 ${channel}`
   
   // 延迟切换频道，模拟换台过程
   setTimeout(() => {
@@ -118,6 +134,7 @@ const changeChannel = (channel) => {
     setTimeout(() => {
       isChangingChannel.value = false
       isScanning.value = false
+      systemStatus.value = '系统就绪'
     }, 500)
   }, 1000)
 }
@@ -131,7 +148,12 @@ const togglePower = () => {
     systemStatus.value = '系统待机'
   } else {
     // 打开电源
-    systemStatus.value = '系统就绪'
+    systemStatus.value = '系统启动中'
+    
+    // 模拟启动过程
+    setTimeout(() => {
+      systemStatus.value = '系统就绪'
+    }, 2000)
   }
 }
 
@@ -151,3 +173,25 @@ const updateSystemStatus = (status) => {
 </script>
 
 <style src="./styles/ControlPanel.css"></style>
+
+/**
+ * ControlPanel 组件
+ * 
+ * 这是一个模拟复古电视机的主控界面组件。
+ * 
+ * 特色功能:
+ * 1. 复古CRT电视机外观 - 包括屏幕玻璃效果、扫描线、微光和反光效果
+ * 2. 频道切换系统 - 模拟老式电视的换台效果，带有静态噪声和扫描线动画
+ * 3. 三个频道功能:
+ *    - 频道1: 角色生成器
+ *    - 频道2: 批量对话
+ *    - 频道3: 评估中心
+ * 4. 复古控制面板:
+ *    - 电源开关
+ *    - 频道选择
+ *    - 音量调节
+ *    - 亮度调节
+ * 
+ * 设计理念:
+ * 通过怀旧的复古电视机界面，为AI工具增添趣味性和独特的用户体验。
+ */ 

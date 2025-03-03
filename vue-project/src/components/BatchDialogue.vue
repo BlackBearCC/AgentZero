@@ -1,36 +1,89 @@
 <template>
   <div class="batch-dialogue">
-    <div v-if="!dialogueResults.length && !isProcessing" class="empty-state">
+    <!-- 未上传文件时的空状态 -->
+    <div v-if="!dialogueData && !isProcessing" class="empty-state">
       <div class="tv-logo">BATCH DIALOGUE</div>
       <div class="channel-info">频道 2</div>
-      <div class="instruction-text">请使用左侧控制面板上传对话文件并开始处理</div>
-    </div>
-    
-    <div v-else-if="isProcessing" class="processing-state">
-      <div class="tv-logo">BATCH DIALOGUE</div>
-      <div class="processing-message">正在处理对话 {{ processedCount }}/{{ totalCount }}</div>
-      <div class="processing-animation"></div>
-      <div class="progress-bar">
-        <div class="progress-fill" :style="{ width: `${(processedCount / Math.max(totalCount, 1)) * 100}%` }"></div>
+      <div class="instruction-text">请上传对话数据文件开始批量处理</div>
+      
+      <!-- 控制区域整合到屏幕中 -->
+      <div class="screen-controls">
+        <div class="file-control">
+          <input 
+            type="file" 
+            id="dialogue-file" 
+            @change="handleFileChange" 
+            accept=".csv,.xlsx"
+            class="file-input"
+          />
+          <label for="dialogue-file" class="tv-button">
+            <span class="button-text">[ 选择对话文件 ]</span>
+          </label>
+          <div class="file-name">{{ fileName || '未选择文件' }}</div>
+        </div>
+        
+        <!-- 对话模型选择 -->
+        <div class="model-select-group">
+          <div class="model-label">对话模型</div>
+          <select v-model="selectedModel" class="model-dropdown">
+            <option value="gpt-3.5">GPT-3.5</option>
+            <option value="gpt-4">GPT-4</option>
+            <option value="claude">Claude</option>
+          </select>
+        </div>
+        
+        <!-- 系统提示词设置 -->
+        <div class="system-prompt-group">
+          <div class="prompt-toggle">
+            <input type="checkbox" id="use-system-prompt" v-model="useSystemPrompt" />
+            <label for="use-system-prompt">使用系统提示词</label>
+          </div>
+          <textarea 
+            v-if="useSystemPrompt"
+            v-model="systemPrompt" 
+            class="system-prompt-input" 
+            placeholder="输入系统提示词..."
+            rows="3"
+          ></textarea>
+        </div>
+      
+        <!-- 操作按钮 -->
+        <div class="action-buttons">
+          <button @click="processDialogues" class="tv-button primary" :disabled="!canProcess">
+            <span class="button-text">[ 开始处理 ]</span>
+          </button>
+        </div>
       </div>
     </div>
     
-    <div v-else-if="dialogueResults.length > 0" class="result-state">
+    <!-- 处理中状态 -->
+    <div v-else-if="isProcessing" class="processing-state">
+      <div class="tv-logo">BATCH DIALOGUE</div>
+      <div class="channel-info">频道 2</div>
+      <div class="processing-message">正在处理对话数据...</div>
+      <div class="processing-animation"></div>
+      <div class="progress-bar">
+        <div class="progress-fill" :style="{ width: `${processingProgress}%` }"></div>
+      </div>
+      <div class="progress-text">{{ processingProgress }}%</div>
+    </div>
+    
+    <!-- 处理结果 -->
+    <div v-else class="result-state">
       <div class="dialogue-header">
         <h2>批量对话结果</h2>
-        <div class="dialogue-actions">
-          <button @click="exportResults" class="crt-button">
-            <span class="button-text">[ 导出对话结果 ]</span>
-          </button>
+        <div class="header-actions">
+          <button @click="resetProcessor" class="crt-button">重新处理</button>
+          <button @click="exportResults" class="crt-button">导出结果</button>
         </div>
       </div>
       
       <div class="dialogue-list">
-        <div v-for="(dialogue, index) in dialogueResults" :key="index" class="dialogue-item">
+        <div v-for="(item, index) in dialogueData" :key="index" class="dialogue-item">
           <div class="dialogue-number">#{{ index + 1 }}</div>
           <div class="dialogue-content">
-            <div class="user-message">{{ dialogue.user }}</div>
-            <div class="ai-response">{{ dialogue.ai }}</div>
+            <div class="user-message">{{ item.user }}</div>
+            <div class="ai-response">{{ item.ai }}</div>
           </div>
         </div>
       </div>
@@ -39,98 +92,188 @@
 </template>
 
 <script setup>
-import { ref, defineEmits } from 'vue'
+import { ref, computed } from 'vue'
 
-const emit = defineEmits(['scanning:start', 'scanning:stop'])
-
-// 批量对话相关状态
+// 状态变量
+const fileName = ref('')
+const dialogueData = ref(null)
 const isProcessing = ref(false)
-const processedCount = ref(0)
-const totalCount = ref(0)
-const dialogueResults = ref([])
+const processingProgress = ref(0)
+const selectedModel = ref('gpt-4')
+const useSystemPrompt = ref(false)
+const systemPrompt = ref('')
 
-// 导出对话结果
-const exportResults = () => {
-  if (dialogueResults.value.length === 0) return
-  
-  // 准备CSV数据
-  const headers = ['序号', '用户输入', 'AI回复']
-  const rows = dialogueResults.value.map((dialogue, index) => [
-    index + 1,
-    dialogue.user.replace(/"/g, '""'),
-    dialogue.ai.replace(/"/g, '""')
-  ])
-  
-  // 生成CSV内容
-  const csvContent = [
-    headers.join(','),
-    ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-  ].join('\n')
-  
-  // 创建下载链接
-  const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { 
-    type: 'text/csv;charset=utf-8'
-  })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `对话结果_${new Date().toISOString().slice(0,10)}.csv`
-  link.click()
-  URL.revokeObjectURL(link.href)
+// 模拟文件上传处理
+const handleFileChange = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    fileName.value = file.name
+    // 在实际应用中，这里应该解析上传的文件
+  }
 }
 
-// 暴露给父组件的方法
-defineExpose({
-  startProcessing(file, model) {
-    isProcessing.value = true
-    processedCount.value = 0
-    totalCount.value = 10 // 模拟10条对话
-    dialogueResults.value = []
-    emit('scanning:start')
-    
-    // 模拟处理进度
-    const processInterval = setInterval(() => {
-      if (processedCount.value < totalCount.value) {
-        processedCount.value++
-        
-        // 添加模拟结果
-        dialogueResults.value.push({
-          user: `这是用户的第${processedCount.value}条测试消息`,
-          ai: `这是AI对第${processedCount.value}条消息的回复。在实际应用中，这里会显示真实的AI回复内容。`
-        })
-      } else {
-        clearInterval(processInterval)
-        setTimeout(() => {
-          isProcessing.value = false
-          emit('scanning:stop')
-        }, 500)
-      }
-    }, 500)
-  },
-  
-  reset() {
-    isProcessing.value = false
-    processedCount.value = 0
-    totalCount.value = 0
-    dialogueResults.value = []
-  }
+// 计算属性：是否可以开始处理
+const canProcess = computed(() => {
+  return fileName.value && !isProcessing.value
 })
+
+// 开始处理对话数据
+const processDialogues = () => {
+  isProcessing.value = true
+  processingProgress.value = 0
+  
+  // 模拟处理进度
+  const interval = setInterval(() => {
+    processingProgress.value += 5
+    
+    if (processingProgress.value >= 100) {
+      clearInterval(interval)
+      setTimeout(() => {
+        // 模拟生成对话数据
+        dialogueData.value = generateMockDialogues()
+        isProcessing.value = false
+      }, 500)
+    }
+  }, 300)
+}
+
+// 重置处理器
+const resetProcessor = () => {
+  dialogueData.value = null
+  fileName.value = ''
+  processingProgress.value = 0
+}
+
+// 导出结果
+const exportResults = () => {
+  // 在实际应用中，这里应该实现导出功能
+  alert('对话结果已导出')
+}
+
+// 模拟生成对话数据
+const generateMockDialogues = () => {
+  return [
+    {
+      user: '你好，请介绍一下你自己。',
+      ai: '你好！我是一个AI助手，由OpenAI开发。我可以帮助回答问题、提供信息和进行各种对话交流。有什么我可以帮助你的吗？'
+    },
+    {
+      user: '解释一下什么是人工智能？',
+      ai: '人工智能(AI)是计算机科学的一个分支，致力于创建能够执行通常需要人类智能的任务的系统。这包括视觉感知、语音识别、决策和语言翻译等。AI系统通过分析大量数据，识别模式，并使用这些见解来做出预测或决策。'
+    },
+    {
+      user: '写一首关于春天的短诗。',
+      ai: '春风轻抚绿意浓，\n花开满园香气融。\n雨后彩虹挂碧空，\n生机勃勃迎春中。'
+    }
+  ]
+}
 </script>
 
 <style scoped>
 .batch-dialogue {
   height: 100%;
-  padding: 20px;
-  overflow-y: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   color: #e0e0e0;
+  overflow-y: auto;
 }
 
-.empty-state, .processing-state {
+.empty-state {
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.screen-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 60%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  border-radius: 10px;
+  padding: 2rem;
+  margin-top: 2rem;
+}
+
+.file-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.file-input {
+  display: none;
+}
+
+.tv-button {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(68, 255, 68, 0.5);
+  color: #44ff44;
+  padding: 0.8rem 1.5rem;
+  border-radius: 5px;
+  cursor: pointer;
   text-align: center;
+  transition: all 0.3s ease;
+}
+
+.tv-button:hover {
+  background: rgba(68, 255, 68, 0.2);
+  text-shadow: 0 0 5px rgba(68, 255, 68, 0.7);
+}
+
+.tv-button.primary {
+  background: rgba(68, 255, 68, 0.2);
+}
+
+.file-name {
+  font-size: 0.9rem;
+  color: #a0a0a0;
+  margin-top: 0.5rem;
+}
+
+.model-select-group, .system-prompt-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.model-label {
+  font-size: 0.9rem;
+  color: #a0a0a0;
+}
+
+.model-dropdown {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  color: #e0e0e0;
+  padding: 0.6rem;
+  border-radius: 5px;
+}
+
+.prompt-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.system-prompt-input {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  color: #e0e0e0;
+  padding: 0.6rem;
+  border-radius: 5px;
+  resize: vertical;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
 }
 
 .tv-logo {

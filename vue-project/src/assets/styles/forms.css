@@ -1,0 +1,100 @@
+/* 表单元素样式 */
+.file-input-button {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  text-align: center;
+}
+
+.hidden-file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.upload-icon {
+  font-style: normal;
+  font-size: 1.2rem;
+}
+
+.button-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* 角色信息输入框 */
+.role-info-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  color: var(--text-light);
+  padding: 0.5rem;
+  font-family: monospace;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.role-info-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 10px var(--primary-shadow);
+}
+
+/* 评估代号输入框 */
+.eval-code-input {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.code-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  color: var(--primary-color);
+  padding: 0.5rem;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.code-input[readonly] {
+  opacity: 0.8;
+  cursor: default;
+}
+
+.field-name {
+  color: var(--text-light);
+  font-size: 0.85rem;
+  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.field-actions {
+  margin-top: 1rem;
+  text-align: right;
+}
+
+/* 确认按钮 */
+.confirm-fields-btn {
+  min-width: 100px;
+}
+
+.confirm-indicator {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: var(--primary-color);
+  font-weight: bold;
+}
+
+/* 上传按钮 */
+.upload-button:hover {
+  background: rgba(68, 255, 68, 0.1);
+} 

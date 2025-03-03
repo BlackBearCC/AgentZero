@@ -1,0 +1,124 @@
+/* 控制元素样式 */
+.channel-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.channel-btn {
+  flex: 1;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.channel-btn.active {
+  background: rgba(68, 255, 68, 0.2);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+  text-shadow: 0 0 5px #44ff44;
+  box-shadow: 0 0 10px rgba(68, 255, 68, 0.3);
+}
+
+.mode-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mode-btn {
+  text-align: left;
+  padding-left: 1rem;
+  position: relative;
+}
+
+.mode-btn.active {
+  background: rgba(68, 255, 68, 0.2);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+  text-shadow: 0 0 5px #44ff44;
+}
+
+.mode-btn.active::before {
+  content: '►';
+  position: absolute;
+  left: 0.4rem;
+  color: #44ff44;
+}
+
+/* 控制按钮基础样式 */
+.control-button {
+  background: #3a3a4a;
+  border: none;
+  border-radius: 4px;
+  padding: 0.8rem;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+.control-button:hover {
+  background: #4a4a5a;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.control-button:active {
+  transform: translateY(1px);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+.control-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 开始按钮 */
+.start-btn {
+  background: linear-gradient(to bottom, #3a3a4a, #2a2a3a);
+  border: 1px solid #4a4a5a;
+  font-weight: bold;
+  letter-spacing: 1px;
+  height: 50px;
+}
+
+.start-btn:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #4a4a5a, #3a3a4a);
+}
+
+/* 迷你按钮 */
+.mini-btn {
+  background: rgba(30, 30, 40, 0.8);
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.mini-btn:hover {
+  background: rgba(50, 50, 60, 0.8);
+  color: #fff;
+}
+
+.mini-btn.delete {
+  color: #ff5252;
+}
+
+.mini-btn.delete:hover {
+  background: rgba(80, 30, 30, 0.8);
+} 

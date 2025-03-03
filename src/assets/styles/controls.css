@@ -1,0 +1,49 @@
+/* 控制元素样式 */
+.channel-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.channel-btn {
+  flex: 1;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.channel-btn.active {
+  background: rgba(68, 255, 68, 0.2);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+  text-shadow: 0 0 5px #44ff44;
+  box-shadow: 0 0 10px rgba(68, 255, 68, 0.3);
+}
+
+.mode-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mode-btn {
+  text-align: left;
+  padding-left: 1rem;
+  position: relative;
+}
+
+.mode-btn.active {
+  background: rgba(68, 255, 68, 0.2);
+  border: 1px solid #44ff44;
+  color: #44ff44;
+  text-shadow: 0 0 5px #44ff44;
+}
+
+.mode-btn.active::before {
+  content: '►';
+  position: absolute;
+  left: 0.4rem;
+  color: #44ff44;
+} 

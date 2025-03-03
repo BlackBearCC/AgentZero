@@ -1,29 +1,46 @@
 <template>
     <div class="evaluation-center">
-      <!-- 未上传文件时的空状态 -->
-      <div v-if="!selectedFile && !isEvaluating && !evaluationStats" class="empty-state">
+      <!-- 主界面 - 根据评估阶段显示不同内容 -->
+      <div class="tv-screen-content">
         <div class="tv-logo">EVALUATION CENTER</div>
         <div class="channel-info">频道 3</div>
-        <div class="instruction-text">请上传评估数据文件开始分析</div>
         
-        <!-- 控制区域整合到屏幕中 -->
-        <div class="screen-controls">
+        <!-- 状态指示器 - 显示当前操作阶段 -->
+        <div class="progress-indicator">
+          <div class="progress-step" :class="{ 'active': !selectedFile, 'complete': selectedFile }">1. 选择文件</div>
+          <div class="progress-step" :class="{ 'active': selectedFile && !fieldsConfirmed, 'complete': fieldsConfirmed }">2. 确认字段</div>
+          <div class="progress-step" :class="{ 'active': fieldsConfirmed && !isEvaluating && !evaluationStats, 'complete': isEvaluating || evaluationStats }">3. 开始评估</div>
+          <div class="progress-step" :class="{ 'active': evaluationStats }">4. 查看报告</div>
+        </div>
+        
+        <!-- 系统消息 -->
+        <div class="system-message" v-if="systemMessage">{{ systemMessage }}</div>
+        
+        <!-- 步骤1: 文件选择 -->
+        <div v-if="!selectedFile" class="step-container file-selection">
+          <div class="instruction-text">请选择数据文件开始评估</div>
           <div class="file-control">
             <input 
               type="file" 
               id="evaluation-file" 
               @change="handleFileUpload" 
-              accept=".csv,.xls,.xlsx,.json"
+              accept=".csv,.xlsx"
               class="file-input"
             />
             <label for="evaluation-file" class="tv-button">
               <span class="button-text">[ 选择评估文件 ]</span>
             </label>
-            <div class="file-name">{{ selectedFile ? selectedFile.name : '未选择文件' }}</div>
+          </div>
+        </div>
+        
+        <!-- 步骤2: 字段选择 -->
+        <div v-else-if="!fieldsConfirmed" class="step-container field-selection">
+          <div class="step-header">
+            <div class="selected-file">已选择: {{ selectedFile.name }}</div>
+            <div class="instruction-text">请选择需要评估的字段</div>
           </div>
           
-          <!-- 字段选择 - 仅在有可用字段时显示 -->
-          <div class="field-selector" v-if="availableFields.length > 0">
+          <div class="field-selector">
             <div class="field-selector-header">
               <div class="field-label">可用字段 <span class="field-count">{{ selectedFields.length }}/{{ availableFields.length }}</span></div>
               <button @click="selectAllFields" class="tv-button small">全选</button>
@@ -43,331 +60,308 @@
               class="tv-button confirm"
               :disabled="selectedFields.length === 0"
             >
-              确认字段
+              [ 确认字段 ]
               <span v-if="fieldsConfirmed" class="confirm-indicator">✓</span>
             </button>
           </div>
-          
-          <!-- 评估类型选择 -->
-          <div class="eval-type-selector" v-if="selectedFile">
-            <div class="selector-label">评估类型</div>
-            <div class="type-buttons">
-              <button 
-                @click="selectedEvalType = 'dialogue'" 
-                class="tv-button" 
-                :class="{ 'active': selectedEvalType === 'dialogue' }"
-              >
-                对话评估
-              </button>
-              <button 
-                @click="selectedEvalType = 'memory'" 
-                class="tv-button" 
-                :class="{ 'active': selectedEvalType === 'memory' }"
-              >
-                记忆评估
-              </button>
-            </div>
-          </div>
-          
-          <!-- 评估代号设置 -->
-          <div class="eval-code-group" v-if="selectedFile">
-            <div class="selector-label">评估代号</div>
-            <div class="eval-code-input">
-              <input 
-                type="text" 
-                v-model="evaluationCode" 
-                placeholder="评估代号"
-                class="retro-input"
-              >
-              <button @click="generateRandomCode" class="tv-button small">
-                重新生成
-              </button>
-            </div>
-          </div>
-          
-          <!-- 人设信息输入 -->
-          <div class="role-info-group" v-if="selectedFile">
-            <div class="selector-label">人设信息</div>
-            <textarea 
-              v-model="roleInfo" 
-              placeholder="输入角色人设信息（可选）"
-              class="retro-textarea"
-              rows="4"
-            ></textarea>
-          </div>
-          
-          <!-- 开始评估按钮 -->
-          <div class="eval-actions" v-if="selectedFile">
-            <button 
-              @click="startEvaluation" 
-              class="tv-button primary" 
-              :disabled="!fieldsConfirmed || isEvaluating"
-            >
-              {{ isEvaluating ? '评估中...' : '开始评估' }}
-              <div class="button-indicator" :class="{ 'active': isEvaluating }"></div>
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 评估过程屏幕 -->
-      <div v-else-if="isEvaluating || (systemMessage && !evaluationStats)" class="eval-process">
-        <!-- 进度条 - 仅在评估过程中显示 -->
-        <div class="progress-container" v-if="isEvaluating">
-          <div class="progress-bar">
-            <div class="progress-fill" :style="progressStyle"></div>
-          </div>
-          <div class="progress-text">{{ processed }}/{{ total }}</div>
         </div>
         
-        <div class="standby-screen" v-if="systemMessage && !evaluationText">
-          <div class="tv-logo">AI EVALUATOR</div>
-          <div class="standby-message">{{ systemMessage }}</div>
-          <div class="standby-animation"></div>
+        <!-- 步骤3: 评估配置 -->
+        <div v-else-if="!isEvaluating && !evaluationStats" class="step-container evaluation-config">
+          <div class="step-header">
+            <div class="instruction-text">评估配置</div>
+          </div>
+          
+          <div class="config-container">
+            <!-- 评估代号设置 -->
+            <div class="eval-code-group">
+              <div class="selector-label">评估代号</div>
+              <div class="eval-code-input">
+                <input 
+                  type="text" 
+                  v-model="evaluationCode" 
+                  placeholder="自动生成评估代号"
+                  class="retro-input"
+                >
+                <button @click="generateRandomCode" class="tv-button small">
+                  [ 随机生成 ]
+                </button>
+              </div>
+            </div>
+            
+            <!-- 评估类型选择 -->
+            <div class="eval-type-selector">
+              <div class="selector-label">评估类型</div>
+              <div class="type-buttons">
+                <button 
+                  @click="selectedEvalType = 'dialogue'" 
+                  class="tv-button" 
+                  :class="{ 'active': selectedEvalType === 'dialogue' }"
+                >
+                  对话评估
+                </button>
+                <button 
+                  @click="selectedEvalType = 'roleplay'" 
+                  class="tv-button" 
+                  :class="{ 'active': selectedEvalType === 'roleplay' }"
+                >
+                  角色扮演评估
+                </button>
+              </div>
+            </div>
+            
+            <!-- 角色信息 (仅对角色扮演评估显示) -->
+            <div class="role-info-group" v-if="selectedEvalType === 'roleplay'">
+              <div class="selector-label">角色信息</div>
+              <textarea 
+                v-model="roleInfo" 
+                placeholder="输入角色人设信息..."
+                class="role-info-input"
+                rows="4"
+              ></textarea>
+            </div>
+            
+            <!-- 开始评估按钮 -->
+            <div class="action-buttons">
+              <button @click="startEvaluation" class="tv-button primary">
+                [ 开始评估 ]
+              </button>
+              <button @click="resetEvaluation" class="tv-button">
+                [ 重置 ]
+              </button>
+            </div>
+          </div>
         </div>
         
-        <!-- 有评估数据时显示内容 -->
-        <div v-else class="evaluation-content">
-          <div class="message system-message" v-if="systemMessage">
-            {{ systemMessage }}
+        <!-- 步骤4: 评估过程 -->
+        <div v-else-if="isEvaluating" class="step-container evaluation-process">
+          <div class="evaluation-status">
+            <div class="status-title">评估进行中...</div>
+            <div class="evaluation-code-display">代号: {{ evaluationCode }}</div>
+            
+            <!-- 进度条 -->
+            <div class="progress-container">
+              <div class="progress-fill" :style="progressStyle"></div>
+              <div class="progress-text">{{ processed }}/{{ total }}</div>
+            </div>
           </div>
-          <div class="message ai-message" v-if="evaluationText">
-            <div class="message-header">
-              <span class="ai-badge">AI</span>
-              <span>评估结果</span>
-            </div>
-            <div class="message-content typewriter">
-              <pre class="typewriter-text">{{ evaluationText }}<span class="cursor" :class="{ 'blink': !isScanning }">|</span></pre>
-            </div>
+          
+          <!-- 实时评估结果展示 -->
+          <div class="evaluation-results-live">
+            <pre class="evaluation-text">{{ evaluationText }}</pre>
           </div>
         </div>
-      </div>
-      
-      <!-- 评估报告屏幕 -->
-      <div v-else-if="evaluationStats" class="eval-report">
-        <div class="report-header">
-          <h2 class="report-title">评估报告</h2>
+        
+        <!-- 步骤5: 评估报告 -->
+        <div v-else-if="evaluationStats" class="step-container evaluation-report">
+          <!-- 报告标签页 -->
           <div class="report-tabs">
             <button 
               @click="activeReportTab = 'details'" 
               class="tab-button" 
               :class="{ 'active': activeReportTab === 'details' }"
             >
-              详细报告
+              详情
+            </button>
+            <button 
+              @click="activeReportTab = 'analysis'" 
+              class="tab-button" 
+              :class="{ 'active': activeReportTab === 'analysis' }"
+            >
+              分析
             </button>
             <button 
               @click="activeReportTab = 'compare'" 
               class="tab-button" 
               :class="{ 'active': activeReportTab === 'compare' }"
             >
-              报告对比
+              对比
             </button>
-          </div>
-          <div class="report-actions">
-            <button @click="exportReportCSV" class="tv-button">
-              [ 导出报告(CSV) ]
-            </button>
-            <button @click="resetEvaluation" class="tv-button">
-              [ 重新评估 ]
-            </button>
-          </div>
-        </div>
-        
-        <!-- 详细报告标签页 -->
-        <div v-if="activeReportTab === 'details'" class="report-tab-content">
-          <!-- 总体评分 -->
-          <div class="score-overview">
-            <div class="score-card">
-              <div class="score-value">{{ evaluationStats.overall_scores.final_score }}</div>
-              <div class="score-label">总体评分</div>
-            </div>
-            <div class="score-card">
-              <div class="score-value">{{ evaluationStats.overall_scores.role_score }}</div>
-              <div class="score-label">角色评分</div>
-            </div>
-            <div class="score-card">
-              <div class="score-value">{{ evaluationStats.overall_scores.dialogue_score }}</div>
-              <div class="score-label">对话评分</div>
-            </div>
           </div>
           
-          <!-- 角色扮演评估 -->
-          <div class="assessment-section">
-            <h3>角色扮演评估</h3>
-            <div class="score-bars">
-              <div class="score-bar-item" v-for="(item, key) in rolePlayItems" :key="key">
-                <div class="score-bar-label">{{ item.label }}</div>
-                <div class="score-bar-container">
-                  <div class="score-bar" :style="{ width: `${getScoreValue(key, 'role_play')}%` }"></div>
+          <!-- 详情标签页内容 -->
+          <div v-if="activeReportTab === 'details'" class="report-content details-tab">
+            <div class="report-header">
+              <div class="report-title">评估报告: {{ evaluationCode }}</div>
+              <div class="report-date">{{ new Date().toLocaleString() }}</div>
+            </div>
+            
+            <!-- 角色扮演评分 -->
+            <div class="score-section">
+              <div class="section-title">角色扮演评分</div>
+              <div class="score-grid">
+                <div v-for="(item, key) in rolePlayItems" :key="`role-${key}`" class="score-item">
+                  <div class="score-label">{{ item.label }}</div>
+                  <div class="score-bar-container">
+                    <div 
+                      class="score-bar" 
+                      :style="{ width: `${getScoreValue(key, 'role_play') * 100}%`, backgroundColor: item.color }"
+                    ></div>
+                  </div>
+                  <div class="score-value">{{ (getScoreValue(key, 'role_play') * 100).toFixed(0) }}</div>
                 </div>
-                <div class="score-bar-value">{{ getScoreValue(key, 'role_play') }}</div>
               </div>
             </div>
             
-            <!-- 角色扮演关键词词云 -->
-            <div class="keywords-section">
-              <h4>角色扮演关键词分析</h4>
-              <div class="keywords-tabs">
+            <!-- 对话体验评分 -->
+            <div class="score-section">
+              <div class="section-title">对话体验评分</div>
+              <div class="score-grid">
+                <div v-for="(item, key) in dialogueItems" :key="`dialogue-${key}`" class="score-item">
+                  <div class="score-label">{{ item.label }}</div>
+                  <div class="score-bar-container">
+                    <div 
+                      class="score-bar" 
+                      :style="{ width: `${getScoreValue(key, 'dialogue_experience') * 100}%`, backgroundColor: item.color }"
+                    ></div>
+                  </div>
+                  <div class="score-value">{{ (getScoreValue(key, 'dialogue_experience') * 100).toFixed(0) }}</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 导出按钮 -->
+            <div class="report-actions">
+              <button @click="exportReportJSON" class="tv-button export-btn">
+                [ 导出报告(JSON) ]
+              </button>
+            </div>
+          </div>
+          
+          <!-- 分析标签页内容 -->
+          <div v-if="activeReportTab === 'analysis'" class="report-content analysis-tab">
+            <!-- 角色词语分析 -->
+            <div class="keyword-section" v-if="evaluationStats.role_keywords">
+              <div class="tabs role-keyword-tabs">
                 <button 
                   v-for="(item, key) in rolePlayItems" 
-                  :key="`role-${key}`"
-                  @click="activeRoleKeywordTab = key"
-                  class="keyword-tab"
+                  :key="`role-tab-${key}`"
+                  @click="activeRoleKeywordTab = key" 
+                  class="sub-tab-button" 
                   :class="{ 'active': activeRoleKeywordTab === key }"
-                >
-                  {{ item.label }}
-                </button>
-              </div>
-              <div class="retro-keyword-cloud" :key="`role-cloud-${activeRoleKeywordTab}`">
-                <div class="scanlines"></div>
-                <div class="glow-container">
-                  <div 
-                    v-for="(keyword, index) in getFormattedKeywords('role_play', activeRoleKeywordTab)" 
-                    :key="`role-keyword-${keyword.text}-${index}`"
-                    class="retro-keyword-tag"
-                    :style="keyword.style"
-                  >
-                    {{ keyword.text }}
-                    <span class="keyword-count">{{ keyword.count }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 对话体验评估 -->
-          <div class="assessment-section">
-            <h3>对话体验评估</h3>
-            <div class="score-bars">
-              <div class="score-bar-item" v-for="(item, key) in dialogueItems" :key="key">
-                <div class="score-bar-label">{{ item.label }}</div>
-                <div class="score-bar-container">
-                  <div class="score-bar" :style="{ width: `${getScoreValue(key, 'dialogue_experience')}%` }"></div>
-                </div>
-                <div class="score-bar-value">{{ getScoreValue(key, 'dialogue_experience') }}</div>
-              </div>
-            </div>
-            
-            <!-- 对话体验关键词词云 -->
-            <div class="keywords-section">
-              <h4>对话体验关键词分析</h4>
-              <div class="keywords-tabs">
-                <button 
-                  v-for="(item, key) in dialogueItems" 
-                  :key="`dialogue-${key}`"
-                  @click="activeDialogueKeywordTab = key"
-                  class="keyword-tab"
-                  :class="{ 'active': activeDialogueKeywordTab === key }"
-                >
-                  {{ item.label }}
-                </button>
-              </div>
-              <div class="retro-keyword-cloud" :key="`dialogue-cloud-${activeDialogueKeywordTab}`">
-                <div class="scanlines"></div>
-                <div class="glow-container">
-                  <div 
-                    v-for="(keyword, index) in getFormattedKeywords('dialogue_experience', activeDialogueKeywordTab)" 
-                    :key="`dialogue-keyword-${keyword.text}-${index}`"
-                    class="retro-keyword-tag"
-                    :style="keyword.style"
-                  >
-                    {{ keyword.text }}
-                    <span class="keyword-count">{{ keyword.count }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 报告对比标签页 -->
-        <div v-if="activeReportTab === 'compare'" class="report-tab-content">
-          <div class="comparison-header">
-            <h3>报告对比</h3>
-            <!-- 添加文件上传按钮 -->
-            <label class="tv-button upload-button">
-              [ 上传报告文件 ]
-              <input 
-                type="file" 
-                @change="handleReportFileUpload" 
-                accept=".json"
-                multiple
-                class="hidden-file-input"
-              />
-            </label>
-          </div>
-  
-          <!-- 无保存报告时显示引导信息 -->
-          <div v-if="savedReports.length === 0" class="no-reports">
-            <div class="info-icon">i</div>
-            <div class="no-reports-text">
-              请上传已保存的评估报告JSON文件进行对比分析。<br>
-              您可以上传多个报告文件同时进行对比。
-            </div>
-          </div>
-          
-          <div v-else class="reports-container">
-            <!-- 报告列表 -->
-            <div class="reports-list">
-              <div class="reports-list-header">
-                <div class="header-text">已加载报告 ({{ savedReports.length }})</div>
-                <div class="clear-button" @click="clearReports">清空</div>
-              </div>
-              <div v-for="report in savedReports" :key="report.id" class="report-item">
-                <div class="report-checkbox">
-                  <input type="checkbox" v-model="selectedReports" :value="report.id" :id="`report-${report.id}`">
-                  <label :for="`report-${report.id}`"></label>
-                </div>
-                <div class="report-info">
-                  <div class="report-code" :style="{ color: getReportColor(report.id) }">
-                    {{ report.evaluation_code }}
-                  </div>
-                  <div class="report-meta">
-                    得分: {{ report.overall_scores.final_score }} | 日期: {{ formatDate(report.evaluation_date) }}
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- 对比视图 -->
-            <div v-if="selectedReports.length >= 2" class="comparison-view">
-              <!-- 对比标签页 -->
-              <div class="comparison-tabs">
-                <button 
-                  v-for="(item, key) in rolePlayItems" 
-                  :key="`comp-${key}`"
-                  @click="activeComparisonTab = key"
-                  class="comparison-tab"
-                  :class="{ 'active': activeComparisonTab === key }"
+                  :style="{ borderColor: item.color }"
                 >
                   {{ item.label }}
                 </button>
               </div>
               
-              <!-- 对比图表 -->
-              <div class="comparison-section">
-                <h4>角色扮演对比 - {{ activeComparisonTab ? rolePlayItems[activeComparisonTab].label : '' }}</h4>
-                <div class="comparison-bars" v-if="activeComparisonTab">
-                  <div 
-                    v-for="reportId in selectedReports" 
-                    :key="`bar-${reportId}-${activeComparisonTab}`"
-                    class="comparison-bar-item"
-                  >
-                    <div class="comparison-label">{{ getReportById(reportId).evaluation_code }}</div>
-                    <div class="comparison-bar-container">
-                      <div 
-                        class="comparison-bar" 
-                        :style="{ 
-                          width: `${getDimensionScore(reportId, 'role_play', activeComparisonTab)}%`,
-                          backgroundColor: getReportColor(reportId)
-                        }"
-                      ></div>
-                    </div>
-                    <div class="comparison-value">{{ getDimensionScore(reportId, 'role_play', activeComparisonTab) }}</div>
+              <div class="keyword-cloud">
+                <div v-for="(weight, word) in evaluationStats.role_keywords[activeRoleKeywordTab]" 
+                    :key="`role-word-${word}`" 
+                    class="keyword-tag"
+                    :style="{ 
+                      fontSize: `${Math.max(0.8, Math.min(2, 0.8 + weight * 1.2))}rem`,
+                      opacity: Math.max(0.5, Math.min(1, 0.5 + weight * 0.5))
+                    }"
+                >
+                  {{ word }}
+                </div>
+              </div>
+            </div>
+            
+            <!-- 对话词语分析 -->
+            <div class="keyword-section" v-if="evaluationStats.dialogue_keywords">
+              <div class="tabs dialogue-keyword-tabs">
+                <button 
+                  v-for="(item, key) in dialogueItems" 
+                  :key="`dialogue-tab-${key}`"
+                  @click="activeDialogueKeywordTab = key" 
+                  class="sub-tab-button" 
+                  :class="{ 'active': activeDialogueKeywordTab === key }"
+                  :style="{ borderColor: item.color }"
+                >
+                  {{ item.label }}
+                </button>
+              </div>
+              
+              <div class="keyword-cloud">
+                <div v-for="(weight, word) in evaluationStats.dialogue_keywords[activeDialogueKeywordTab]" 
+                    :key="`dialogue-word-${word}`" 
+                    class="keyword-tag"
+                    :style="{ 
+                      fontSize: `${Math.max(0.8, Math.min(2, 0.8 + weight * 1.2))}rem`,
+                      opacity: Math.max(0.5, Math.min(1, 0.5 + weight * 0.5))
+                    }"
+                >
+                  {{ word }}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 对比标签页内容 -->
+          <div v-if="activeReportTab === 'compare'" class="report-content compare-tab">
+            <div class="report-actions top">
+              <input 
+                type="file" 
+                id="report-file" 
+                @change="handleReportFileUpload" 
+                accept=".json"
+                multiple
+                class="file-input"
+              />
+              <label for="report-file" class="tv-button">
+                [ 导入报告文件 ]
+              </label>
+              <button @click="clearReports" class="tv-button">
+                [ 清空报告 ]
+              </button>
+            </div>
+            
+            <!-- 已保存的报告列表 -->
+            <div class="saved-reports-list" v-if="savedReports.length > 0">
+              <div class="list-header">
+                <div class="list-title">已保存的报告 ({{ savedReports.length }})</div>
+                <div class="list-subtitle">选择要对比的报告</div>
+              </div>
+              
+              <div class="report-items">
+                <div v-for="report in savedReports" :key="report.id" class="report-item">
+                  <label class="report-label">
+                    <input type="checkbox" v-model="selectedReports" :value="report.id">
+                    <span class="report-name">{{ report.evaluation_code }}</span>
+                    <span class="report-date">{{ new Date(parseInt(report.id)).toLocaleDateString() }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 对比图表 -->
+            <div v-if="selectedReports.length >= 2" class="comparison-charts">
+              <div class="tabs comparison-tabs">
+                <button 
+                  @click="activeComparisonTab = 'consistency'" 
+                  class="sub-tab-button" 
+                  :class="{ 'active': activeComparisonTab === 'consistency' }"
+                >
+                  角色一致性
+                </button>
+                <button 
+                  @click="activeComparisonTab = 'helpfulness'" 
+                  class="sub-tab-button" 
+                  :class="{ 'active': activeComparisonTab === 'helpfulness' }"
+                >
+                  帮助程度
+                </button>
+              </div>
+              
+              <div class="comparison-chart">
+                <div v-for="reportId in selectedReports" :key="`chart-${reportId}`" class="comparison-item">
+                  <div class="comparison-label">{{ getReportById(reportId).evaluation_code }}</div>
+                  <div class="comparison-score">{{ (getDimensionScore(reportId) * 100).toFixed(0) }}</div>
+                  <div class="comparison-bar-container">
+                    <div 
+                      class="comparison-bar" 
+                      :style="{ 
+                        width: `${getDimensionScore(reportId) * 100}%`, 
+                        backgroundColor: getDimensionColor(reportId)
+                      }"
+                    ></div>
                   </div>
                 </div>
               </div>
             </div>
+            
             <div v-if="savedReports.length > 0" class="report-actions bottom">
               <button @click="exportComparisonCSV" class="tv-button export-btn">
                 [ 导出对比报告(CSV) ]
@@ -530,7 +524,7 @@
       
       systemMessage.value = '正在连接评估服务...'
       
-      const response = await fetch(`${API_BASE_URL}/api/v1/evaluate`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/evaluate/stream`, {
         method: 'POST',
         body: formData
       })

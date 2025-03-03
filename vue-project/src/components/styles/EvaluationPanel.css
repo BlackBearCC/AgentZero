@@ -1,62 +1,25 @@
 /* 主容器 */
-/* 全局滚动条样式 */
+/* 重置基本样式 */
 
-  
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
-  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #333333, #222222);
-  border-radius: 4px;
-  box-shadow: inset 0 0 3px rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(68, 255, 68, 0.3);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #444444, #333333);
-  border-color: rgba(68, 255, 68, 0.5);
-}
-
-::-webkit-scrollbar-corner {
-  background: transparent;
-}
-
-/* 为Firefox浏览器设置滚动条样式 */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #333333 rgba(0, 0, 0, 0.3);
-}
-/* 主容器 - 确保占满整个视口 */
 .tv-container {
-    display: flex;
-    width: 100vw;
-    height: 100vh;
-    background-color: #1a1a2a;
-    overflow: hidden;
-    position: fixed;
-    top: 0;
-    left: 0;
-  }
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  background-color: #1a1a2a;
+  position: fixed;
+  color: #e0e0e0;
+}
 
 /* 控制面板 */
 .control-panel {
-  width: 300px;
-  background-color: #2a2a3a;
-  padding: 20px;
-  border-right: 2px solid #3a3a4a;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow-y: auto;
-}
+    width: 300px;
+    min-width: 300px;
+    height: 100vh;
+    background-color: #2a2a3a;
+    padding: 20px;
+    border-right: 2px solid #3a3a4a;
+    overflow-y: auto;
+  }
 
 .panel-title {
   font-size: 1.5rem;
@@ -183,30 +146,32 @@
   text-shadow: 0 0 5px rgba(68, 255, 68, 0.3);
 }
 
-/* 电视屏幕 */
+/* 电视屏幕 - 占据剩余所有空间 */
 .tv-screen {
   flex: 1;
-  padding: 20px;
+  height: 100vh;
+  background-color: #000000;
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
 
+/* 屏幕框架 */
 .screen-frame {
   width: 100%;
   height: 100%;
-  background-color: #000;
-  border-radius: 10px;
-  overflow: hidden;
+  background-color: #000000;
   position: relative;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.1);
+  overflow: hidden;
 }
 
+/* 屏幕内容 */
 .screen-content {
   width: 100%;
   height: 100%;
   position: relative;
-  overflow: hidden;
+  background-color: #000000;
 }
 
 /* 扫描线效果 */

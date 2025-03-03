@@ -1,9 +1,9 @@
 <template>
   <div id="app">
-    <EvaluationPanel />
+    <ControlPanel />
   </div>
 </template>
 
 <script setup>
-import EvaluationPanel from './components/ControlPanel.vue'
+import ControlPanel from './components/ControlPanel.vue'
 </script> 

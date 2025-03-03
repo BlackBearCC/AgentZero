@@ -5,5 +5,5 @@
 </template>
 
 <script setup>
-import EvaluationPanel from './components/EvaluationPanel.vue'
+import EvaluationPanel from './components/ControlPanel.vue'
 </script> 

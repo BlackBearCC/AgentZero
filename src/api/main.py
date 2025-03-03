@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api.routes import chat, agent, eval
+from src.api.routes import chat, agent, eval, role
 from src.services.agent_service import AgentService
 
 app = FastAPI(title="AgentZero API")
@@ -21,6 +21,7 @@ agent_service = AgentService()
 app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
 app.include_router(agent.router, prefix="/api/v1", tags=["agent"])
 app.include_router(eval.router, prefix="/api/v1", tags=["evaluation"])
+app.include_router(role.router, prefix="/api/v1", tags=["role"])
 
 @app.get("/")
 async def health_check():

@@ -131,32 +131,82 @@ const handleFileChange = (event) => {
     fileName.value = ''
   }
 }
-
 // 生成角色
-const generateCharacter = () => {
+const generateCharacter = async () => {
   if (!canGenerate.value) return
   
   isGenerating.value = true
+  characterData.value = null
   
-  // 模拟生成过程
-  setTimeout(() => {
-    // 生成模拟数据
-    characterData.value = {
-      name: "艾丽莎·克拉克",
-      background: "艾丽莎出生于一个沿海小镇，父亲是灯塔守护者，母亲是一名海洋生物学家。童年时常独自探索海滩和礁石，培养了她对神秘和冒险的热爱。大学主修海洋考古学，曾参与多次沉船探索任务。在一次任务中意外发现了一个古老的海洋文明遗迹，此后专注于研究古代海洋文明与现代社会的联系。她性格独立又富有好奇心，坚信海洋中隐藏着人类历史的重要线索。",
-      keywords: ["海洋考古学家", "冒险家", "学者", "独立", "执着", "直觉敏锐"],
-      traits: [
-        { name: "好奇心", value: 85 },
-        { name: "冒险精神", value: 78 },
-        { name: "分析能力", value: 92 },
-        { name: "独立性", value: 80 },
-        { name: "耐心", value: 65 },
-        { name: "适应力", value: 75 }
-      ]
-    }
+  try {
+    // 读取文件内容
+    const fileContent = await selectedFile.value.text()
     
+    const response = await fetch('/api/v1/generate_role_config/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream'
+      },
+      body: JSON.stringify({
+        reference: fileContent // 使用文件实际内容
+      })
+    })
+    
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+    
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      
+      buffer += decoder.decode(value, { stream: true })
+      
+      // 处理SSE格式数据
+      const lines = buffer.split('\n\n')
+      for (const line of lines.slice(0, -1)) {  // 保留最后未完成部分
+        if (line.startsWith('data: ')) {
+          try {
+            const jsonStr = line.replace('data: ', '')
+            const data = JSON.parse(jsonStr)
+            
+            // 初始化数据结构
+            if (!characterData.value) {
+              characterData.value = {
+                name: '',
+                background: '',
+                keywords: [],
+                traits: []
+              }
+            }
+            
+            // 合并流式数据
+            if (data.basic_info) {
+              characterData.value.name = data.basic_info.name || ''
+              characterData.value.background = data.basic_info.background || ''
+            }
+            if (data.personality?.traits) {
+              characterData.value.traits = data.personality.traits.map(t => ({
+                name: t,
+                value: Math.floor(Math.random() * 40 + 60) // 模拟数值
+              }))
+            }
+            if (data.expertise) {
+              characterData.value.keywords = [...data.expertise]
+            }
+          } catch (e) {
+            console.error('解析错误:', e)
+          }
+        }
+      }
+      buffer = lines[lines.length - 1]  // 保留未处理完的数据
+    }
+  } catch (e) {
+    console.error('生成失败:', e)
+  } finally {
     isGenerating.value = false
-  }, 3000)
+  }
 }
 
 // 导出角色

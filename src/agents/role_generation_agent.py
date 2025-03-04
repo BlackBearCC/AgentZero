@@ -97,8 +97,33 @@ class RoleGenerationAgent(BaseAgent):
 
     def _fix_json(self, text: str) -> str:
         """修复不完整的JSON"""
-        text = text.replace("'", '"')
-        text = text.replace("，", ",")
+        # 移除可能的前缀和后缀
+        text = text.strip()
+        
+        # 如果文本被转义了，需要还原
+        if text.startswith('"') and text.endswith('"'):
+            try:
+                # 先解码转义的字符串
+                text = json.loads(text)
+            except:
+                pass
+        
+        # 基础清理
+        text = text.replace('\n', '')
+        text = text.replace('\r', '')
+        text = text.replace('\t', '')
+        text = text.replace('，', ',')
+        text = text.replace('：', ':')
+        text = text.replace('"', '"')
+        text = text.replace('"', '"')
+        text = text.replace('\'', '"')
+        
+        # 确保 JSON 对象的完整性
+        if not text.startswith('{'):
+            text = '{' + text
+        if not text.endswith('}'):
+            text = text + '}'
+        
         return text
 
     # 实现基类要求的抽象方法
@@ -143,14 +168,21 @@ class RoleGenerationAgent(BaseAgent):
             # 发送数据块
             yield f"data: {json.dumps({'type': 'chunk', 'content': chunk}, ensure_ascii=False)}\n\n"
         
-        # 发送结束标记
-        yield f"data: {json.dumps({'type': 'end'}, ensure_ascii=False)}\n\n"
-        
-        self._logger.info(f"角色生成完成: {full_response}")
-        # 最终验证并发送完整结果
         try:
-            json.loads(full_response)
-            yield f"data: {json.dumps({'type': 'complete', 'content': full_response}, ensure_ascii=False)}\n\n"
-        except json.JSONDecodeError:
-            fixed_json = self._fix_json(full_response)
-            yield f"data: {json.dumps({'type': 'complete', 'content': fixed_json}, ensure_ascii=False)}\n\n"
+            # 清理和规范化 JSON 字符串
+            cleaned_response = full_response.strip()
+            # 尝试直接解析，因为返回的应该已经是合法的 JSON
+            try:
+                parsed_response = json.loads(cleaned_response)
+            except json.JSONDecodeError:
+                # 如果直接解析失败，尝试修复 JSON
+                cleaned_response = self._fix_json(cleaned_response)
+                parsed_response = json.loads(cleaned_response)
+            
+            # 发送完整的解析后的数据
+            yield f"data: {json.dumps({'type': 'complete', 'content': parsed_response}, ensure_ascii=False)}\n\n"
+        except json.JSONDecodeError as e:
+            self._logger.warning(f"JSON解析失败: {str(e)}")
+            # 如果解析失败，发送原始响应
+            yield f"data: {json.dumps({'type': 'chunk', 'content': cleaned_response}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'content': cleaned_response}, ensure_ascii=False)}\n\n"

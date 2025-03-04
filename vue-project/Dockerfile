@@ -5,10 +5,20 @@ ENV NODE_OPTIONS=--openssl-legacy-provider
 
 WORKDIR /app
 COPY package*.json ./
+
+# Install dependencies including Element Plus
 RUN npm install
+RUN npm install element-plus @element-plus/icons-vue
 
 # 复制所有源文件，包括字体
 COPY . .
+
+# Add Element Plus import to main.js if not already present
+RUN if ! grep -q "element-plus" src/main.js; then \
+    echo "import ElementPlus from 'element-plus';" >> src/main.js && \
+    echo "import 'element-plus/dist/index.css';" >> src/main.js && \
+    echo "app.use(ElementPlus);" >> src/main.js; \
+    fi
 
 RUN npm run build
 
@@ -20,4 +30,4 @@ RUN mkdir -p /usr/share/nginx/html/fonts
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"] 
+CMD ["nginx", "-g", "daemon off;"]

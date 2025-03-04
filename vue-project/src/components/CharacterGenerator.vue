@@ -58,59 +58,27 @@
           :loading="isGenerating"
           placeholder="正在生成角色配置..."
           :typing-effect="true"
-          :typing-speed="30"
+          :typing-speed="3"
         />
       </div>
     </div>
     
-    <!-- 生成结果 -->
-    <div v-else class="character-result">
-      <div class="result-header">
-        <h2>{{ characterData.name }}</h2>
-        <div class="header-actions">
-          <button @click="resetGenerator" class="tv-button">
-            <span class="button-text">[ 重新生成 ]</span>
-          </button>
-          <button @click="exportCharacter" class="tv-button">
-            <span class="button-text">[ 导出角色 ]</span>
-          </button>
-        </div>
-      </div>
-      
-      <div class="character-content">
-        <div class="character-section">
-          <h3>背景故事</h3>
-          <p>{{ characterData.background }}</p>
-        </div>
-        
-        <div class="character-section">
-          <h3>关键特点</h3>
-          <div class="keywords-list">
-            <span v-for="(keyword, index) in characterData.keywords" :key="index" class="keyword-tag">
-              {{ keyword }}
-            </span>
-          </div>
-        </div>
-        
-        <div class="character-section">
-          <h3>性格特质</h3>
-          <div class="traits-list">
-            <div v-for="(trait, index) in characterData.traits" :key="index" class="trait-item">
-              <div class="trait-name">{{ trait.name }}</div>
-              <div class="trait-bar-container">
-                <div class="trait-bar" :style="{ width: `${trait.value}%` }"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- 生成结果 - 使用新组件 -->
+    <div v-else class="result-container">
+      <CharacterReport 
+        :character="characterData"
+        @reset="resetGenerator"
+        @export="exportCharacter"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import StreamDisplay from './StreamDisplay.vue'
+import CharacterReport from './CharacterReport.vue'
 
 // 文件状态
 const fileName = ref('')
@@ -142,6 +110,57 @@ const handleFileChange = (event) => {
     fileName.value = ''
   }
 }
+
+// 处理最终数据
+const processCharacterData = (finalData) => {
+  // 确保 finalData 存在且是对象
+  if (!finalData || typeof finalData !== 'object') {
+    return null;
+  }
+
+  // 提取基础信息
+  const basicInfo = finalData.基础信息 || [];
+  const name = basicInfo.find(item => item.关键词.includes('姓名'))?.内容 || '';
+  const age = basicInfo.find(item => item.关键词.includes('年龄'))?.内容 || '';
+  const identity = basicInfo.find(item => item.关键词.includes('身份'))?.内容 || '';
+
+  // 提取背景故事
+  const background = [
+    ...(finalData.成长经历 || []).map(item => item.内容),
+    ...(finalData.背景故事 || []).map(item => item.内容)
+  ].join('\n\n');
+
+  // 收集所有关键词
+  const keywords = [
+    ...basicInfo.flatMap(item => item.关键词 || []),
+    ...(finalData.性格特征 || []).flatMap(item => item.关键词 || []),
+    ...(finalData.能力特征 || []).flatMap(item => item.关键词 || []),
+    ...(finalData.兴趣爱好 || []).flatMap(item => item.关键词 || []),
+    ...(finalData.特殊习惯 || []).flatMap(item => item.关键词 || []),
+    ...(finalData.价值观念 || []).flatMap(item => item.关键词 || [])
+  ].filter((keyword, index, self) => 
+    keyword && self.indexOf(keyword) === index // 去重
+  );
+
+  // 收集性格特征
+  const traits = [
+    ...(finalData.性格特征 || []),
+    ...(finalData.情感特质 || []),
+    ...(finalData.行为模式 || [])
+  ].map(t => ({
+    name: t.内容?.replace(/[（(].*[)）]/, '').trim() || '', // 移除括号内的内容
+    value: t.强度 ? t.强度 * 20 : 80 // 1-5 映射到 20-100
+  })).filter(t => t.name); // 过滤掉空名称
+
+  return {
+    name,
+    identity,
+    age,
+    background,
+    keywords,
+    traits
+  };
+};
 
 // 生成角色
 const generateCharacter = async () => {
@@ -188,17 +207,21 @@ const generateCharacter = async () => {
               streamContent.value += data.content
               break
             case 'complete':
-              // 最终数据处理
-              const finalData = JSON.parse(data.content)
-              characterData.value = {
-                name: finalData.基础信息?.[0]?.内容 || '',
-                background: finalData.成长经历?.[0]?.内容 || '',
-                keywords: finalData.关键词 || [],
-                traits: finalData.性格特征?.map(t => ({
-                  name: t.内容,
-                  value: Math.floor(Math.random() * 40 + 60)
-                })) || []
+              try {
+                // 最终数据处理
+                const processedData = processCharacterData(data.content)
+                if (processedData) {
+                  characterData.value = processedData
+                }
+              } catch (parseError) {
+                console.error('角色数据解析失败:', parseError)
+                // 显示错误提示
+                ElMessage.error('角色数据解析失败，请重试')
               }
+              break
+            case 'error':
+              console.error('生成错误:', data.content)
+              ElMessage.error(data.content)
               break
           }
         }
@@ -206,6 +229,7 @@ const generateCharacter = async () => {
     }
   } catch (e) {
     console.error('生成失败:', e)
+    ElMessage.error('生成过程出现错误，请重试')
   } finally {
     isGenerating.value = false
   }
@@ -380,117 +404,6 @@ const resetGenerator = () => {
   gap: 15px;
 }
 
-/* 处理中动画 */
-.processing-message {
-  font-size: 1.2rem;
-  color: #e0e0e0;
-  margin-bottom: 2rem;
-}
-
-.processing-animation {
-  width: 100px;
-  height: 100px;
-  border: 5px solid rgba(68, 255, 68, 0.3);
-  border-top: 5px solid #44ff44;
-  border-radius: 50%;
-  animation: spin 1.5s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* 结果显示样式 */
-.character-result {
-  padding: 20px;
-}
-
-.result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(68, 255, 68, 0.3);
-}
-
-.result-header h2 {
-  color: #44ff44;
-  margin: 0;
-  font-size: 1.5rem;
-  text-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
-}
-
-.header-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.character-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.character-section {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(68, 255, 68, 0.2);
-  border-radius: 8px;
-  padding: 15px;
-}
-
-.character-section h3 {
-  color: #44ff44;
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 1.2rem;
-}
-
-.keywords-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.keyword-tag {
-  background: rgba(68, 255, 68, 0.2);
-  border: 1px solid rgba(68, 255, 68, 0.5);
-  border-radius: 15px;
-  padding: 5px 12px;
-  font-size: 0.9rem;
-}
-
-.traits-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.trait-item {
-  display: flex;
-  align-items: center;
-}
-
-.trait-name {
-  width: 100px;
-  font-size: 0.9rem;
-}
-
-.trait-bar-container {
-  flex: 1;
-  height: 15px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.trait-bar {
-  height: 100%;
-  background: linear-gradient(90deg, rgba(68, 255, 68, 0.5), #44ff44);
-  border-radius: 8px;
-}
-
 .generation-screen {
   flex: 1;
   position: relative;
@@ -555,15 +468,16 @@ const resetGenerator = () => {
   position: relative;
   z-index: 3;
   overflow-y: auto;
+  text-align: left; /* 确保文本左对齐 */
 }
 
 :deep(.stream-text) {
   font-size: 1.2rem;
   line-height: 1.6;
   width: 100%;
-  /* 防止抖动的关键设置 */
   min-height: 100%;
   position: relative;
+  text-align: left; /* 确保文本左对齐 */
 }
 
 /* 修改光标样式以匹配主题 */
@@ -571,6 +485,7 @@ const resetGenerator = () => {
   background-color: #44ff44;
   box-shadow: 0 0 5px rgba(68, 255, 68, 0.7);
   height: 1.2em;
+  margin-left: 0; /* 移除左边距,使光标紧跟文本 */
 }
 
 :deep(.loading-indicator) {
@@ -619,5 +534,33 @@ const resetGenerator = () => {
   color: #44ff44;
   text-shadow: 0 0 10px rgba(68, 255, 68, 0.7);
   z-index: 4;
+}
+
+/* 结果容器样式 */
+.result-container {
+  height: 100%;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 15px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .screen-controls {
+    width: 95%;
+  }
+  
+  .generation-screen {
+    margin: 10px;
+    width: calc(100% - 20px);
+  }
+  
+  .result-container {
+    padding: 10px;
+  }
 }
 </style>

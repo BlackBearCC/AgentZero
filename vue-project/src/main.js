@@ -14,11 +14,14 @@ import '@/assets/styles/buttons.css'
 import '@/assets/styles/indicators.css'
 import '@/assets/styles/progress-bars.css'
 import { createApp } from 'vue'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
 import App from './App.vue'
 import router from './router'
 
 const app = createApp(App)
 
 app.use(router)
+app.use(ElementPlus) // 注册 ElementPlus
 
 app.mount('#app')

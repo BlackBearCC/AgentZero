@@ -50,8 +50,15 @@
     <!-- 生成中状态 -->
     <div v-else-if="isGenerating" class="processing-state">
       <div class="tv-logo">CHARACTER GENERATOR</div>
-      <div class="processing-message">正在生成角色资料...</div>
-      <div class="processing-animation"></div>
+      <div class="generation-content">
+        <StreamDisplay 
+          :content="streamContent"
+          :loading="isGenerating"
+          placeholder="正在生成角色配置..."
+          :typing-effect="true"
+          :typing-speed="30"
+        />
+      </div>
     </div>
     
     <!-- 生成结果 -->
@@ -100,7 +107,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
+import StreamDisplay from './StreamDisplay.vue'
 
 // 文件状态
 const fileName = ref('')
@@ -114,6 +122,7 @@ const extractKeywords = ref(true)
 // 生成状态
 const isGenerating = ref(false)
 const characterData = ref(null)
+const streamContent = ref('')
 
 // 计算属性
 const canGenerate = computed(() => {
@@ -131,17 +140,16 @@ const handleFileChange = (event) => {
     fileName.value = ''
   }
 }
+
 // 生成角色
 const generateCharacter = async () => {
   if (!canGenerate.value) return
   
   isGenerating.value = true
   characterData.value = null
+  streamContent.value = ''  // 重置流内容
   
   try {
-    // 读取文件内容
-    const fileContent = await selectedFile.value.text()
-    
     const response = await fetch('/api/v1/generate_role_config/stream', {
       method: 'POST',
       headers: {
@@ -149,7 +157,7 @@ const generateCharacter = async () => {
         'Accept': 'text/event-stream'
       },
       body: JSON.stringify({
-        reference: fileContent // 使用文件实际内容
+        reference: await selectedFile.value.text()
       })
     })
     
@@ -163,24 +171,23 @@ const generateCharacter = async () => {
       
       buffer += decoder.decode(value, { stream: true })
       
-      // 处理SSE格式数据
-      const lines = buffer.split('\n\n')
-      for (const line of lines.slice(0, -1)) {  // 保留最后未完成部分
-        if (line.startsWith('data: ')) {
+      // 修复点：更健壮的SSE事件分割逻辑
+      let eventEndIndex
+      while ((eventEndIndex = buffer.indexOf('\n\n')) !== -1) {
+        const event = buffer.slice(0, eventEndIndex)
+        buffer = buffer.slice(eventEndIndex + 2)
+        
+        // 处理单个事件
+        if (event.startsWith('data: ')) {
+          const content = event.slice(6).trim() // 移除 "data: " 和前后空格
+          streamContent.value += content  // 只在这里追加内容
+          
           try {
-            const jsonStr = line.replace('data: ', '')
-            const data = JSON.parse(jsonStr)
-            
+            const data = JSON.parse(content)
             // 初始化数据结构
             if (!characterData.value) {
-              characterData.value = {
-                name: '',
-                background: '',
-                keywords: [],
-                traits: []
-              }
+              characterData.value = { name: '', background: '', keywords: [], traits: [] }
             }
-            
             // 合并流式数据
             if (data.basic_info) {
               characterData.value.name = data.basic_info.name || ''
@@ -189,18 +196,17 @@ const generateCharacter = async () => {
             if (data.personality?.traits) {
               characterData.value.traits = data.personality.traits.map(t => ({
                 name: t,
-                value: Math.floor(Math.random() * 40 + 60) // 模拟数值
+                value: Math.floor(Math.random() * 40 + 60)
               }))
             }
             if (data.expertise) {
               characterData.value.keywords = [...data.expertise]
             }
           } catch (e) {
-            console.error('解析错误:', e)
+            // JSON解析失败时不重复追加内容
           }
         }
       }
-      buffer = lines[lines.length - 1]  // 保留未处理完的数据
     }
   } catch (e) {
     console.error('生成失败:', e)
@@ -487,5 +493,23 @@ const resetGenerator = () => {
   height: 100%;
   background: linear-gradient(90deg, rgba(68, 255, 68, 0.5), #44ff44);
   border-radius: 8px;
+}
+
+.generation-content {
+  width: 80%;
+  max-width: 800px;
+  margin: 2rem auto;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  border-radius: 5px;
+  padding: 1.5rem;
+}
+
+.typewriter-text {
+  font-family: 'VT323', monospace;
+  color: #44ff44;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 </style> 

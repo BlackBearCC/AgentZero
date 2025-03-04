@@ -17,127 +17,63 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted, nextTick } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 
 const props = defineProps({
-  // 流式内容
   content: {
     type: String,
     default: ''
   },
-  // 是否显示加载状态
   loading: {
     type: Boolean,
     default: false
   },
-  // 占位文本
   placeholder: {
     type: String,
-    default: '等待数据流...'
+    default: ''
   },
-  // 是否启用打字机效果
   typingEffect: {
     type: Boolean,
-    default: true
+    default: false
   },
-  // 打字机效果速度 (ms)
   typingSpeed: {
     type: Number,
-    default: 30
-  },
-  // 是否自动滚动到底部
-  autoScroll: {
-    type: Boolean,
-    default: true
-  },
-  // 是否尝试格式化JSON
-  formatJson: {
-    type: Boolean,
-    default: true
+    default: 30 // 每个字符的打字速度(ms)
   }
 });
 
-const displayContent = ref('');
+const formattedContent = ref('');
 const contentRef = ref(null);
-const typingTimer = ref(null);
-const buffer = ref(''); // 用于存储待打印的内容
 
-// 监听内容变化
-watch(() => props.content, (newContent) => {
-  if (!newContent) {
-    displayContent.value = '';
-    buffer.value = '';
+// 实现打字机效果
+const typeContent = async (text) => {
+  if (!props.typingEffect) {
+    formattedContent.value = text;
     return;
   }
 
-  // 将新内容添加到缓冲区
-  const newChunk = newContent.substring(buffer.value.length);
-  if (newChunk) {
-    buffer.value = newContent;
-    if (props.typingEffect) {
-      // 如果正在打字，不需要重新开始
-      if (!typingTimer.value) {
-        typeNextChar();
-      }
-    } else {
-      // 不需要打字效果，直接显示
-      displayContent.value = newContent;
-      scrollToBottom();
-    }
-  }
-});
-
-// 打字效果 - 逐字打印
-const typeNextChar = () => {
-  if (displayContent.value.length < buffer.value.length) {
-    // 添加下一个字符
-    displayContent.value = buffer.value.substring(0, displayContent.value.length + 1);
-    scrollToBottom();
-    
-    // 设置下一个字符的定时器
-    typingTimer.value = setTimeout(() => {
-      typingTimer.value = null;
-      typeNextChar();
-    }, props.typingSpeed);
+  let currentIndex = formattedContent.value.length;
+  const targetLength = text.length;
+  
+  while (currentIndex < targetLength) {
+    formattedContent.value = text.slice(0, currentIndex + 1);
+    currentIndex++;
+    await new Promise(resolve => setTimeout(resolve, props.typingSpeed));
   }
 };
 
-// 滚动到底部
-const scrollToBottom = () => {
-  if (props.autoScroll && contentRef.value) {
-    nextTick(() => {
+// 监听content变化
+watch(() => props.content, async (newContent) => {
+  if (newContent) {
+    await typeContent(newContent);
+    // 自动滚动到底部
+    if (contentRef.value) {
       contentRef.value.scrollTop = contentRef.value.scrollHeight;
-    });
-  }
-};
-
-// 格式化显示内容
-const formattedContent = computed(() => {
-  if (!displayContent.value) return '';
-  
-  if (props.formatJson) {
-    try {
-      const jsonObj = JSON.parse(displayContent.value);
-      return JSON.stringify(jsonObj, null, 2);
-    } catch (e) {
-      return displayContent.value;
     }
+  } else {
+    formattedContent.value = '';
   }
-  
-  return displayContent.value;
-});
-
-// 组件卸载时清理
-onMounted(() => {
-  if (props.content) {
-    buffer.value = props.content;
-    if (props.typingEffect) {
-      typeNextChar();
-    } else {
-      displayContent.value = props.content;
-    }
-  }
-});
+}, { immediate: true });
 </script>
 
 <style scoped>

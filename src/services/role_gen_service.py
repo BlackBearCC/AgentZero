@@ -42,6 +42,7 @@ class RoleGenService:
         """流式生成角色配置"""
         try:
             async for chunk in self.gen_agent.astream_response(reference, user_id):
+                print(chunk)
                 yield chunk
         except Exception as e:
             self.logger.error(f"角色生成失败: {str(e)}")

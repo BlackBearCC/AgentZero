@@ -135,21 +135,22 @@ class RoleGenerationAgent(BaseAgent):
         ]
         
         full_response = ""
+        # 发送开始标记
+        yield f"data: {json.dumps({'type': 'start','content':''}, ensure_ascii=False)}\n\n"
+        
         async for chunk in self.llm.astream(messages):
             full_response += chunk
-            # 使用SSE格式包装响应
-            try:
-                # 尝试解析为JSON，如果成功则作为JSON数据返回
-                json_obj = json.loads(chunk)
-                yield f"data: {json.dumps(json_obj, ensure_ascii=False)}\n\n"
-            except json.JSONDecodeError:
-                # 如果不是有效JSON，则作为普通文本返回
-                yield f"data: {chunk}\n\n"
+            # 发送数据块
+            yield f"data: {json.dumps({'type': 'chunk', 'content': chunk}, ensure_ascii=False)}\n\n"
+        
+        # 发送结束标记
+        yield f"data: {json.dumps({'type': 'end'}, ensure_ascii=False)}\n\n"
         
         self._logger.info(f"角色生成完成: {full_response}")
-        # 最终验证JSON格式
+        # 最终验证并发送完整结果
         try:
             json.loads(full_response)
+            yield f"data: {json.dumps({'type': 'complete', 'content': full_response}, ensure_ascii=False)}\n\n"
         except json.JSONDecodeError:
             fixed_json = self._fix_json(full_response)
-            yield f"data: {fixed_json}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'content': fixed_json}, ensure_ascii=False)}\n\n"

@@ -171,39 +171,33 @@ const generateCharacter = async () => {
       
       buffer += decoder.decode(value, { stream: true })
       
-      // 修复点：更健壮的SSE事件分割逻辑
+      // 处理SSE事件
       let eventEndIndex
       while ((eventEndIndex = buffer.indexOf('\n\n')) !== -1) {
         const event = buffer.slice(0, eventEndIndex)
         buffer = buffer.slice(eventEndIndex + 2)
         
-        // 处理单个事件
         if (event.startsWith('data: ')) {
-          const content = event.slice(6).trim() // 移除 "data: " 和前后空格
-          streamContent.value += content  // 只在这里追加内容
+          const data = JSON.parse(event.slice(6).trim())
           
-          try {
-            const data = JSON.parse(content)
-            // 初始化数据结构
-            if (!characterData.value) {
-              characterData.value = { name: '', background: '', keywords: [], traits: [] }
-            }
-            // 合并流式数据
-            if (data.basic_info) {
-              characterData.value.name = data.basic_info.name || ''
-              characterData.value.background = data.basic_info.background || ''
-            }
-            if (data.personality?.traits) {
-              characterData.value.traits = data.personality.traits.map(t => ({
-                name: t,
-                value: Math.floor(Math.random() * 40 + 60)
-              }))
-            }
-            if (data.expertise) {
-              characterData.value.keywords = [...data.expertise]
-            }
-          } catch (e) {
-            // JSON解析失败时不重复追加内容
+          // 根据事件类型处理数据
+          switch (data.type) {
+            case 'chunk':
+              streamContent.value += data.content
+              break
+            case 'complete':
+              // 最终数据处理
+              const finalData = JSON.parse(data.content)
+              characterData.value = {
+                name: finalData.基础信息?.[0]?.内容 || '',
+                background: finalData.成长经历?.[0]?.内容 || '',
+                keywords: finalData.关键词 || [],
+                traits: finalData.性格特征?.map(t => ({
+                  name: t.内容,
+                  value: Math.floor(Math.random() * 40 + 60)
+                })) || []
+              }
+              break
           }
         }
       }

@@ -50,7 +50,9 @@
     <!-- 生成中状态 -->
     <div v-else-if="isGenerating" class="processing-state">
       <div class="tv-logo">CHARACTER GENERATOR</div>
-      <div class="generation-content">
+      <div class="generation-screen">
+        <div class="scan-line"></div>
+        <div class="screen-glare"></div>
         <StreamDisplay 
           :content="streamContent"
           :loading="isGenerating"
@@ -489,21 +491,133 @@ const resetGenerator = () => {
   border-radius: 8px;
 }
 
-.generation-content {
-  width: 80%;
-  max-width: 800px;
-  margin: 2rem auto;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(68, 255, 68, 0.3);
-  border-radius: 5px;
-  padding: 1.5rem;
+.generation-screen {
+  flex: 1;
+  position: relative;
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid rgba(68, 255, 68, 0.3);
+  border-radius: 15px;
+  overflow: hidden;
+  padding: 20px;
+  margin: 20px;
+  margin-top: 60px; /* 为顶部logo留出空间 */
+  width: calc(100% - 40px); /* 减去左右margin */
+  height: calc(100% - 100px); /* 减去上下margin和logo高度 */
+  box-shadow: 
+    inset 0 0 50px rgba(68, 255, 68, 0.1),
+    0 0 20px rgba(68, 255, 68, 0.2);
+  display: flex; /* 使用flex布局 */
 }
 
-.typewriter-text {
-  font-family: 'VT323', monospace;
-  color: #44ff44;
-  font-size: 1.1rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
+/* 扫描线效果 */
+.scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(68, 255, 68, 0.2);
+  animation: scanning 8s linear infinite;
+  z-index: 2;
 }
-</style> 
+
+/* CRT屏幕反光效果 */
+.screen-glare {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  right: -50%;
+  bottom: -50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes scanning {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
+/* 修改 StreamDisplay 容器样式 */
+:deep(.stream-content) {
+  height: 100%;
+  width: 100%;
+  background: transparent;
+  border: none;
+  font-family: 'VT323', 'Courier New', monospace;
+  color: #44ff44;
+  text-shadow: 0 0 5px rgba(68, 255, 68, 0.5);
+  padding: 20px;
+  position: relative;
+  z-index: 3;
+  overflow-y: auto;
+}
+
+:deep(.stream-text) {
+  font-size: 1.2rem;
+  line-height: 1.6;
+  width: 100%;
+  /* 防止抖动的关键设置 */
+  min-height: 100%;
+  position: relative;
+}
+
+/* 修改光标样式以匹配主题 */
+:deep(.stream-text.typing::after) {
+  background-color: #44ff44;
+  box-shadow: 0 0 5px rgba(68, 255, 68, 0.7);
+  height: 1.2em;
+}
+
+:deep(.loading-indicator) {
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  padding: 8px 15px;
+}
+
+/* 自定义滚动条 */
+:deep(.stream-content::-webkit-scrollbar) {
+  width: 10px;
+}
+
+:deep(.stream-content::-webkit-scrollbar-track) {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+:deep(.stream-content::-webkit-scrollbar-thumb) {
+  background: rgba(68, 255, 68, 0.3);
+  border-radius: 5px;
+}
+
+:deep(.stream-content::-webkit-scrollbar-thumb:hover) {
+  background: rgba(68, 255, 68, 0.5);
+}
+
+/* 闪烁的光标效果 */
+:deep(.stream-text.typing::after) {
+  content: '█';
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* 适配电视机主题的其他样式调整 */
+.tv-logo {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'VT323', monospace;
+  font-size: 1.5rem;
+  color: #44ff44;
+  text-shadow: 0 0 10px rgba(68, 255, 68, 0.7);
+  z-index: 4;
+}
+</style>

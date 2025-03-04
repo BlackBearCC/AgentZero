@@ -76,7 +76,6 @@ class RoleGenerationAgent(BaseAgent):
         return full_response
     
     async def astream_response(self, input_text: str, user_id: str, remark: str = '', context: Dict[str, Any] = None) -> AsyncIterator[str]:
-        """适配流式响应接口"""
         """流式生成角色配置"""
         prompt = self.gen_prompt.safe_substitute(
             reference=input_text
@@ -90,11 +89,19 @@ class RoleGenerationAgent(BaseAgent):
         full_response = ""
         async for chunk in self.llm.astream(messages):
             full_response += chunk
-            yield chunk
+            # 使用SSE格式包装响应
+            try:
+                # 尝试解析为JSON，如果成功则作为JSON数据返回
+                json_obj = json.loads(chunk)
+                yield f"data: {json.dumps(json_obj, ensure_ascii=False)}\n\n"
+            except json.JSONDecodeError:
+                # 如果不是有效JSON，则作为普通文本返回
+                yield f"data: {chunk}\n\n"
         
         self._logger.info(f"角色生成完成: {full_response}")
         # 最终验证JSON格式
         try:
             json.loads(full_response)
         except json.JSONDecodeError:
-            yield self._fix_json(full_response)
+            fixed_json = self._fix_json(full_response)
+            yield f"data: {fixed_json}\n\n"

@@ -17,8 +17,9 @@ async def stream_generate_role_config(
 ) -> StreamingResponse:
     """流式生成角色配置"""
     try:
+        message_stream = role_gen_service.generate_role_config(request.reference, request.user_id)
         return StreamingResponse(
-            role_gen_service.generate_role_config(request.reference, request.user_id),
+            message_stream,
             media_type="text/event-stream"
         )
     except Exception as e:

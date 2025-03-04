@@ -32,7 +32,8 @@ class RoleGenerationAgent(BaseAgent):
 
         用户输入：$reference
         
-        输出格式（请严格按照以下JSON格式输出，不要有任何多余内容）：
+        输出格式（请严格按照以下JSON格式输出，不要有任何多余内容，禁止包含\n）：
+        ```josn
         {
             "基础信息": [
                 {
@@ -78,19 +79,10 @@ class RoleGenerationAgent(BaseAgent):
                     "内容": "对感情专一且深情",
                     "强度": 5
                 }
-            ],
-            "喜好厌恶": [],
-            "成长经历": [],
-            "价值观念": [],
-            "社交关系": [],
-            "禁忌话题": [],
-            "行为模式": [],
-            "隐藏设定": [],
-            "目标动机": [],
-            "弱点缺陷": [],
-            "特殊习惯": [],
-            "语言风格": []
+            ]
+
         }
+        ```
         """)
         
 
@@ -168,21 +160,22 @@ class RoleGenerationAgent(BaseAgent):
             # 发送数据块
             yield f"data: {json.dumps({'type': 'chunk', 'content': chunk}, ensure_ascii=False)}\n\n"
         
+        # 发送结束标记
+        yield f"data: {json.dumps({'type': 'end'}, ensure_ascii=False)}\n\n"
+        
+        # 处理可能的markdown格式
+        cleaned_response = full_response
+        # 移除可能的markdown代码块标记
+        if "```json" in cleaned_response or "```josn" in cleaned_response:
+            cleaned_response = cleaned_response.replace("```json", "").replace("```josn", "").replace("```", "")
+        
+        self._logger.info(f"角色生成完成: {cleaned_response}")
+        
         try:
-            # 清理和规范化 JSON 字符串
-            cleaned_response = full_response.strip()
-            # 尝试直接解析，因为返回的应该已经是合法的 JSON
-            try:
-                parsed_response = json.loads(cleaned_response)
-            except json.JSONDecodeError:
-                # 如果直接解析失败，尝试修复 JSON
-                cleaned_response = self._fix_json(cleaned_response)
-                parsed_response = json.loads(cleaned_response)
-            
-            # 发送完整的解析后的数据
+            # 尝试解析JSON
+            parsed_response = json.loads(cleaned_response)
             yield f"data: {json.dumps({'type': 'complete', 'content': parsed_response}, ensure_ascii=False)}\n\n"
         except json.JSONDecodeError as e:
             self._logger.warning(f"JSON解析失败: {str(e)}")
             # 如果解析失败，发送原始响应
-            yield f"data: {json.dumps({'type': 'chunk', 'content': cleaned_response}, ensure_ascii=False)}\n\n"
             yield f"data: {json.dumps({'type': 'complete', 'content': cleaned_response}, ensure_ascii=False)}\n\n"

@@ -184,6 +184,7 @@ function handleAiOptimize(data) {
 
 // 添加 AI 生成处理函数
 function handleAiGenerate(data) {
+  console.log('CharacterReport 处理 AI 生成:', data);
   emit('aiGenerate', data);
 }
 </script>

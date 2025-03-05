@@ -160,7 +160,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { ElMessageBox } from 'element-plus';
 
 const props = defineProps({
@@ -189,6 +189,14 @@ const emit = defineEmits(['refresh', 'update', 'aiOptimize', 'aiGenerate']);
 // 编辑状态
 const isEditing = ref(false);
 const editingAttributes = ref([]);
+
+// 监听属性变化，更新编辑状态
+watch(() => props.attributes, (newAttributes) => {
+  if (isEditing.value) {
+    // 如果正在编辑，更新编辑中的属性
+    editingAttributes.value = JSON.parse(JSON.stringify(newAttributes));
+  }
+}, { deep: true });
 
 // 格式化内容，移除占位符
 function formatContent(content) {

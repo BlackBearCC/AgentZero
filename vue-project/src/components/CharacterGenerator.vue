@@ -99,6 +99,7 @@ import { ref, computed, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import StreamDisplay from './StreamDisplay.vue'
 import CharacterReport from './CharacterReport.vue'
+const emit = defineEmits(['reset', 'refresh', 'update', 'aiOptimize', 'aiGenerate'])
 
 // 文件状态
 const fileName = ref('')
@@ -456,6 +457,13 @@ async function handleAiOptimize({ category, index, attribute }) {
       throw new Error(`未找到类别: ${category}`);
     }
     
+    console.log('发送优化请求:', {
+      category: categoryConfig.key,
+      content: attribute.内容,
+      keywords: attribute.关键词,
+      importance: attribute.强度
+    });
+    
     const response = await fetch('/api/v1/optimize_attribute', {
       method: 'POST',
       headers: {
@@ -475,9 +483,11 @@ async function handleAiOptimize({ category, index, attribute }) {
     }
     
     const result = await response.json();
+    console.log('优化结果:', result);
     
-    // 更新编辑中的属性
+    // 更新编辑中的属性 - 直接使用返回的中文键名
     if (characterData[categoryConfig.key] && characterData[categoryConfig.key][index]) {
+      // 使用服务端返回的数据结构（中文键名）
       characterData[categoryConfig.key][index] = {
         内容: result.内容,
         关键词: result.关键词,
@@ -488,7 +498,7 @@ async function handleAiOptimize({ category, index, attribute }) {
     ElMessage.success('AI 优化完成');
   } catch (error) {
     console.error('AI 优化失败:', error);
-    ElMessage.error('AI 优化失败，请重试');
+    ElMessage.error(`AI 优化失败: ${error.message}`);
   } finally {
     // 移除加载状态
     const index = loadingCategories.value.indexOf(category);
@@ -509,6 +519,11 @@ async function handleAiGenerate({ category, existingAttributes }) {
       throw new Error(`未找到类别: ${category}`);
     }
     
+    console.log('发送生成请求:', {
+      category: categoryConfig.key,
+      existingAttributes: existingAttributes
+    });
+    
     const response = await fetch('/api/v1/generate_new_attribute', {
       method: 'POST',
       headers: {
@@ -526,22 +541,27 @@ async function handleAiGenerate({ category, existingAttributes }) {
     }
     
     const result = await response.json();
+    console.log('生成结果:', result);
     
-    // 在数组开头添加新生成的属性
+    // 在数组开头添加新生成的属性 - 直接使用返回的中文键名
     if (!characterData[categoryConfig.key]) {
       characterData[categoryConfig.key] = [];
     }
     
+    // 使用服务端返回的数据结构（中文键名）
     characterData[categoryConfig.key].unshift({
       内容: result.内容,
       关键词: result.关键词,
       强度: result.强度
     });
     
+    // 触发更新事件，通知 AttributeCard 组件更新编辑状态
+    emit('update', categoryConfig.key, characterData[categoryConfig.key]);
+    
     ElMessage.success('AI 生成完成');
   } catch (error) {
     console.error('AI 生成失败:', error);
-    ElMessage.error('AI 生成失败，请重试');
+    ElMessage.error(`AI 生成失败: ${error.message}`);
   } finally {
     const index = loadingCategories.value.indexOf(category);
     if (index !== -1) {

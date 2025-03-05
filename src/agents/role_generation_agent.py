@@ -159,3 +159,118 @@ class RoleGenerationAgent(BaseAgent):
             self._logger.warning(f"JSON解析失败: {str(e)}")
             # 如果解析失败，发送原始响应
             yield f"data: {json.dumps({'type': 'complete', 'content': cleaned_response}, ensure_ascii=False)}\n\n"
+
+    def _load_optimize_prompt(self):
+        """加载优化提示词模板"""
+        return Template("""
+        你是一个专业的角色配置优化专家。请基于以下信息优化角色属性：
+
+        类别：$category
+        当前内容：$content
+        当前关键词：$keywords
+        当前重要程度：$importance
+        
+        参考资料：$reference
+
+        请优化这个属性，使其更加丰富和准确。输出格式如下（严格按照JSON格式）：
+        {
+            "内容": "优化后的描述文本",
+            "关键词": ["关键词1", "关键词2", "关键词3"],
+            "强度": 5
+        }
+        """)
+
+    def _load_new_attribute_prompt(self):
+        """加载新属性生成提示词模板"""
+        return Template("""
+        你是一个专业的角色配置生成专家。请基于以下信息生成新的角色属性：
+
+        类别：$category
+        已有属性：$existing_attributes
+        参考资料：$reference
+
+        请生成一个新的、不重复的属性。输出格式如下（严格按照JSON格式）：
+        {
+            "内容": "新的描述文本",
+            "关键词": ["关键词1", "关键词2", "关键词3"],
+            "强度": 5
+        }
+        """)
+
+    async def optimize_attribute(
+        self,
+        category: str,
+        content: str,
+        keywords: List[str],
+        importance: int,
+        reference: str
+    ) -> dict:
+        """优化属性内容"""
+        prompt_template = self._load_optimize_prompt()
+        prompt = prompt_template.safe_substitute(
+            category=category,
+            content=content,
+            keywords=json.dumps(keywords, ensure_ascii=False),
+            importance=importance,
+            reference=reference
+        )
+        
+        messages = [
+            {"role": "system", "content": "你是一个角色配置优化专家"},
+            {"role": "user", "content": prompt}
+        ]
+        
+        # 使用 astream 替代 achat，并拼接结果
+        full_response = ""
+        async for chunk in self.llm.astream(messages):
+            full_response += chunk
+        
+        # 处理响应
+        cleaned_response = full_response
+        if "```json" in cleaned_response:
+            cleaned_response = cleaned_response.replace("```json", "").replace("```", "")
+        
+        try:
+            result = json.loads(cleaned_response)
+            print(f"优化结果: {result}")
+            return result
+        except json.JSONDecodeError:
+            self._logger.error(f"JSON解析失败: {cleaned_response}")
+            raise ValueError("优化结果格式错误")
+
+    async def generate_new_attribute(
+        self,
+        category: str,
+        existing_attributes: List[dict],
+        reference: str
+    ) -> dict:
+        """生成新属性"""
+        prompt_template = self._load_new_attribute_prompt()
+        prompt = prompt_template.safe_substitute(
+            category=category,
+            existing_attributes=json.dumps(existing_attributes, ensure_ascii=False),
+            reference=reference
+        )
+        
+        messages = [
+            {"role": "system", "content": "你是一个角色配置生成专家"},
+            {"role": "user", "content": prompt}
+        ]
+        
+        # 使用 astream 替代 achat，并拼接结果
+        full_response = ""
+        async for chunk in self.llm.astream(messages):
+            full_response += chunk
+        
+        # 处理响应
+        cleaned_response = full_response
+        if "```json" in cleaned_response:
+            cleaned_response = cleaned_response.replace("```json", "").replace("```", "")
+        
+        try:
+            result = json.loads(cleaned_response)
+            print(f"生成结果: {result}")
+            return result
+        except json.JSONDecodeError:
+            self._logger.error(f"JSON解析失败: {cleaned_response}")
+            raise ValueError("生成结果格式错误")

@@ -69,9 +69,12 @@
       
       <!-- 编辑模式 -->
       <div class="card-content edit-mode" v-else-if="isEditing">
-        <div class="edit-actions">
+        <div class="edit-actions top">
           <button @click="addNewAttribute" class="add-button">
             <span>+ 添加新属性</span>
+          </button>
+          <button @click="aiAddNewAttribute" class="add-button ai">
+            <span>🤖 AI 生成新属性</span>
           </button>
         </div>
         
@@ -81,12 +84,22 @@
           class="attribute-item editing"
         >
           <div class="edit-item-header">
-            <textarea 
-              v-model="attr.内容" 
-              class="edit-content"
-              placeholder="输入内容..."
-              rows="2"
-            ></textarea>
+            <div class="edit-content-wrapper">
+              <textarea 
+                v-model="attr.内容" 
+                class="edit-content"
+                placeholder="输入内容..."
+                rows="2"
+              ></textarea>
+              <button 
+                @click="aiOptimizeAttribute(index)" 
+                class="ai-optimize-button"
+                :disabled="attr.isOptimizing"
+              >
+                <span class="button-icon">🤖</span>
+                <span class="button-text">AI 优化</span>
+              </button>
+            </div>
             
             <div class="edit-importance">
               <span class="importance-label">重要程度:</span>
@@ -148,6 +161,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { ElMessageBox } from 'element-plus';
 
 const props = defineProps({
   title: {
@@ -170,7 +184,7 @@ const props = defineProps({
 });
 
 // 添加 emit 定义
-const emit = defineEmits(['refresh', 'update']);
+const emit = defineEmits(['refresh', 'update', 'aiOptimize', 'aiGenerate']);
 
 // 编辑状态
 const isEditing = ref(false);
@@ -189,13 +203,98 @@ function handleRefresh() {
 }
 
 // 切换编辑模式
-function toggleEditing() {
-  if (!isEditing.value) {
+async function toggleEditing() {
+  if (isEditing.value) {
+    // 如果已经在编辑模式，询问是否保存
+    try {
+      await ElMessageBox.confirm(
+        '是否保存当前的修改？',
+        '提示',
+        {
+          confirmButtonText: '保存',
+          cancelButtonText: '不保存',
+          type: 'warning',
+          distinguishCancelAndClose: true,
+          showClose: true,
+        }
+      );
+      // 用户点击保存
+      await saveChanges();
+    } catch (action) {
+      if (action === 'cancel') {
+        // 用户点击不保存
+        cancelEditing();
+      }
+      // 用户点击关闭按钮，保持编辑状态
+      return;
+    }
+  } else {
     // 进入编辑模式，复制一份数据进行编辑
     editingAttributes.value = JSON.parse(JSON.stringify(props.attributes));
   }
   isEditing.value = !isEditing.value;
 }
+
+// AI 优化属性
+async function aiOptimizeAttribute(index) {
+  const attr = editingAttributes.value[index];
+  attr.isOptimizing = true;
+  
+  try {
+    // 向父组件发送优化请求
+    emit('aiOptimize', {
+      category: props.title,
+      index,
+      attribute: attr
+    });
+    
+    // 注意：实际的优化逻辑在父组件中处理
+    // 这里只需要发送事件
+  } catch (error) {
+    console.error('AI 优化失败:', error);
+  } finally {
+    attr.isOptimizing = false;
+  }
+}
+
+// AI 添加新属性
+async function aiAddNewAttribute() {
+  // 向父组件发送生成请求
+  emit('aiGenerate', {
+    category: props.title,
+    existingAttributes: editingAttributes.value
+  });
+  
+  // 注意：实际的生成逻辑在父组件中处理
+}
+
+// 处理取消编辑
+async function handleCancelEditing() {
+  if (hasChanges.value) {
+    try {
+      await ElMessageBox.confirm(
+        '确定要取消编辑？未保存的修改将会丢失。',
+        '警告',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '返回编辑',
+          type: 'warning'
+        }
+      );
+      cancelEditing();
+    } catch {
+      // 用户取消操作，继续编辑
+    }
+  } else {
+    cancelEditing();
+  }
+}
+
+// 检查是否有未保存的更改
+const hasChanges = computed(() => {
+  if (!isEditing.value) return false;
+  return JSON.stringify(editingAttributes.value) !== JSON.stringify(props.attributes);
+});
 
 // 添加新属性
 function addNewAttribute() {
@@ -755,5 +854,56 @@ function cancelEditing() {
 
 .cancel-button:hover {
   background: rgba(150, 150, 150, 0.2);
+}
+
+.edit-content-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.ai-optimize-button {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  background: rgba(68, 68, 255, 0.1);
+  border: 1px solid rgba(68, 68, 255, 0.3);
+  border-radius: 4px;
+  color: #4444ff;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.3s ease;
+}
+
+.ai-optimize-button:hover {
+  background: rgba(68, 68, 255, 0.2);
+}
+
+.ai-optimize-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.add-button.ai {
+  background: rgba(68, 68, 255, 0.1);
+  border-color: rgba(68, 68, 255, 0.3);
+  color: #4444ff;
+}
+
+.add-button.ai:hover {
+  background: rgba(68, 68, 255, 0.2);
+}
+
+.edit-actions.top {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.button-icon {
+  font-size: 1.1rem;
 }
 </style>

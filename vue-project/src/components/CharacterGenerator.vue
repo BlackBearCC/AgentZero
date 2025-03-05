@@ -87,6 +87,8 @@
         @reset="resetGenerator"
         @refresh="refreshCategory"
         @update="updateCategory"
+        @aiOptimize="handleAiOptimize"
+        @aiGenerate="handleAiGenerate"
       />
     </div>
   </div>
@@ -441,6 +443,111 @@ function updateCategory(categoryKey, updatedData) {
   
   // 显示更新成功提示
   ElMessage.success(`${categoryKey} 更新成功`);
+}
+// 处理 AI 优化请求
+async function handleAiOptimize({ category, index, attribute }) {
+  // 添加到加载状态
+  loadingCategories.value.push(category);
+  
+  try {
+    // 找到对应的类别配置
+    const categoryConfig = categoryOptions.find(cat => cat.title === category);
+    if (!categoryConfig) {
+      throw new Error(`未找到类别: ${category}`);
+    }
+    
+    const response = await fetch('/api/v1/optimize_attribute', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        category: categoryConfig.key,
+        content: attribute.内容,
+        keywords: attribute.关键词,
+        importance: attribute.强度,
+        reference: await selectedFile.value.text() // 添加参考资料
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`优化请求失败: ${response.status} ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    // 更新编辑中的属性
+    if (characterData[categoryConfig.key] && characterData[categoryConfig.key][index]) {
+      characterData[categoryConfig.key][index] = {
+        内容: result.内容,
+        关键词: result.关键词,
+        强度: result.强度
+      };
+    }
+    
+    ElMessage.success('AI 优化完成');
+  } catch (error) {
+    console.error('AI 优化失败:', error);
+    ElMessage.error('AI 优化失败，请重试');
+  } finally {
+    // 移除加载状态
+    const index = loadingCategories.value.indexOf(category);
+    if (index !== -1) {
+      loadingCategories.value.splice(index, 1);
+    }
+  }
+}
+
+// 处理 AI 生成请求
+async function handleAiGenerate({ category, existingAttributes }) {
+  loadingCategories.value.push(category);
+  
+  try {
+    // 找到对应的类别配置
+    const categoryConfig = categoryOptions.find(cat => cat.title === category);
+    if (!categoryConfig) {
+      throw new Error(`未找到类别: ${category}`);
+    }
+    
+    const response = await fetch('/api/v1/generate_new_attribute', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        category: categoryConfig.key,
+        existingAttributes: existingAttributes,
+        reference: await selectedFile.value.text() // 添加参考资料
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`生成请求失败: ${response.status} ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    // 在数组开头添加新生成的属性
+    if (!characterData[categoryConfig.key]) {
+      characterData[categoryConfig.key] = [];
+    }
+    
+    characterData[categoryConfig.key].unshift({
+      内容: result.内容,
+      关键词: result.关键词,
+      强度: result.强度
+    });
+    
+    ElMessage.success('AI 生成完成');
+  } catch (error) {
+    console.error('AI 生成失败:', error);
+    ElMessage.error('AI 生成失败，请重试');
+  } finally {
+    const index = loadingCategories.value.indexOf(category);
+    if (index !== -1) {
+      loadingCategories.value.splice(index, 1);
+    }
+  }
 }
 </script>
 

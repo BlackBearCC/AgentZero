@@ -12,6 +12,55 @@ class RoleGenRequest(BaseModel):
     user_id: str = "web"
     categories: Optional[List[str]] = None
 
+class AttributeOptimizeRequest(BaseModel):
+    category: str
+    content: str
+    keywords: List[str]
+    importance: int
+    reference: str
+    user_id: str = "web"
+
+class AttributeGenerateRequest(BaseModel):
+    category: str
+    existingAttributes: List[dict]
+    reference: str
+    user_id: str = "web"
+
+@router.post("/optimize_attribute")
+async def optimize_attribute(
+    request: AttributeOptimizeRequest,
+    role_gen_service: RoleGenService = Depends(get_role_gen_service)
+) -> dict:
+    """优化属性内容"""
+    try:
+        result = await role_gen_service.optimize_attribute(
+            category=request.category,
+            content=request.content,
+            keywords=request.keywords,
+            importance=request.importance,
+            reference=request.reference,
+            user_id=request.user_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/generate_new_attribute")
+async def generate_new_attribute(
+    request: AttributeGenerateRequest,
+    role_gen_service: RoleGenService = Depends(get_role_gen_service)
+) -> dict:
+    """生成新属性"""
+    try:
+        result = await role_gen_service.generate_new_attribute(
+            category=request.category,
+            existing_attributes=request.existingAttributes,
+            reference=request.reference,
+            user_id=request.user_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 @router.post("/generate_role_config/stream")
 async def stream_generate_role_config(
     request: RoleGenRequest,
@@ -25,4 +74,4 @@ async def stream_generate_role_config(
             media_type="text/event-stream"
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))

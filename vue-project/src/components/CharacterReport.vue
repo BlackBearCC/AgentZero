@@ -24,6 +24,8 @@
         :loading="category.loading"
         @refresh="handleRefresh"
         @update="handleUpdate"
+        @aiOptimize="handleAiOptimize"
+        @aiGenerate="handleAiGenerate"
       />
     </div>
   </div>
@@ -34,7 +36,8 @@ import { ref, computed } from 'vue';
 import AttributeCard from './cards/AttributeCard.vue';
 
 // 修改 emit 定义，添加 refresh 事件
-const emit = defineEmits(['reset', 'refresh', 'update']);
+// 修改 emit 定义，添加 AI 相关事件
+const emit = defineEmits(['reset', 'refresh', 'update', 'aiOptimize', 'aiGenerate']);
 
 const props = defineProps({
   character: {
@@ -172,6 +175,16 @@ function handleUpdate(categoryTitle, updatedData) {
   } else {
     console.error('未找到对应的类别配置:', categoryTitle);
   }
+}
+
+// 添加 AI 优化处理函数
+function handleAiOptimize(data) {
+  emit('aiOptimize', data);
+}
+
+// 添加 AI 生成处理函数
+function handleAiGenerate(data) {
+  emit('aiGenerate', data);
 }
 </script>
 

@@ -116,7 +116,49 @@ class RoleGenService:
         
         # 发送结束信号
         yield f"data: {json.dumps({'type': 'all_complete', 'content': '所有类别生成完成'}, ensure_ascii=False)}\n\n"
+    async def optimize_attribute(
+        self,
+        category: str,
+        content: str,
+        keywords: List[str],
+        importance: int,
+        reference: str,
+        user_id: str
+    ) -> dict:
+        """优化属性内容"""
+        try:
+            # 构建优化提示
+            result = await self.gen_agent.optimize_attribute(
+                category=category,
+                content=content,
+                keywords=keywords,
+                importance=importance,
+                reference=reference
+            )
+            return result
+        except Exception as e:
+            self.logger.error(f"属性优化失败: {str(e)}")
+            raise
 
+    async def generate_new_attribute(
+        self,
+        category: str,
+        existing_attributes: List[dict],
+        reference: str,
+        user_id: str
+    ) -> dict:
+        """生成新属性"""
+        try:
+            # 构建生成提示
+            result = await self.gen_agent.generate_new_attribute(
+                category=category,
+                existing_attributes=existing_attributes,
+                reference=reference
+            )
+            return result
+        except Exception as e:
+            self.logger.error(f"新属性生成失败: {str(e)}")
+            raise
 # 依赖注入函数
 async def get_role_gen_service() -> RoleGenService:
     return RoleGenService()

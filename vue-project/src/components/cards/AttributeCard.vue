@@ -18,10 +18,7 @@
         >
           <span class="button-icon">↻</span>
         </button>
-        <div class="status-indicator" v-if="loading">
-          <div class="scanning-line"></div>
-          <span class="status-text">生成中...</span>
-        </div>
+        <!-- 移除了这里的状态指示器 -->
       </div>
     </div>
     
@@ -280,25 +277,6 @@ function handleRefresh() {
 .keyword-tag:hover {
   background: rgba(68, 255, 68, 0.2);
   transform: translateY(-2px);
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.scanning-line {
-  width: 50px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #44ff44, transparent);
-  animation: scanning 1.5s linear infinite;
-}
-
-.status-text {
-  color: #44ff44;
-  font-size: 0.9rem;
-  opacity: 0.8;
 }
 
 .card-placeholder {

@@ -10,9 +10,9 @@ class RoleGenerationAgent(BaseAgent):
         self.generation_rules = """
         生成规范：
         1. 内容结构：每条内容必须包含关键词数组、描述文本和重要程度。
-           - 关键词数组：用于检索和匹配，包含3-30个关联词，覆盖内容的重要概念。
-           - 描述文本：角色特征的具体描述，长度为10-30字，可包含补充说明，使用()标注。
-           - 重要程度：数值范围1-5，表示内容的重要性和优先级。
+           - 关键词：用于检索和匹配，包含3-30个关联词，覆盖内容的重要概念。
+           - 内容：角色特征的具体描述，长度为10-30字，可包含补充说明，使用()标注。
+           - 强度：数值范围1-5，表示内容的重要性和优先级。
         2. 内容生成：至少生成3条内容，确保描述的多样性和丰富性。
         3. 描述文本中可使用{{user}}和{{char}}占位符。
         """
@@ -28,6 +28,7 @@ class RoleGenerationAgent(BaseAgent):
         用户输入：$reference
         
         请仅生成 $category 类别的内容，输出格式如下（严格按照JSON格式，不要有任何多余内容）：
+        ```json
         {{
             "$category": [
                 {{
@@ -37,6 +38,7 @@ class RoleGenerationAgent(BaseAgent):
                 }}
             ]
         }}
+        ```
         """)
 
     async def generate_category(self, category: str, input_text: str) -> AsyncIterator[str]:
@@ -70,37 +72,6 @@ class RoleGenerationAgent(BaseAgent):
         except Exception as e:
             self._logger.warning(f"JSON解析失败: {str(e)}")
             yield f"data: {json.dumps({'type': 'error', 'category': category, 'content': cleaned_response}, ensure_ascii=False)}\n\n"
-
-    def _fix_json(self, text: str) -> str:
-        """修复不完整的JSON"""
-        # 移除可能的前缀和后缀
-        text = text.strip()
-        
-        # 如果文本被转义了，需要还原
-        if text.startswith('"') and text.endswith('"'):
-            try:
-                # 先解码转义的字符串
-                text = json.loads(text)
-            except:
-                pass
-        
-        # 基础清理
-        text = text.replace('\n', '')
-        text = text.replace('\r', '')
-        text = text.replace('\t', '')
-        text = text.replace('，', ',')
-        text = text.replace('：', ':')
-        text = text.replace('"', '"')
-        text = text.replace('"', '"')
-        text = text.replace('\'', '"')
-        
-        # 确保 JSON 对象的完整性
-        if not text.startswith('{'):
-            text = '{' + text
-        if not text.endswith('}'):
-            text = text + '}'
-        
-        return text
 
     # 实现基类要求的抽象方法
     async def load_prompt(self) -> str:
@@ -176,14 +147,16 @@ class RoleGenerationAgent(BaseAgent):
         当前内容：$content
         参考资料：$reference
 
-        请优化这个属性的内容描述，使其更加丰富和准确，但保持原有的关键信息。
+        请优化这个属性的内容描述，使其更加丰富和准确，但保持原有的关键信息，禁止长篇大论。
         内容长度应为10-30字，可包含补充说明，使用()标注。
         可使用{{{{user}}}}和{{{{char}}}}占位符。
 
-        输出格式如下（严格按照JSON格式）：
+        输出格式如下（严格按照以下JSON格式）：
+        ```json
         {{
             "内容": "优化后的描述文本"
         }}
+        ```
         """)
 
     # 添加优化关键词的提示词模板
@@ -203,10 +176,88 @@ class RoleGenerationAgent(BaseAgent):
         关键词应包含3-30个关联词，覆盖内容的重要概念。
 
         输出格式如下（严格按照JSON格式）：
+        ```json
         {{
             "关键词": ["关键词1", "关键词2", "关键词3"]
         }}
+        ```
         """)
+
+    async def optimize_content(
+        self,
+        category: str,
+        content: str,
+        reference: str
+    ) -> dict:
+        """优化属性内容"""
+        prompt_template = self._load_optimize_content_prompt()
+        prompt = prompt_template.safe_substitute(
+            category=category,
+            content=content,
+            reference=reference
+        )
+        
+        messages = [
+            {"role": "system", "content": "你是一个角色配置优化专家"},
+            {"role": "user", "content": prompt}
+        ]
+        
+        # 使用 astream 并拼接结果
+        full_response = ""
+        async for chunk in self.llm.astream(messages):
+            full_response += chunk
+        
+        # 处理响应
+        cleaned_response = full_response
+        if "```json" in cleaned_response:
+            cleaned_response = cleaned_response.replace("```json", "").replace("```", "")
+        
+        try:
+            result = json.loads(cleaned_response)
+            print(f"内容优化结果: {result}")
+            return result
+        except json.JSONDecodeError:
+            self._logger.error(f"JSON解析失败: {cleaned_response}")
+            raise ValueError("内容优化结果格式错误")
+
+    async def optimize_keywords(
+        self,
+        category: str,
+        content: str,
+        keywords: List[str],
+        reference: str
+    ) -> dict:
+        """优化属性关键词"""
+        prompt_template = self._load_optimize_keywords_prompt()
+        prompt = prompt_template.safe_substitute(
+            category=category,
+            content=content,
+            keywords=json.dumps(keywords, ensure_ascii=False),
+            reference=reference
+        )
+        
+        messages = [
+            {"role": "system", "content": "你是一个角色配置优化专家"},
+            {"role": "user", "content": prompt}
+        ]
+        
+        # 使用 astream 并拼接结果
+        full_response = ""
+        async for chunk in self.llm.astream(messages):
+            full_response += chunk
+        
+        # 处理响应
+        cleaned_response = full_response
+        if "```json" in cleaned_response:
+            cleaned_response = cleaned_response.replace("```json", "").replace("```", "")
+        
+        try:
+            result = json.loads(cleaned_response)
+            print(f"关键词优化结果: {result}")
+            return result
+        except json.JSONDecodeError:
+            self._logger.error(f"JSON解析失败: {cleaned_response}")
+            raise ValueError("关键词优化结果格式错误")
 
     def _load_new_attribute_prompt(self):
         """加载新属性生成提示词模板"""

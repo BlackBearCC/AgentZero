@@ -12,10 +12,9 @@
       <div class="header-actions">
         <!-- 只在有数据且不在加载状态时显示刷新按钮 -->
         <button 
-          v-if="attributes && attributes.length > 0" 
-          @click="$emit('refresh', title)" 
-          class="refresh-button" 
-          :disabled="loading"
+          v-if="attributes && attributes.length > 0 && !loading" 
+          @click="handleRefresh" 
+          class="refresh-button"
         >
           <span class="button-icon">↻</span>
         </button>
@@ -27,7 +26,7 @@
     </div>
     
     <div class="card-content-wrapper">
-      <div class="card-content" v-if="attributes && attributes.length">
+      <div class="card-content" v-if="attributes && attributes.length && !loading">
         <div 
           v-for="(attr, index) in attributes" 
           :key="index"
@@ -63,6 +62,10 @@
       
       <div class="card-placeholder" v-else-if="!loading">
         <span>等待生成...</span>
+      </div>
+      
+      <div class="card-placeholder" v-else>
+        <span>正在生成...</span>
       </div>
     </div>
   </div>
@@ -100,7 +103,7 @@ const emit = defineEmits(['refresh']);
 
 // 添加刷新处理函数
 function handleRefresh() {
-  console.log('刷新按钮被点击，标题:', props.title); // 调试日志
+  console.log('刷新按钮被点击，标题:', props.title);
   emit('refresh', props.title);
 }
 </script>

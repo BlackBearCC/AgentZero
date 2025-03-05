@@ -143,18 +143,18 @@ function handleExport() {
 
 // 添加刷新处理函数
 function handleRefresh(categoryTitle) {
-  console.log('AttributeCard 触发刷新:', categoryTitle); // 调试日志
+  console.log('AttributeCard 触发刷新:', categoryTitle);
   
   // 找到对应的类别配置
   const category = categoryConfig.find(cat => cat.title === categoryTitle);
-  console.log('找到类别配置:', category); // 调试日志
+  console.log('找到类别配置:', category);
   
   if (category) {
     // 触发父组件的刷新事件
-    console.log('触发父组件刷新事件:', category.key); // 调试日志
+    console.log('触发父组件刷新事件:', category.key);
     emit('refresh', category.key);
   } else {
-    console.error('未找到对应的类别配置:', categoryTitle); // 调试日志
+    console.error('未找到对应的类别配置:', categoryTitle);
   }
 }
 

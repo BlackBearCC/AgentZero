@@ -12,38 +12,59 @@ class RoleGenRequest(BaseModel):
     user_id: str = "web"
     categories: Optional[List[str]] = None
 
-class AttributeOptimizeRequest(BaseModel):
-    category: str
-    content: str
-    keywords: List[str]
-    importance: int
-    reference: str
-    user_id: str = "web"
-
 class AttributeGenerateRequest(BaseModel):
     category: str
     existingAttributes: List[dict]
     reference: str
     user_id: str = "web"
+class ContentOptimizeRequest(BaseModel):
+    category: str
+    content: str
+    reference: str
+    user_id: str = "web"
 
-@router.post("/optimize_attribute")
-async def optimize_attribute(
-    request: AttributeOptimizeRequest,
+class KeywordsOptimizeRequest(BaseModel):
+    category: str
+    content: str
+    keywords: List[str]
+    reference: str
+    user_id: str = "web"
+
+@router.post("/optimize_content")
+async def optimize_content(
+    request: ContentOptimizeRequest,
     role_gen_service: RoleGenService = Depends(get_role_gen_service)
 ) -> dict:
     """优化属性内容"""
     try:
-        result = await role_gen_service.optimize_attribute(
+        result = await role_gen_service.optimize_content(
             category=request.category,
             content=request.content,
-            keywords=request.keywords,
-            importance=request.importance,
             reference=request.reference,
             user_id=request.user_id
         )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/optimize_keywords")
+async def optimize_keywords(
+    request: KeywordsOptimizeRequest,
+    role_gen_service: RoleGenService = Depends(get_role_gen_service)
+) -> dict:
+    """优化属性关键词"""
+    try:
+        result = await role_gen_service.optimize_keywords(
+            category=request.category,
+            content=request.content,
+            keywords=request.keywords,
+            reference=request.reference,
+            user_id=request.user_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/generate_new_attribute")
 async def generate_new_attribute(

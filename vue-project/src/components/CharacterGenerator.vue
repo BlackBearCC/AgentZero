@@ -87,7 +87,8 @@
         @reset="resetGenerator"
         @refresh="refreshCategory"
         @update="updateCategory"
-        @aiOptimize="handleAiOptimize"
+        @aiOptimizeContent="handleAiOptimizeContent"
+        @aiOptimizeKeywords="handleAiOptimizeKeywords"
         @aiGenerate="handleAiGenerate"
       />
     </div>
@@ -99,7 +100,9 @@ import { ref, computed, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import StreamDisplay from './StreamDisplay.vue'
 import CharacterReport from './CharacterReport.vue'
-const emit = defineEmits(['reset', 'refresh', 'update', 'aiOptimize', 'aiGenerate'])
+
+// 修改 emit 定义，确保包含所有需要的事件
+const emit = defineEmits(['reset', 'refresh', 'update', 'aiOptimizeContent', 'aiOptimizeKeywords', 'aiGenerate'])
 
 // 文件状态
 const fileName = ref('')
@@ -109,7 +112,10 @@ const selectedFile = ref(null)
 const batchGenerate = ref(true)
 const showGenerationProcess = ref(true)
 const selectedCategories = ref([
-  '基础信息', '性格特征', '能力特征', '兴趣爱好', '情感特质'
+  '基础信息', '性格特征', '能力特征', '兴趣爱好', '情感特质', 
+  '喜好厌恶', '成长经历', '价值观念', '社交关系', '禁忌话题', 
+  '行为模式', '隐藏设定', '目标动机', '弱点缺陷', '特殊习惯', 
+  '语言风格'
 ])
 
 // 类别配置
@@ -445,68 +451,6 @@ function updateCategory(categoryKey, updatedData) {
   // 显示更新成功提示
   ElMessage.success(`${categoryKey} 更新成功`);
 }
-// 处理 AI 优化请求
-async function handleAiOptimize({ category, index, attribute }) {
-  // 添加到加载状态
-  loadingCategories.value.push(category);
-  
-  try {
-    // 找到对应的类别配置
-    const categoryConfig = categoryOptions.find(cat => cat.title === category);
-    if (!categoryConfig) {
-      throw new Error(`未找到类别: ${category}`);
-    }
-    
-    console.log('发送优化请求:', {
-      category: categoryConfig.key,
-      content: attribute.内容,
-      keywords: attribute.关键词,
-      importance: attribute.强度
-    });
-    
-    const response = await fetch('/api/v1/optimize_attribute', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        category: categoryConfig.key,
-        content: attribute.内容,
-        keywords: attribute.关键词,
-        importance: attribute.强度,
-        reference: await selectedFile.value.text() // 添加参考资料
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`优化请求失败: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    console.log('优化结果:', result);
-    
-    // 更新编辑中的属性 - 直接使用返回的中文键名
-    if (characterData[categoryConfig.key] && characterData[categoryConfig.key][index]) {
-      // 使用服务端返回的数据结构（中文键名）
-      characterData[categoryConfig.key][index] = {
-        内容: result.内容,
-        关键词: result.关键词,
-        强度: result.强度
-      };
-    }
-    
-    ElMessage.success('AI 优化完成');
-  } catch (error) {
-    console.error('AI 优化失败:', error);
-    ElMessage.error(`AI 优化失败: ${error.message}`);
-  } finally {
-    // 移除加载状态
-    const index = loadingCategories.value.indexOf(category);
-    if (index !== -1) {
-      loadingCategories.value.splice(index, 1);
-    }
-  }
-}
 
 // 处理 AI 生成请求
 async function handleAiGenerate({ category, existingAttributes }) {
@@ -563,6 +507,134 @@ async function handleAiGenerate({ category, existingAttributes }) {
     console.error('AI 生成失败:', error);
     ElMessage.error(`AI 生成失败: ${error.message}`);
   } finally {
+    const index = loadingCategories.value.indexOf(category);
+    if (index !== -1) {
+      loadingCategories.value.splice(index, 1);
+    }
+  }
+}
+// 处理 AI 优化内容请求
+async function handleAiOptimizeContent({ category, index, attribute }) {
+  console.log('CharacterGenerator: 处理优化内容请求', { category, index, attribute });
+  
+  // 添加到加载状态
+  loadingCategories.value.push(category);
+  
+  try {
+    // 找到对应的类别配置
+    const categoryConfig = categoryOptions.find(cat => cat.title === category);
+    if (!categoryConfig) {
+      throw new Error(`未找到类别: ${category}`);
+    }
+    
+    if (!selectedFile.value) {
+      throw new Error('没有选择文件');
+    }
+    
+    const fileContent = await selectedFile.value.text();
+    
+    const response = await fetch('/api/v1/optimize_content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        category: categoryConfig.key,
+        content: attribute.内容,
+        reference: fileContent,
+        user_id: 'web'  // 添加 user_id
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `优化内容请求失败: ${response.status} ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    console.log('优化内容结果:', result);
+    
+    // 更新编辑中的属性
+    if (characterData[categoryConfig.key] && characterData[categoryConfig.key][index]) {
+      // 只更新内容
+      characterData[categoryConfig.key][index].内容 = result.内容;
+    }
+    
+    ElMessage.success('内容优化完成');
+  } catch (error) {
+    console.error('AI 优化内容失败:', error);
+    ElMessage.error(`AI 优化内容失败: ${error.message}`);
+  } finally {
+    // 移除加载状态
+    const index = loadingCategories.value.indexOf(category);
+    if (index !== -1) {
+      loadingCategories.value.splice(index, 1);
+    }
+  }
+}
+
+// 处理 AI 优化关键词请求
+async function handleAiOptimizeKeywords({ category, index, attribute }) {
+  console.log('CharacterGenerator: 处理优化关键词请求', { category, index, attribute });
+  
+  // 添加到加载状态
+  loadingCategories.value.push(category);
+  
+  try {
+    // 找到对应的类别配置
+    const categoryConfig = categoryOptions.find(cat => cat.title === category);
+    if (!categoryConfig) {
+      throw new Error(`未找到类别: ${category}`);
+    }
+    
+    console.log('发送优化关键词请求:', {
+      category: categoryConfig.key,
+      content: attribute.内容,
+      keywords: attribute.关键词
+    });
+    
+    if (!selectedFile.value) {
+      throw new Error('没有选择文件');
+    }
+    
+    const fileContent = await selectedFile.value.text();
+    console.log('文件内容长度:', fileContent.length);
+    
+    const response = await fetch('/api/v1/optimize_keywords', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        category: categoryConfig.key,
+        content: attribute.内容,
+        keywords: attribute.关键词,
+        reference: fileContent
+      })
+    });
+    
+    console.log('优化关键词响应状态:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`优化关键词请求失败: ${response.status} ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    console.log('优化关键词结果:', result);
+    
+    // 更新编辑中的属性
+    if (characterData[categoryConfig.key] && characterData[categoryConfig.key][index]) {
+      // 只更新关键词
+      console.log('更新关键词:', result.关键词);
+      characterData[categoryConfig.key][index].关键词 = result.关键词;
+    }
+    
+    ElMessage.success('关键词优化完成');
+  } catch (error) {
+    console.error('AI 优化关键词失败:', error);
+    ElMessage.error(`AI 优化关键词失败: ${error.message}`);
+  } finally {
+    // 移除加载状态
     const index = loadingCategories.value.indexOf(category);
     if (index !== -1) {
       loadingCategories.value.splice(index, 1);

@@ -24,7 +24,8 @@
         :loading="category.loading"
         @refresh="handleRefresh"
         @update="handleUpdate"
-        @aiOptimize="handleAiOptimize"
+        @aiOptimizeContent="handleAiOptimizeContent"
+        @aiOptimizeKeywords="handleAiOptimizeKeywords"
         @aiGenerate="handleAiGenerate"
       />
     </div>
@@ -36,8 +37,8 @@ import { ref, computed } from 'vue';
 import AttributeCard from './cards/AttributeCard.vue';
 
 // 修改 emit 定义，添加 refresh 事件
-// 修改 emit 定义，添加 AI 相关事件
-const emit = defineEmits(['reset', 'refresh', 'update', 'aiOptimize', 'aiGenerate']);
+// 修改 emit 定义，添加新的 AI 相关事件
+const emit = defineEmits(['reset', 'refresh', 'update', 'aiOptimizeContent', 'aiOptimizeKeywords', 'aiGenerate']);
 
 const props = defineProps({
   character: {
@@ -177,9 +178,16 @@ function handleUpdate(categoryTitle, updatedData) {
   }
 }
 
-// 添加 AI 优化处理函数
-function handleAiOptimize(data) {
-  emit('aiOptimize', data);
+// 添加 AI 优化内容处理函数
+function handleAiOptimizeContent(data) {
+  console.log('CharacterReport: 收到优化内容请求', data);
+  emit('aiOptimizeContent', data);
+}
+
+// 添加 AI 优化关键词处理函数
+function handleAiOptimizeKeywords(data) {
+  console.log('CharacterReport: 收到优化关键词请求', data);
+  emit('aiOptimizeKeywords', data);
 }
 
 // 添加 AI 生成处理函数

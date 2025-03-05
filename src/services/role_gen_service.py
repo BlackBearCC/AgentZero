@@ -116,28 +116,47 @@ class RoleGenService:
         
         # 发送结束信号
         yield f"data: {json.dumps({'type': 'all_complete', 'content': '所有类别生成完成'}, ensure_ascii=False)}\n\n"
-    async def optimize_attribute(
+
+    async def optimize_content(
         self,
         category: str,
         content: str,
-        keywords: List[str],
-        importance: int,
         reference: str,
         user_id: str
     ) -> dict:
         """优化属性内容"""
         try:
             # 构建优化提示
-            result = await self.gen_agent.optimize_attribute(
+            result = await self.gen_agent.optimize_content(
                 category=category,
                 content=content,
-                keywords=keywords,
-                importance=importance,
                 reference=reference
             )
             return result
         except Exception as e:
-            self.logger.error(f"属性优化失败: {str(e)}")
+            self.logger.error(f"内容优化失败: {str(e)}")
+            raise
+
+    async def optimize_keywords(
+        self,
+        category: str,
+        content: str,
+        keywords: List[str],
+        reference: str,
+        user_id: str
+    ) -> dict:
+        """优化属性关键词"""
+        try:
+            # 构建优化提示
+            result = await self.gen_agent.optimize_keywords(
+                category=category,
+                content=content,
+                keywords=keywords,
+                reference=reference
+            )
+            return result
+        except Exception as e:
+            self.logger.error(f"关键词优化失败: {str(e)}")
             raise
 
     async def generate_new_attribute(

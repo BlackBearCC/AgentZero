@@ -6,13 +6,8 @@ from typing import AsyncIterator, Dict, Any, List
 class RoleGenerationAgent(BaseAgent):
     def __init__(self, config: dict, llm=None):
         super().__init__(config, llm)
-        self._load_gen_prompt()
-        
-    def _load_gen_prompt(self):
-        """加载生成提示词模板"""
-        self.gen_prompt = Template("""
-        你是一个专业的角色配置生成器。请基于用户输入，生成角色的 $category 相关配置。
-        
+        # 定义公共的生成规范
+        self.generation_rules = """
         生成规范：
         1. 内容结构：每条内容必须包含关键词数组、描述文本和重要程度。
            - 关键词数组：用于检索和匹配，包含3-30个关联词，覆盖内容的重要概念。
@@ -20,21 +15,30 @@ class RoleGenerationAgent(BaseAgent):
            - 重要程度：数值范围1-5，表示内容的重要性和优先级。
         2. 内容生成：至少生成3条内容，确保描述的多样性和丰富性。
         3. 描述文本中可使用{{user}}和{{char}}占位符。
+        """
+        self._load_gen_prompt()
+        
+    def _load_gen_prompt(self):
+        """加载生成提示词模板"""
+        self.gen_prompt = Template(f"""
+        你是一个专业的角色配置生成器。请基于用户输入，生成角色的 $category 相关配置。
+        
+        {self.generation_rules}
     
         用户输入：$reference
         
         请仅生成 $category 类别的内容，输出格式如下（严格按照JSON格式，不要有任何多余内容）：
-        {
+        {{
             "$category": [
-                {
+                {{
                     "关键词": ["关键词1", "关键词2", "关键词3"],
                     "内容": "具体描述内容",
                     "强度": 5
-                }
+                }}
             ]
-        }
+        }}
         """)
-    
+
     async def generate_category(self, category: str, input_text: str) -> AsyncIterator[str]:
         """生成指定类别的角色属性"""
         prompt = self.gen_prompt.safe_substitute(
@@ -160,83 +164,71 @@ class RoleGenerationAgent(BaseAgent):
             # 如果解析失败，发送原始响应
             yield f"data: {json.dumps({'type': 'complete', 'content': cleaned_response}, ensure_ascii=False)}\n\n"
 
-    def _load_optimize_prompt(self):
-        """加载优化提示词模板"""
-        return Template("""
-        你是一个专业的角色配置优化专家。请基于以下信息优化角色属性：
+    # 添加优化内容的提示词模板
+    def _load_optimize_content_prompt(self):
+        """加载优化内容提示词模板"""
+        return Template(f"""
+        你是一个专业的角色配置优化专家。请基于以下信息优化角色属性的内容：
+
+        {self.generation_rules}
+
+        类别：$category
+        当前内容：$content
+        参考资料：$reference
+
+        请优化这个属性的内容描述，使其更加丰富和准确，但保持原有的关键信息。
+        内容长度应为10-30字，可包含补充说明，使用()标注。
+        可使用{{{{user}}}}和{{{{char}}}}占位符。
+
+        输出格式如下（严格按照JSON格式）：
+        {{
+            "内容": "优化后的描述文本"
+        }}
+        """)
+
+    # 添加优化关键词的提示词模板
+    def _load_optimize_keywords_prompt(self):
+        """加载优化关键词提示词模板"""
+        return Template(f"""
+        你是一个专业的角色配置优化专家。请基于以下信息优化角色属性的关键词：
+
+        {self.generation_rules}
 
         类别：$category
         当前内容：$content
         当前关键词：$keywords
-        当前重要程度：$importance
-        
         参考资料：$reference
 
-        请优化这个属性，使其更加丰富和准确。输出格式如下（严格按照JSON格式）：
-        {
-            "内容": "优化后的描述文本",
-            "关键词": ["关键词1", "关键词2", "关键词3"],
-            "强度": 5
-        }
+        请优化这个属性的关键词，使其更加精准和全面。
+        关键词应包含3-30个关联词，覆盖内容的重要概念。
+
+        输出格式如下（严格按照JSON格式）：
+        {{
+            "关键词": ["关键词1", "关键词2", "关键词3"]
+        }}
         """)
 
     def _load_new_attribute_prompt(self):
         """加载新属性生成提示词模板"""
-        return Template("""
+        return Template(f"""
         你是一个专业的角色配置生成专家。请基于以下信息生成新的角色属性：
+
+        {self.generation_rules}
 
         类别：$category
         已有属性：$existing_attributes
         参考资料：$reference
 
-        请生成一个新的、不重复的属性。输出格式如下（严格按照JSON格式）：
-        {
+        请生成一个新的、不重复的属性，确保与已有属性不冲突。
+        
+        输出格式如下（严格按照JSON格式）：
+        {{
             "内容": "新的描述文本",
             "关键词": ["关键词1", "关键词2", "关键词3"],
             "强度": 5
-        }
+        }}
         """)
 
-    async def optimize_attribute(
-        self,
-        category: str,
-        content: str,
-        keywords: List[str],
-        importance: int,
-        reference: str
-    ) -> dict:
-        """优化属性内容"""
-        prompt_template = self._load_optimize_prompt()
-        prompt = prompt_template.safe_substitute(
-            category=category,
-            content=content,
-            keywords=json.dumps(keywords, ensure_ascii=False),
-            importance=importance,
-            reference=reference
-        )
-        
-        messages = [
-            {"role": "system", "content": "你是一个角色配置优化专家"},
-            {"role": "user", "content": prompt}
-        ]
-        
-        # 使用 astream 替代 achat，并拼接结果
-        full_response = ""
-        async for chunk in self.llm.astream(messages):
-            full_response += chunk
-        
-        # 处理响应
-        cleaned_response = full_response
-        if "```json" in cleaned_response:
-            cleaned_response = cleaned_response.replace("```json", "").replace("```", "")
-        
-        try:
-            result = json.loads(cleaned_response)
-            print(f"优化结果: {result}")
-            return result
-        except json.JSONDecodeError:
-            self._logger.error(f"JSON解析失败: {cleaned_response}")
-            raise ValueError("优化结果格式错误")
 
     async def generate_new_attribute(
         self,

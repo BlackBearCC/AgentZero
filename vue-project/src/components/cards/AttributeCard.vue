@@ -91,14 +91,24 @@
                 placeholder="输入内容..."
                 rows="2"
               ></textarea>
-              <button 
-                @click="aiOptimizeAttribute(index)" 
-                class="ai-optimize-button"
-                :disabled="attr.isOptimizing"
-              >
-                <span class="button-icon">🤖</span>
-                <span class="button-text">AI 优化</span>
-              </button>
+              <div class="ai-buttons-group">
+                <button 
+                  @click="aiOptimizeContent(index)" 
+                  class="ai-optimize-button content"
+                  :disabled="attr.isOptimizingContent"
+                >
+                  <span class="button-icon">🤖</span>
+                  <span class="button-text">优化内容</span>
+                </button>
+                <button 
+                  @click="aiOptimizeKeywords(index)" 
+                  class="ai-optimize-button keywords"
+                  :disabled="attr.isOptimizingKeywords"
+                >
+                  <span class="button-icon">🔍</span>
+                  <span class="button-text">优化关键词</span>
+                </button>
+              </div>
             </div>
             
             <div class="edit-importance">
@@ -183,8 +193,8 @@ const props = defineProps({
   }
 });
 
-// 添加 emit 定义
-const emit = defineEmits(['refresh', 'update', 'aiOptimize', 'aiGenerate']);
+// 添加 emit 定义，增加新的事件类型
+const emit = defineEmits(['refresh', 'update', 'aiOptimizeContent', 'aiOptimizeKeywords', 'aiGenerate']);
 
 // 编辑状态
 const isEditing = ref(false);
@@ -243,25 +253,55 @@ async function toggleEditing() {
   isEditing.value = !isEditing.value;
 }
 
-// AI 优化属性
-async function aiOptimizeAttribute(index) {
+// AI 优化内容
+async function aiOptimizeContent(index) {
+  console.log('AttributeCard: 开始优化内容', index);
   const attr = editingAttributes.value[index];
-  attr.isOptimizing = true;
+  attr.isOptimizingContent = true;
   
   try {
-    // 向父组件发送优化请求
-    emit('aiOptimize', {
+    console.log('AttributeCard: 发送优化内容事件', {
+      category: props.title,
+      index,
+      attribute: attr
+    });
+    // 向父组件发送优化内容请求
+    emit('aiOptimizeContent', {
       category: props.title,
       index,
       attribute: attr
     });
     
     // 注意：实际的优化逻辑在父组件中处理
-    // 这里只需要发送事件
   } catch (error) {
-    console.error('AI 优化失败:', error);
-  } finally {
-    attr.isOptimizing = false;
+    console.error('AI 优化内容失败:', error);
+    attr.isOptimizingContent = false;
+  }
+}
+
+// AI 优化关键词
+async function aiOptimizeKeywords(index) {
+  console.log('AttributeCard: 开始优化关键词', index);
+  const attr = editingAttributes.value[index];
+  attr.isOptimizingKeywords = true;
+  
+  try {
+    console.log('AttributeCard: 发送优化关键词事件', {
+      category: props.title,
+      index,
+      attribute: attr
+    });
+    // 向父组件发送优化关键词请求
+    emit('aiOptimizeKeywords', {
+      category: props.title,
+      index,
+      attribute: attr
+    });
+    
+    // 注意：实际的优化逻辑在父组件中处理
+  } catch (error) {
+    console.error('AI 优化关键词失败:', error);
+    attr.isOptimizingKeywords = false;
   }
 }
 
@@ -869,10 +909,15 @@ function cancelEditing() {
   width: 100%;
 }
 
-.ai-optimize-button {
+.ai-buttons-group {
   position: absolute;
   right: 8px;
   bottom: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.ai-optimize-button {
   background: rgba(68, 68, 255, 0.1);
   border: 1px solid rgba(68, 68, 255, 0.3);
   border-radius: 4px;
@@ -886,8 +931,24 @@ function cancelEditing() {
   transition: all 0.3s ease;
 }
 
+.ai-optimize-button.content {
+  background: rgba(68, 68, 255, 0.1);
+  border-color: rgba(68, 68, 255, 0.3);
+  color: #4444ff;
+}
+
+.ai-optimize-button.keywords {
+  background: rgba(68, 255, 68, 0.1);
+  border-color: rgba(68, 255, 68, 0.3);
+  color: #44ff44;
+}
+
 .ai-optimize-button:hover {
   background: rgba(68, 68, 255, 0.2);
+}
+
+.ai-optimize-button.keywords:hover {
+  background: rgba(68, 255, 68, 0.2);
 }
 
 .ai-optimize-button:disabled {

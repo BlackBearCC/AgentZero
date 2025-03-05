@@ -9,7 +9,7 @@
         <button @click="$emit('reset')" class="tv-button">
           <span class="button-text">[ 重新生成 ]</span>
         </button>
-        <button @click="$emit('export')" class="tv-button primary">
+        <button @click="handleExport" class="tv-button primary">
           <span class="button-text">[ 导出角色 ]</span>
         </button>
       </div>
@@ -31,6 +31,9 @@
 import { ref, computed } from 'vue';
 import AttributeCard from './cards/AttributeCard.vue';
 
+// 只保留一个 defineEmits
+defineEmits(['reset']);
+
 const props = defineProps({
   character: {
     type: Object,
@@ -41,8 +44,6 @@ const props = defineProps({
     default: () => []
   }
 });
-
-defineEmits(['reset', 'export']);
 
 // 获取角色名称
 const characterName = computed(() => {
@@ -93,6 +94,51 @@ const visibleCategories = computed(() => {
     })
     .filter(category => category !== null);
 });
+
+// 添加导出相关的函数
+function exportToCSV(data) {
+  // CSV 表头
+  let csvContent = "类别,内容,关键词,重要程度\n";
+  
+  // 遍历所有类别数据
+  Object.entries(data).forEach(([category, attributes]) => {
+    if (Array.isArray(attributes)) {
+      attributes.forEach(attr => {
+        const keywords = Array.isArray(attr.关键词) ? attr.关键词.join('|') : '';
+        const content = attr.内容.replace(/{{char}}/g, '').replace(/{{user}}/g, '').replace(/"/g, '""');
+        csvContent += `"${category}","${content}","${keywords}",${attr.强度}\n`;
+      });
+    }
+  });
+  
+  // 创建 Blob 并下载
+  const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${characterName.value || '未命名角色'}_角色设定.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function exportToJSON(data) {
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${characterName.value || '未命名角色'}_角色设定.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+// 导出处理函数
+function handleExport() {
+  // 导出 JSON
+  exportToJSON(props.character);
+  // 导出 CSV
+  exportToCSV(props.character);
+}
+
+// 删除这里重复的 defineEmits 定义
 </script>
 
 <style scoped>

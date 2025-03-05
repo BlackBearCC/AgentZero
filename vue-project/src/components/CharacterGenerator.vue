@@ -86,6 +86,7 @@
         :loadingCategories="loadingCategories"
         @reset="resetGenerator"
         @refresh="refreshCategory"
+        @update="updateCategory"
       />
     </div>
   </div>
@@ -421,6 +422,25 @@ async function refreshCategory(categoryKey) {
     }
     console.log('刷新完成，加载状态更新:', loadingCategories.value);
   }
+}
+// 添加更新类别数据的函数
+function updateCategory(categoryKey, updatedData) {
+  console.log('更新类别数据:', categoryKey, updatedData);
+  
+  // 直接更新对应类别的数据
+  characterData[categoryKey] = updatedData;
+  
+  // 可以选择是否要保存到本地存储
+  try {
+    const savedData = JSON.parse(localStorage.getItem('characterData') || '{}');
+    savedData[categoryKey] = updatedData;
+    localStorage.setItem('characterData', JSON.stringify(savedData));
+  } catch (e) {
+    console.error('保存到本地存储失败:', e);
+  }
+  
+  // 显示更新成功提示
+  ElMessage.success(`${categoryKey} 更新成功`);
 }
 </script>
 

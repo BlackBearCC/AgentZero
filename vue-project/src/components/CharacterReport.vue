@@ -23,6 +23,7 @@
         :attributes="category.data"
         :loading="category.loading"
         @refresh="handleRefresh"
+        @update="handleUpdate"
       />
     </div>
   </div>
@@ -33,7 +34,7 @@ import { ref, computed } from 'vue';
 import AttributeCard from './cards/AttributeCard.vue';
 
 // 修改 emit 定义，添加 refresh 事件
-const emit = defineEmits(['reset', 'refresh']);
+const emit = defineEmits(['reset', 'refresh', 'update']);
 
 const props = defineProps({
   character: {
@@ -158,7 +159,20 @@ function handleRefresh(categoryTitle) {
   }
 }
 
-// 删除这里重复的 defineEmits 定义
+// 添加更新处理函数
+function handleUpdate(categoryTitle, updatedData) {
+  console.log('处理卡片更新:', categoryTitle, updatedData);
+  
+  // 找到对应的类别配置
+  const category = categoryConfig.find(cat => cat.title === categoryTitle);
+  
+  if (category) {
+    // 触发父组件的更新事件
+    emit('update', category.key, updatedData);
+  } else {
+    console.error('未找到对应的类别配置:', categoryTitle);
+  }
+}
 </script>
 
 <style scoped>

@@ -16,73 +16,29 @@
     </div>
 
     <div class="report-grid">
-      <!-- 基础信息卡片 -->
-      <div class="report-card basic-info">
-        <h3>基础信息</h3>
-        <div class="info-grid">
-          <div v-for="(info, index) in basicInfo" :key="index" class="info-item">
-            <div class="info-label">{{ info.label }}</div>
-            <div class="info-value">{{ info.value }}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 性格特质卡片 -->
-      <div class="report-card traits">
-        <h3>性格特质</h3>
-        <div class="traits-list">
-          <div v-for="trait in character.traits" :key="trait.name" class="trait-item">
-            <div class="trait-header">
-              <span class="trait-name">{{ trait.name }}</span>
-              <span class="trait-value">{{ trait.value }}%</span>
-            </div>
-            <div class="trait-bar-container">
-              <div class="trait-bar" :style="{ width: `${trait.value}%` }">
-                <div class="trait-glow"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 关键词卡片 -->
-      <div class="report-card keywords">
-        <h3>关键特征</h3>
-        <div class="keywords-cloud">
-          <span 
-            v-for="(keyword, index) in character.keywords" 
-            :key="index" 
-            class="keyword-tag"
-            :style="{ 
-              fontSize: `${1 + Math.random() * 0.5}rem`,
-              opacity: 0.7 + Math.random() * 0.3
-            }"
-          >
-            {{ keyword }}
-          </span>
-        </div>
-      </div>
-
-      <!-- 背景故事卡片 -->
-      <div class="report-card background">
-        <h3>背景故事</h3>
-        <div class="background-content">
-          <p v-for="(paragraph, index) in backgroundParagraphs" :key="index">
-            {{ paragraph }}
-          </p>
-        </div>
-      </div>
+      <AttributeCard
+        v-for="(category, index) in categories"
+        :key="index"
+        :title="category.title"
+        :attributes="category.data"
+        :loading="category.loading"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
+import AttributeCard from './cards/AttributeCard.vue';
 
 const props = defineProps({
   character: {
     type: Object,
     required: true
+  },
+  loadingCategories: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -102,6 +58,37 @@ const basicInfo = computed(() => {
     { label: '身份', value: identity || '未知' },
     { label: '年龄', value: age || '未知' }
   ];
+});
+
+// 定义所有类别及其显示标题
+const categoryConfig = [
+  { key: '基础信息', title: '基础信息' },
+  { key: '性格特征', title: '性格特征' },
+  { key: '能力特征', title: '能力特征' },
+  { key: '兴趣爱好', title: '兴趣爱好' },
+  { key: '情感特质', title: '情感特质' },
+  { key: '喜好厌恶', title: '喜好与厌恶' },
+  { key: '成长经历', title: '成长经历' },
+  { key: '价值观念', title: '价值观念' },
+  { key: '社交关系', title: '社交关系' },
+  { key: '禁忌话题', title: '禁忌话题' },
+  { key: '行为模式', title: '行为模式' },
+  { key: '隐藏设定', title: '隐藏设定' },
+  { key: '目标动机', title: '目标动机' },
+  { key: '弱点缺陷', title: '弱点缺陷' },
+  { key: '特殊习惯', title: '特殊习惯' },
+  { key: '语言风格', title: '语言风格' }
+];
+
+// 计算属性，生成所有类别的数据
+const categories = computed(() => {
+  return categoryConfig.map(category => {
+    return {
+      title: category.title,
+      data: props.character[category.key] || [],
+      loading: props.loadingCategories.includes(category.key)
+    };
+  });
 });
 </script>
 
@@ -153,7 +140,6 @@ const basicInfo = computed(() => {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
 }
-
 .report-card {
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(68, 255, 68, 0.2);
@@ -161,12 +147,10 @@ const basicInfo = computed(() => {
   padding: 20px;
   transition: all 0.3s ease;
 }
-
 .report-card:hover {
   border-color: rgba(68, 255, 68, 0.4);
   box-shadow: 0 0 15px rgba(68, 255, 68, 0.2);
 }
-
 .report-card h3 {
   color: #44ff44;
   margin: 0 0 15px 0;
@@ -174,67 +158,56 @@ const basicInfo = computed(() => {
   border-bottom: 1px solid rgba(68, 255, 68, 0.2);
   font-size: 1.2rem;
 }
-
 /* 基础信息样式 */
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 15px;
 }
-
 .info-item {
   padding: 10px;
   background: rgba(68, 255, 68, 0.1);
   border-radius: 5px;
 }
-
 .info-label {
   color: #a0a0a0;
   font-size: 0.9rem;
   margin-bottom: 5px;
 }
-
 .info-value {
   color: #44ff44;
   font-size: 1.1rem;
 }
-
 /* 性格特质样式 */
 .traits-list {
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
-
 .trait-item {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
-
 .trait-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-
 .trait-name {
   color: #e0e0e0;
   font-size: 1rem;
 }
-
 .trait-value {
   color: #44ff44;
   font-size: 0.9rem;
 }
-
 .trait-bar-container {
   height: 8px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 4px;
   overflow: hidden;
 }
-
 .trait-bar {
   height: 100%;
   background: linear-gradient(90deg, rgba(68, 255, 68, 0.3), #44ff44);
@@ -242,7 +215,6 @@ const basicInfo = computed(() => {
   position: relative;
   transition: width 1s ease-out;
 }
-
 .trait-glow {
   position: absolute;
   top: 0;
@@ -257,7 +229,6 @@ const basicInfo = computed(() => {
   );
   animation: glow 2s linear infinite;
 }
-
 /* 关键词样式 */
 .keywords-cloud {
   display: flex;
@@ -265,7 +236,6 @@ const basicInfo = computed(() => {
   gap: 10px;
   padding: 10px;
 }
-
 .keyword-tag {
   background: rgba(68, 255, 68, 0.15);
   border: 1px solid rgba(68, 255, 68, 0.3);
@@ -274,28 +244,23 @@ const basicInfo = computed(() => {
   transition: all 0.3s ease;
   cursor: default;
 }
-
 .keyword-tag:hover {
   background: rgba(68, 255, 68, 0.25);
   transform: translateY(-2px);
   box-shadow: 0 2px 8px rgba(68, 255, 68, 0.2);
 }
-
 /* 背景故事样式 */
 .background {
   grid-column: 1 / -1;
 }
-
 .background-content {
   line-height: 1.6;
   color: #d0d0d0;
 }
-
 .background-content p {
   margin-bottom: 15px;
   text-indent: 2em;
 }
-
 /* 按钮样式 */
 .tv-button {
   background: rgba(40, 40, 60, 0.8);
@@ -306,34 +271,28 @@ const basicInfo = computed(() => {
   cursor: pointer;
   transition: all 0.3s ease;
 }
-
 .tv-button:hover {
   background: rgba(60, 60, 80, 0.8);
   box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
 }
-
 .tv-button.primary {
   background: rgba(68, 255, 68, 0.3);
 }
-
 /* 动画效果 */
 @keyframes glow {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
-
 /* 响应式调整 */
 @media (max-width: 768px) {
   .report-grid {
     grid-template-columns: 1fr;
   }
-  
   .report-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 15px;
   }
-  
   .header-actions {
     width: 100%;
     display: flex;

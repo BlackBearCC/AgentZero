@@ -85,7 +85,7 @@
         :character="characterData"
         :loadingCategories="loadingCategories"
         @reset="resetGenerator"
-        @export="exportCharacter"
+        @refresh="refreshCategory"
       />
     </div>
   </div>
@@ -310,6 +310,111 @@ const resetGenerator = () => {
   fileName.value = ''
   isGenerating.value = false
   loadingCategories.value = []
+}
+
+// 添加单个类别刷新函数
+async function refreshCategory(categoryKey) {
+  console.log('刷新类别被触发:', categoryKey); // 调试日志
+  
+  if (!selectedFile.value) {
+    console.error('没有选择文件'); // 调试日志
+    ElMessage.warning('没有可用的角色资料文件');
+    return;
+  }
+  
+  if (isGenerating.value) {
+    console.warn('正在生成中，无法刷新'); // 调试日志
+    ElMessage.warning('正在生成中，请稍后再试');
+    return;
+  }
+  
+  // 将类别添加到加载状态
+  loadingCategories.value.push(categoryKey);
+  console.log('加载状态更新:', loadingCategories.value); // 调试日志
+  
+  try {
+    console.log('开始读取文件'); // 调试日志
+    const fileContent = await selectedFile.value.text();
+    
+    // 构建请求体
+    const requestBody = {
+      reference: fileContent,
+      categories: [categoryKey] // 只包含要刷新的类别
+    };
+    console.log('请求体:', requestBody); // 调试日志
+    
+    console.log('发送请求'); // 调试日志
+    const response = await fetch('/api/v1/generate_role_config/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream'
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) {
+      console.error('请求失败:', response.status, response.statusText); // 调试日志
+      throw new Error(`请求失败: ${response.status} ${response.statusText}`);
+    }
+    
+    console.log('开始处理响应流'); // 调试日志
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        console.log('响应流读取完成'); // 调试日志
+        break;
+      }
+      
+      const chunk = decoder.decode(value, { stream: true });
+      console.log('收到数据块:', chunk); // 调试日志
+      buffer += chunk;
+      
+      // 处理SSE事件
+      let eventEndIndex;
+      while ((eventEndIndex = buffer.indexOf('\n\n')) !== -1) {
+        const event = buffer.slice(0, eventEndIndex);
+        buffer = buffer.slice(eventEndIndex + 2);
+        
+        if (event.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(event.slice(6).trim());
+            console.log('解析的事件数据:', data); // 调试日志
+            
+            switch (data.type) {
+              case 'complete':
+                if (data.category && data.content) {
+                  console.log(`更新类别 ${data.category} 的数据`); // 调试日志
+                  characterData[data.category] = data.content;
+                  ElMessage.success(`${data.category} 刷新成功`);
+                }
+                break;
+              case 'error':
+                console.error('生成错误:', data.content);
+                ElMessage.error(data.content);
+                break;
+            }
+          } catch (e) {
+            console.error('解析事件数据失败:', e, event.slice(6).trim()); // 调试日志
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('刷新失败:', e);
+    ElMessage.error(`刷新过程出现错误: ${e.message}`);
+  } finally {
+    // 从加载状态中移除该类别
+    const index = loadingCategories.value.indexOf(categoryKey);
+    if (index !== -1) {
+      loadingCategories.value.splice(index, 1);
+    }
+    console.log('刷新完成，加载状态更新:', loadingCategories.value); // 调试日志
+  }
 }
 </script>
 

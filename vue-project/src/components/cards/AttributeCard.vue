@@ -9,9 +9,20 @@
   >
     <div class="card-header">
       <h3>{{ title }}</h3>
-      <div class="status-indicator" v-if="loading">
-        <div class="scanning-line"></div>
-        <span class="status-text">生成中...</span>
+      <div class="header-actions">
+        <!-- 只在有数据且不在加载状态时显示刷新按钮 -->
+        <button 
+          v-if="attributes && attributes.length > 0" 
+          @click="$emit('refresh', title)" 
+          class="refresh-button" 
+          :disabled="loading"
+        >
+          <span class="button-icon">↻</span>
+        </button>
+        <div class="status-indicator" v-if="loading">
+          <div class="scanning-line"></div>
+          <span class="status-text">生成中...</span>
+        </div>
       </div>
     </div>
     
@@ -82,6 +93,15 @@ const props = defineProps({
 function formatContent(content) {
   if (!content) return '';
   return content.replace(/{{char}}/g, '').replace(/{{user}}/g, '').trim();
+}
+
+// 添加 emit 定义
+const emit = defineEmits(['refresh']);
+
+// 添加刷新处理函数
+function handleRefresh() {
+  console.log('刷新按钮被点击，标题:', props.title); // 调试日志
+  emit('refresh', props.title);
 }
 </script>
 
@@ -347,5 +367,46 @@ function formatContent(content) {
     font-size: 0.8rem;
     padding: 3px 8px;
   }
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.refresh-button {
+  background: transparent;
+  border: 1px solid rgba(68, 255, 68, 0.3);
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #44ff44;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.refresh-button:hover {
+  background: rgba(68, 255, 68, 0.1);
+  border-color: rgba(68, 255, 68, 0.5);
+  transform: rotate(180deg);
+}
+
+.refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-icon {
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+}
+
+.refresh-button:hover .button-icon {
+  transform: rotate(180deg);
 }
 </style>

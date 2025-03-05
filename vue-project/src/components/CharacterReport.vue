@@ -22,6 +22,7 @@
         :title="category.title"
         :attributes="category.data"
         :loading="category.loading"
+        @refresh="handleRefresh"
       />
     </div>
   </div>
@@ -31,8 +32,8 @@
 import { ref, computed } from 'vue';
 import AttributeCard from './cards/AttributeCard.vue';
 
-// 只保留一个 defineEmits
-defineEmits(['reset']);
+// 修改 emit 定义，添加 refresh 事件
+const emit = defineEmits(['reset', 'refresh']);
 
 const props = defineProps({
   character: {
@@ -136,6 +137,25 @@ function handleExport() {
   exportToJSON(props.character);
   // 导出 CSV
   exportToCSV(props.character);
+}
+
+
+
+// 添加刷新处理函数
+function handleRefresh(categoryTitle) {
+  console.log('AttributeCard 触发刷新:', categoryTitle); // 调试日志
+  
+  // 找到对应的类别配置
+  const category = categoryConfig.find(cat => cat.title === categoryTitle);
+  console.log('找到类别配置:', category); // 调试日志
+  
+  if (category) {
+    // 触发父组件的刷新事件
+    console.log('触发父组件刷新事件:', category.key); // 调试日志
+    emit('refresh', category.key);
+  } else {
+    console.error('未找到对应的类别配置:', categoryTitle); // 调试日志
+  }
 }
 
 // 删除这里重复的 defineEmits 定义

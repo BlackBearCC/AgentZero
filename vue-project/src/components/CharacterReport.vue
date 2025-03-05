@@ -3,7 +3,7 @@
     <div class="report-header">
       <div class="header-left">
         <div class="report-badge">角色档案</div>
-        <h2>{{ character.name || '未命名角色' }}</h2>
+        <h2>{{ characterName }}</h2>
       </div>
       <div class="header-actions">
         <button @click="$emit('reset')" class="tv-button">
@@ -15,14 +15,60 @@
       </div>
     </div>
 
-    <div class="report-grid">
-      <AttributeCard
-        v-for="(category, index) in categories"
-        :key="index"
-        :title="category.title"
-        :attributes="category.data"
-        :loading="category.loading"
-      />
+    <div class="report-content">
+      <!-- 基础信息区域 - 特殊处理 -->
+      <div class="report-section basic-info-section" v-if="character['基础信息']">
+        <h3 class="section-title">基础信息</h3>
+        <div class="basic-info-grid">
+          <div 
+            v-for="(attr, index) in character['基础信息']" 
+            :key="index"
+            class="basic-info-item"
+          >
+            <div class="info-label">
+              {{ getMainKeyword(attr.关键词) }}
+            </div>
+            <div class="info-value">
+              {{ formatContent(attr.内容) }}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 主要特性区域 - 使用卡片布局 -->
+      <div class="report-section main-traits-section">
+        <div class="traits-grid">
+          <AttributeCard
+            v-for="category in mainCategories"
+            :key="category.key"
+            :title="category.title"
+            :attributes="character[category.key] || []"
+            :loading="loadingCategories.includes(category.key)"
+            display-mode="compact"
+            class="trait-card"
+          />
+        </div>
+      </div>
+      
+      <!-- 次要特性区域 - 使用列表布局 -->
+      <div class="report-section secondary-traits-section" v-if="secondaryCategories.length > 0">
+        <h3 class="section-title">其他特性</h3>
+        <div class="secondary-traits-container">
+          <div 
+            v-for="category in secondaryCategories" 
+            :key="category.key"
+            class="secondary-category"
+          >
+            <AttributeCard
+              :title="category.title"
+              :attributes="character[category.key] || []"
+              :loading="loadingCategories.includes(category.key)"
+              display-mode="list"
+              class="secondary-card"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -44,51 +90,67 @@ const props = defineProps({
 
 defineEmits(['reset', 'export']);
 
-// 处理背景故事分段
-const backgroundParagraphs = computed(() => {
-  if (!props.character.background) return [];
-  return props.character.background.split('\n').filter(p => p.trim());
+// 获取角色名称
+const characterName = computed(() => {
+  if (props.character['基础信息'] && props.character['基础信息'].length > 0) {
+    const nameItem = props.character['基础信息'].find(item => 
+      item.关键词 && item.关键词.some(k => k.includes('姓名') || k.includes('名字'))
+    );
+    return nameItem ? formatContent(nameItem.内容) : '未命名角色';
+  }
+  return '未命名角色';
 });
 
-// 处理基础信息
-const basicInfo = computed(() => {
-  const { name, identity, age } = props.character;
-  return [
-    { label: '姓名', value: name || '未知' },
-    { label: '身份', value: identity || '未知' },
-    { label: '年龄', value: age || '未知' }
-  ];
-});
+// 格式化内容，移除占位符
+function formatContent(content) {
+  if (!content) return '';
+  return content.replace(/{{char}}/g, '').replace(/{{user}}/g, '').trim();
+}
+
+// 从关键词数组中获取主要关键词
+function getMainKeyword(keywords) {
+  if (!keywords || keywords.length === 0) return '未知';
+  // 优先返回较短的关键词作为标签
+  const sortedKeywords = [...keywords].sort((a, b) => a.length - b.length);
+  return sortedKeywords[0];
+}
 
 // 定义所有类别及其显示标题
 const categoryConfig = [
-  { key: '基础信息', title: '基础信息' },
-  { key: '性格特征', title: '性格特征' },
-  { key: '能力特征', title: '能力特征' },
-  { key: '兴趣爱好', title: '兴趣爱好' },
-  { key: '情感特质', title: '情感特质' },
-  { key: '喜好厌恶', title: '喜好与厌恶' },
-  { key: '成长经历', title: '成长经历' },
-  { key: '价值观念', title: '价值观念' },
-  { key: '社交关系', title: '社交关系' },
-  { key: '禁忌话题', title: '禁忌话题' },
-  { key: '行为模式', title: '行为模式' },
-  { key: '隐藏设定', title: '隐藏设定' },
-  { key: '目标动机', title: '目标动机' },
-  { key: '弱点缺陷', title: '弱点缺陷' },
-  { key: '特殊习惯', title: '特殊习惯' },
-  { key: '语言风格', title: '语言风格' }
+  { key: '基础信息', title: '基础信息', priority: 0 },
+  { key: '性格特征', title: '性格特征', priority: 1 },
+  { key: '能力特征', title: '能力特征', priority: 1 },
+  { key: '情感特质', title: '情感特质', priority: 1 },
+  { key: '兴趣爱好', title: '兴趣爱好', priority: 1 },
+  { key: '喜好厌恶', title: '喜好与厌恶', priority: 2 },
+  { key: '成长经历', title: '成长经历', priority: 2 },
+  { key: '价值观念', title: '价值观念', priority: 2 },
+  { key: '社交关系', title: '社交关系', priority: 2 },
+  { key: '禁忌话题', title: '禁忌话题', priority: 2 },
+  { key: '行为模式', title: '行为模式', priority: 2 },
+  { key: '隐藏设定', title: '隐藏设定', priority: 2 },
+  { key: '目标动机', title: '目标动机', priority: 2 },
+  { key: '弱点缺陷', title: '弱点缺陷', priority: 2 },
+  { key: '特殊习惯', title: '特殊习惯', priority: 2 },
+  { key: '语言风格', title: '语言风格', priority: 2 }
 ];
 
-// 计算属性，生成所有类别的数据
-const categories = computed(() => {
-  return categoryConfig.map(category => {
-    return {
-      title: category.title,
-      data: props.character[category.key] || [],
-      loading: props.loadingCategories.includes(category.key)
-    };
-  });
+// 获取已生成的类别
+const availableCategories = computed(() => {
+  return categoryConfig.filter(category => 
+    props.character[category.key] && 
+    props.character[category.key].length > 0
+  );
+});
+
+// 主要特性类别（优先级1）
+const mainCategories = computed(() => {
+  return availableCategories.value.filter(category => category.priority === 1);
+});
+
+// 次要特性类别（优先级2）
+const secondaryCategories = computed(() => {
+  return availableCategories.value.filter(category => category.priority === 2);
 });
 </script>
 
@@ -100,6 +162,8 @@ const categories = computed(() => {
   border-radius: 15px;
   border: 2px solid rgba(68, 255, 68, 0.3);
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .report-header {
@@ -135,132 +199,99 @@ const categories = computed(() => {
   text-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
 }
 
-.report-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+.report-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
 }
-.report-card {
-  background: rgba(0, 0, 0, 0.5);
+
+.report-section {
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(68, 255, 68, 0.2);
   border-radius: 10px;
   padding: 20px;
-  transition: all 0.3s ease;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
 }
-.report-card:hover {
-  border-color: rgba(68, 255, 68, 0.4);
-  box-shadow: 0 0 15px rgba(68, 255, 68, 0.2);
-}
-.report-card h3 {
+
+.section-title {
   color: #44ff44;
-  margin: 0 0 15px 0;
-  padding-bottom: 8px;
+  margin: 0 0 20px 0;
+  padding-bottom: 10px;
   border-bottom: 1px solid rgba(68, 255, 68, 0.2);
-  font-size: 1.2rem;
+  font-size: 1.3rem;
+  text-shadow: 0 0 8px rgba(68, 255, 68, 0.3);
 }
-/* 基础信息样式 */
-.info-grid {
+
+/* 基础信息区域样式 */
+.basic-info-section {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(68, 255, 68, 0.3);
+}
+
+.basic-info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 15px;
 }
-.info-item {
-  padding: 10px;
-  background: rgba(68, 255, 68, 0.1);
-  border-radius: 5px;
+
+.basic-info-item {
+  background: rgba(68, 255, 68, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.3s ease;
 }
+
+.basic-info-item:hover {
+  background: rgba(68, 255, 68, 0.1);
+  transform: translateY(-2px);
+}
+
 .info-label {
   color: #a0a0a0;
   font-size: 0.9rem;
   margin-bottom: 5px;
 }
+
 .info-value {
-  color: #44ff44;
+  color: #e0e0e0;
   font-size: 1.1rem;
 }
-/* 性格特质样式 */
-.traits-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+
+/* 主要特性区域样式 */
+.traits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
 }
-.trait-item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.trait-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.trait-name {
-  color: #e0e0e0;
-  font-size: 1rem;
-}
-.trait-value {
-  color: #44ff44;
-  font-size: 0.9rem;
-}
-.trait-bar-container {
-  height: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.trait-bar {
+
+.trait-card {
   height: 100%;
-  background: linear-gradient(90deg, rgba(68, 255, 68, 0.3), #44ff44);
-  border-radius: 4px;
-  position: relative;
-  transition: width 1s ease-out;
+  transition: all 0.3s ease;
 }
-.trait-glow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(68, 255, 68, 0.5),
-    transparent
-  );
-  animation: glow 2s linear infinite;
+
+.trait-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(68, 255, 68, 0.1);
 }
-/* 关键词样式 */
-.keywords-cloud {
+
+/* 次要特性区域样式 */
+.secondary-traits-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  padding: 10px;
+  gap: 20px;
 }
-.keyword-tag {
-  background: rgba(68, 255, 68, 0.15);
-  border: 1px solid rgba(68, 255, 68, 0.3);
-  border-radius: 15px;
-  padding: 5px 12px;
-  transition: all 0.3s ease;
-  cursor: default;
+
+.secondary-category {
+  flex: 1 1 300px;
+  min-width: 0;
 }
-.keyword-tag:hover {
-  background: rgba(68, 255, 68, 0.25);
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(68, 255, 68, 0.2);
+
+.secondary-card {
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
 }
-/* 背景故事样式 */
-.background {
-  grid-column: 1 / -1;
-}
-.background-content {
-  line-height: 1.6;
-  color: #d0d0d0;
-}
-.background-content p {
-  margin-bottom: 15px;
-  text-indent: 2em;
-}
+
 /* 按钮样式 */
 .tv-button {
   background: rgba(40, 40, 60, 0.8);
@@ -271,28 +302,28 @@ const categories = computed(() => {
   cursor: pointer;
   transition: all 0.3s ease;
 }
+
 .tv-button:hover {
   background: rgba(60, 60, 80, 0.8);
   box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
 }
+
 .tv-button.primary {
   background: rgba(68, 255, 68, 0.3);
 }
-/* 动画效果 */
-@keyframes glow {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
-  .report-grid {
+  .traits-grid {
     grid-template-columns: 1fr;
   }
+  
   .report-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 15px;
   }
+  
   .header-actions {
     width: 100%;
     display: flex;

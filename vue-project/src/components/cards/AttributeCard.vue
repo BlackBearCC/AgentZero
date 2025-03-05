@@ -1,5 +1,12 @@
 <template>
-  <div class="attribute-card" :class="{ 'is-generating': loading }">
+  <div 
+    class="attribute-card" 
+    :class="{ 
+      'is-generating': loading,
+      'mode-compact': displayMode === 'compact',
+      'mode-list': displayMode === 'list'
+    }"
+  >
     <div class="card-header">
       <h3>{{ title }}</h3>
       <div class="status-indicator" v-if="loading">
@@ -19,8 +26,8 @@
         }"
       >
         <div class="attribute-header">
-          <span class="attribute-title">{{ attr.内容 }}</span>
-          <div class="importance-indicator">
+          <span class="attribute-title">{{ formatContent(attr.内容) }}</span>
+          <div class="importance-indicator" v-if="displayMode !== 'list'">
             <div 
               v-for="n in 5" 
               :key="n"
@@ -30,7 +37,7 @@
           </div>
         </div>
         
-        <div class="keywords-container">
+        <div class="keywords-container" v-if="displayMode !== 'list'">
           <span 
             v-for="(keyword, kidx) in attr.关键词"
             :key="kidx"
@@ -49,7 +56,7 @@
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   title: {
     type: String,
     required: true
@@ -61,8 +68,19 @@ defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  displayMode: {
+    type: String,
+    default: 'default', // 'default', 'compact', 'list'
+    validator: (value) => ['default', 'compact', 'list'].includes(value)
   }
 });
+
+// 格式化内容，移除占位符
+function formatContent(content) {
+  if (!content) return '';
+  return content.replace(/{{char}}/g, '').replace(/{{user}}/g, '').trim();
+}
 </script>
 
 <style scoped>
@@ -79,6 +97,49 @@ defineProps({
 .attribute-card:hover {
   border-color: rgba(68, 255, 68, 0.4);
   box-shadow: 0 0 15px rgba(68, 255, 68, 0.2);
+}
+
+/* 紧凑模式样式 */
+.mode-compact {
+  padding: 15px;
+}
+
+.mode-compact .attribute-item {
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.mode-compact .attribute-title {
+  font-size: 1rem;
+}
+
+.mode-compact .keywords-container {
+  margin-top: 5px;
+}
+
+.mode-compact .keyword-tag {
+  padding: 2px 8px;
+  font-size: 0.8rem;
+}
+
+/* 列表模式样式 */
+.mode-list .attribute-item {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: rgba(68, 255, 68, 0.03);
+}
+
+.mode-list .attribute-header {
+  margin-bottom: 0;
+}
+
+.mode-list .attribute-title {
+  font-size: 0.95rem;
+  color: #c0c0c0;
+}
+
+.mode-list .attribute-item:hover {
+  background: rgba(68, 255, 68, 0.08);
 }
 
 .card-header {
@@ -115,11 +176,14 @@ defineProps({
 .attribute-title {
   color: #e0e0e0;
   font-size: 1.1rem;
+  flex: 1;
+  margin-right: 10px;
 }
 
 .importance-indicator {
   display: flex;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 .importance-dot {
@@ -223,5 +287,25 @@ defineProps({
 @keyframes shine {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .attribute-card {
+    padding: 15px;
+  }
+  
+  .card-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .attribute-title {
+    font-size: 1rem;
+  }
+  
+  .keyword-tag {
+    font-size: 0.8rem;
+    padding: 3px 8px;
+  }
 }
 </style>

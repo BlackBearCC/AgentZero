@@ -15,42 +15,44 @@
       </div>
     </div>
     
-    <div class="card-content" v-if="attributes && attributes.length">
-      <div 
-        v-for="(attr, index) in attributes" 
-        :key="index"
-        class="attribute-item"
-        :style="{ 
-          '--delay': `${index * 0.1}s`,
-          '--importance': attr.强度
-        }"
-      >
-        <div class="attribute-header">
-          <span class="attribute-title">{{ formatContent(attr.内容) }}</span>
-          <div class="importance-indicator" v-if="displayMode !== 'list'">
-            <div 
-              v-for="n in 5" 
-              :key="n"
-              class="importance-dot"
-              :class="{ active: n <= attr.强度 }"
-            ></div>
+    <div class="card-content-wrapper">
+      <div class="card-content" v-if="attributes && attributes.length">
+        <div 
+          v-for="(attr, index) in attributes" 
+          :key="index"
+          class="attribute-item"
+          :style="{ 
+            '--delay': `${index * 0.1}s`,
+            '--importance': attr.强度
+          }"
+        >
+          <div class="attribute-header">
+            <span class="attribute-title">{{ formatContent(attr.内容) }}</span>
+            <div class="importance-indicator" v-if="displayMode !== 'list'">
+              <div 
+                v-for="n in 5" 
+                :key="n"
+                class="importance-dot"
+                :class="{ active: n <= attr.强度 }"
+              ></div>
+            </div>
+          </div>
+          
+          <div class="keywords-container" v-if="displayMode !== 'list'">
+            <span 
+              v-for="(keyword, kidx) in attr.关键词"
+              :key="kidx"
+              class="keyword-tag"
+            >
+              {{ keyword }}
+            </span>
           </div>
         </div>
-        
-        <div class="keywords-container" v-if="displayMode !== 'list'">
-          <span 
-            v-for="(keyword, kidx) in attr.关键词"
-            :key="kidx"
-            class="keyword-tag"
-          >
-            {{ keyword }}
-          </span>
-        </div>
       </div>
-    </div>
-    
-    <div class="card-placeholder" v-else-if="!loading">
-      <span>等待生成...</span>
+      
+      <div class="card-placeholder" v-else-if="!loading">
+        <span>等待生成...</span>
+      </div>
     </div>
   </div>
 </template>
@@ -92,11 +94,47 @@ function formatContent(content) {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  height: 40vh; /* 固定高度为视口高度的40% */
+  display: flex;
+  flex-direction: column;
 }
 
 .attribute-card:hover {
   border-color: rgba(68, 255, 68, 0.4);
   box-shadow: 0 0 15px rgba(68, 255, 68, 0.2);
+}
+
+.card-content-wrapper {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.card-content {
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 10px; /* 为滚动条留出空间 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(68, 255, 68, 0.3) rgba(0, 0, 0, 0.2);
+}
+
+/* 自定义滚动条样式 */
+.card-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.card-content::-webkit-scrollbar-thumb {
+  background: rgba(68, 255, 68, 0.3);
+  border-radius: 3px;
+}
+
+.card-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(68, 255, 68, 0.5);
 }
 
 /* 紧凑模式样式 */
@@ -147,6 +185,7 @@ function formatContent(content) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  flex-shrink: 0; /* 防止头部被压缩 */
 }
 
 .card-header h3 {
@@ -240,7 +279,7 @@ function formatContent(content) {
 }
 
 .card-placeholder {
-  height: 100px;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -293,6 +332,7 @@ function formatContent(content) {
 @media (max-width: 768px) {
   .attribute-card {
     padding: 15px;
+    height: 50vh; /* 在小屏幕上稍微增加高度 */
   }
   
   .card-header h3 {

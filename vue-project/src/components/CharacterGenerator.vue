@@ -13,13 +13,27 @@
             type="file" 
             id="character-file" 
             @change="handleFileChange" 
-            accept=".txt,.pdf,.docx"
+            accept=".txt,.pdf,.docx,.csv,.json"
             class="file-input"
           />
           <label for="character-file" class="tv-button">
             <span class="button-text">[ 选择角色文件 ]</span>
           </label>
           <div class="file-name">{{ fileName || '未选择文件' }}</div>
+        </div>
+
+        <!-- 导入角色按钮 -->
+        <div class="import-control">
+          <input 
+            type="file" 
+            id="import-character" 
+            @change="handleImportFile" 
+            accept=".csv,.json"
+            class="file-input"
+          />
+          <label for="import-character" class="tv-button">
+            <span class="button-text">[ 导入角色 ]</span>
+          </label>
         </div>
 
         <!-- 生成选项 -->

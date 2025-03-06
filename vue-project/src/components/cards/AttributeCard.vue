@@ -346,7 +346,7 @@ const hasChanges = computed(() => {
 
 // 添加新属性
 function addNewAttribute() {
-  editingAttributes.value.push({
+  editingAttributes.value.unshift({
     内容: '',
     关键词: [''],
     强度: 3
@@ -360,7 +360,7 @@ function removeAttribute(index) {
 
 // 添加关键词
 function addKeyword(attrIndex) {
-  editingAttributes.value[attrIndex].关键词.push('');
+  editingAttributes.value[attrIndex].关键词.unshift('');
 }
 
 // 删除关键词

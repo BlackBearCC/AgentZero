@@ -374,7 +374,7 @@ async function refreshCategory(categoryKey) {
     console.log('请求体:', requestBody);
     
     console.log('发送请求');
-    const response = await fetch('/api/v1/generate_role_config/stream', {
+    const response = await fetchWithTimeout('/api/v1/generate_role_config/stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -482,7 +482,7 @@ async function handleAiGenerate({ category, existingAttributes }) {
       existingAttributes: existingAttributes
     });
     
-    const response = await fetch('/api/v1/generate_new_attribute', {
+    const response = await fetchWithTimeout('/api/v1/generate_new_attribute', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -547,7 +547,7 @@ async function handleAiOptimizeContent({ category, index, attribute }) {
     
     const fileContent = await selectedFile.value.text();
     
-    const response = await fetch('/api/v1/optimize_content', {
+    const response = await fetchWithTimeout('/api/v1/optimize_content', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -614,7 +614,7 @@ async function handleAiOptimizeKeywords({ category, index, attribute }) {
     const fileContent = await selectedFile.value.text();
     console.log('文件内容长度:', fileContent.length);
     
-    const response = await fetch('/api/v1/optimize_keywords', {
+    const response = await fetchWithTimeout('/api/v1/optimize_keywords', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

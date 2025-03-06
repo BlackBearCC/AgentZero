@@ -36,6 +36,7 @@ async def optimize_content(
     role_gen_service: RoleGenService = Depends(get_role_gen_service)
 ) -> dict:
     """优化属性内容"""
+    print(request.dict())
     try:
         result = await role_gen_service.optimize_content(
             category=request.category,
@@ -43,6 +44,7 @@ async def optimize_content(
             reference=request.reference,
             user_id=request.user_id
         )
+        print(result)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -53,6 +55,7 @@ async def optimize_keywords(
     role_gen_service: RoleGenService = Depends(get_role_gen_service)
 ) -> dict:
     """优化属性关键词"""
+    print(request.dict())
     try:
         result = await role_gen_service.optimize_keywords(
             category=request.category,
@@ -61,6 +64,7 @@ async def optimize_keywords(
             reference=request.reference,
             user_id=request.user_id
         )
+        print(result)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -72,6 +76,7 @@ async def generate_new_attribute(
     role_gen_service: RoleGenService = Depends(get_role_gen_service)
 ) -> dict:
     """生成新属性"""
+    print(request.dict())
     try:
         result = await role_gen_service.generate_new_attribute(
             category=request.category,
@@ -79,6 +84,7 @@ async def generate_new_attribute(
             reference=request.reference,
             user_id=request.user_id
         )
+        print(result)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

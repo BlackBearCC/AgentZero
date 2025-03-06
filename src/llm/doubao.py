@@ -16,7 +16,7 @@ load_dotenv()
 class DoubaoLLM(LLM):
     """豆包 API 的自定义封装"""
     
-    api_key: str = os.getenv("ARK_API_KEY_OFFICE", "")
+    api_key: str = os.getenv("ARK_API_KEY", "")
     api_base: str = "https://ark.cn-beijing.volces.com/api/v3"
     model_name: str = "ep-20241113173739-b6v4g"
     temperature: float = 0.7

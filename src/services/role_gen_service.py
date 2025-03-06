@@ -40,7 +40,7 @@ class RoleGenService:
     def _create_gen_agent(self) -> RoleGenerationAgent:
         """创建角色生成Agent"""
         llm = DoubaoLLM(
-            model_name=os.getenv("DOUBAO_MODEL_PRO"),
+            model_name=os.getenv("DOUBAO_MODEL_DEEPSEEK_V3"),
             temperature=0.8,
             # max_tokens=4096
         )

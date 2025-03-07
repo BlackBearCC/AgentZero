@@ -2,7 +2,7 @@
   <div class="tv-container">
     <!-- 控制面板 -->
     <div class="control-panel">
-      <div class="panel-title">控制中心</div>
+      <div class="panel-title">CONTROL</div>
       
       <!-- 电源控制 -->
       <div class="control-group">
@@ -177,11 +177,11 @@ const updateSystemStatus = (status) => {
 /**
  * ControlPanel 组件
  * 
- * 这是一个模拟复古电视机的主控界面组件。
+ * 这是一个模拟银翼杀手、重返未来1999的复古科幻电脑的主控界面组件。
  * 
  * 特色功能:
- * 1. 复古CRT电视机外观 - 包括屏幕玻璃效果、扫描线、微光和反光效果
- * 2. 频道切换系统 - 模拟老式电视的换台效果，带有静态噪声和扫描线动画
+ * 1. 复古科幻CRT屏幕外观 - 包括屏幕玻璃效果、扫描线、微光和反光效果
+ * 2. 频道切换系统 - 
  * 3. 三个频道功能:
  *    - 频道1: 角色生成器
  *    - 频道2: 批量对话
@@ -193,5 +193,5 @@ const updateSystemStatus = (status) => {
  *    - 亮度调节
  * 
  * 设计理念:
- * 通过怀旧的复古电视机界面，为AI工具增添趣味性和独特的用户体验。
+ * 通过怀旧的复古科幻电脑界面，为AI工具增添趣味性和独特的用户体验。
  */ 

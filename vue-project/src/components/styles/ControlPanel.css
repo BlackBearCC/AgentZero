@@ -355,6 +355,7 @@
   align-items: center;
   position: relative;
   overflow: hidden;
+  box-shadow: inset 0 0 150px rgba(0, 30, 60, 0.8);
 }
 
 /* 屏幕框架 */
@@ -367,16 +368,18 @@
   box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
 }
 
-/* 屏幕内容 */
+/* 屏幕内容 - 简化结构，移除多余边框 */
 .screen-content {
   width: 100%;
   height: 100%;
   position: relative;
   background-color: #000000;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
 }
 
-/* CRT屏幕效果 */
-.screen-frame::after {
+/* CRT屏幕效果 - 直接应用到屏幕内容 */
+.screen-content::after {
   content: '';
   position: absolute;
   top: 0;
@@ -387,13 +390,34 @@
     radial-gradient(
       ellipse at center,
       rgba(0, 0, 0, 0) 50%,
-      rgba(0, 0, 0, 0.5) 100%
+      rgba(0, 30, 60, 0.6) 100%
     );
   pointer-events: none;
   z-index: 5;
 }
 
-/* 扫描线效果 */
+/* 屏幕噪点效果 */
+.screen-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 6;
+  animation: noiseAnimation 0.5s infinite;
+}
+
+@keyframes noiseAnimation {
+  0% { opacity: 0.08; }
+  50% { opacity: 0.06; }
+  100% { opacity: 0.08; }
+}
+
+/* 扫描线效果 - 增强版 */
 .scanning::before {
   content: '';
   position: absolute;
@@ -411,12 +435,34 @@
   z-index: 10;
 }
 
+/* 添加水平扫描线 */
+.scanning::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(0, 195, 255, 0.15);
+  box-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
+  animation: horizontalScan 3s linear infinite;
+  pointer-events: none;
+  z-index: 11;
+}
+
+@keyframes horizontalScan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
 @keyframes scan {
   0% { transform: translateY(-100%); }
   100% { transform: translateY(100%); }
 }
 
-/* 换台效果 */
+/* 换台效果 - 增强版 */
 .changing-channel::after {
   content: '';
   position: absolute;
@@ -435,13 +481,27 @@
   z-index: 20;
 }
 
+/* 添加换台闪烁效果 */
+.changing-channel {
+  animation: channelFlicker 0.5s ease-in-out;
+}
+
+@keyframes channelFlicker {
+  0% { filter: brightness(1); }
+  20% { filter: brightness(1.5); }
+  40% { filter: brightness(0.8); }
+  60% { filter: brightness(1.2); }
+  80% { filter: brightness(0.9); }
+  100% { filter: brightness(1); }
+}
+
 @keyframes channel-change {
   0% { opacity: 0; }
   50% { opacity: 0.5; }
   100% { opacity: 0; }
 }
 
-/* 关机效果 */
+/* 关机效果 - 增强版 */
 .power-off-screen {
   width: 100%;
   height: 100%;
@@ -450,6 +510,12 @@
   justify-content: center;
   align-items: center;
   position: relative;
+  animation: powerOffFade 1s forwards;
+}
+
+@keyframes powerOffFade {
+  0% { background-color: #000022; }
+  100% { background-color: #000000; }
 }
 
 .power-off-screen::after {
@@ -493,6 +559,87 @@
   border: 1px solid rgba(0, 195, 255, 0.3);
   opacity: 0.8;
   animation: dot-pulse 2s forwards;
+}
+
+/* 开机效果 */
+.power-on-screen {
+  animation: powerOnEffect 2s ease-out;
+}
+
+@keyframes powerOnEffect {
+  0% { 
+    filter: brightness(0); 
+    background-color: #000000;
+  }
+  30% { 
+    filter: brightness(0.3); 
+    background-color: #001020;
+  }
+  60% { 
+    filter: brightness(1.5); 
+    background-color: #002040;
+  }
+  70% { 
+    filter: brightness(0.8); 
+    background-color: #001830;
+  }
+  100% { 
+    filter: brightness(1); 
+    background-color: #000000;
+  }
+}
+
+/* 全息投影屏幕效果 */
+.hologram-screen {
+  position: relative;
+}
+
+.hologram-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    linear-gradient(90deg, 
+      rgba(0, 195, 255, 0.03) 1px, 
+      transparent 1px
+    ),
+    linear-gradient(0deg, 
+      rgba(0, 195, 255, 0.03) 1px, 
+      transparent 1px
+    );
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 15;
+  opacity: 0.5;
+}
+
+/* 屏幕边缘发光效果 */
+.screen-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-shadow: 
+    inset 0 0 50px rgba(0, 195, 255, 0.3),
+    inset 0 0 100px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 12;
+}
+
+/* 屏幕闪烁故障效果 */
+.screen-glitch {
+  animation: screenGlitch 10s infinite;
+}
+
+@keyframes screenGlitch {
+  0%, 100% { filter: none; }
+  98.5% { filter: none; }
+  99% { filter: hue-rotate(90deg) brightness(1.1) saturate(1.5); }
+  99.5% { filter: none; }
 }
 
 @keyframes fade-out {

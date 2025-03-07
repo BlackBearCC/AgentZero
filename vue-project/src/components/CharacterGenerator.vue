@@ -1,11 +1,10 @@
 <template>
-  <TvScreen class="character-generator" :scanning="isGenerating">
+  <!-- <TvScreen class="character-generator" :scanning="isGenerating"> -->
     <!-- 未上传文件时的空状态 -->
     <div v-if="!hasGeneratedData && !isGenerating" class="empty-state">
       <TvTitle size="xl">CHARACTER GENERATOR</TvTitle>
       <div class="channel-info">频道 1</div>
       <div class="instruction-text">请上传角色资料文件开始生成</div>
-      
       <!-- 控制区域整合到屏幕中 -->
       <TvPanel>
         <TvControlGroup label="文件控制">
@@ -109,7 +108,7 @@
         @aiGenerate="handleAiGenerate"
       />
     </div>
-  </TvScreen>
+  <!-- </TvScreen> -->
 </template>
 
 <script setup>
@@ -123,7 +122,7 @@ import {
   TvScreen,
   TvTitle,
   TvCheckbox,
-  TvControlGroup
+  TvControlGroup,
 } from '../design-system/components'
 
 // 修改 emit 定义，确保包含所有需要的事件

@@ -29,10 +29,14 @@
     animation: thinking 2s infinite;
   }
   
+  &.talking {
+    animation: subtle-float 3s ease-in-out infinite;
+  }
+  
   .robot-head {
     width: 140px;
     height: 100px;
-    background: #1a1a2a;
+    background: transparenta;
     position: relative;
     margin: 0 auto;
     box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
@@ -40,6 +44,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    animation: glow 4s infinite alternate;
     
     &::before {
       content: '';
@@ -66,6 +71,7 @@
     display: flex;
     gap: 30px;
     margin-top: 40px;
+    animation: slight-shift 8s ease-in-out infinite;
     
     .robot-eye {
       width: 24px;
@@ -77,6 +83,14 @@
       &.blink {
         height: 2px;
         transform: translateY(3px);
+      }
+      
+      &.left {
+        animation: eye-move-left 6s ease-in-out infinite;
+      }
+      
+      &.right {
+        animation: eye-move-right 6s ease-in-out infinite;
       }
     }
   }
@@ -115,5 +129,33 @@
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-2px); }
   75% { transform: translateX(2px); }
+}
+
+@keyframes subtle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8); }
+  50% { box-shadow: inset 0 0 20px rgba(0, 195, 255, 0.2); }
+}
+
+@keyframes slight-shift {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-2px); }
+  70% { transform: translateY(2px); }
+}
+
+@keyframes eye-move-left {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(1px); }
+}
+
+@keyframes eye-move-right {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(2px); }
+  75% { transform: translateX(-1px); }
 }
 </style>

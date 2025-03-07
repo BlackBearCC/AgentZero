@@ -7,9 +7,10 @@
   height: 100vh;
   background-color: #1a1a2a;
   position: fixed;
-  color: #e0e0e0;
-  font-family: 'Orbitron', 'Share Tech Mono', monospace;
+  color: #00c3ff; /* 更改基础文字颜色为亮蓝色 */
+  font-family: 'Blade Runner', 'Orbitron', 'Share Tech Mono', monospace;
   overflow: hidden;
+  text-shadow: 0 0 5px rgba(0, 195, 255, 0.5); /* 为所有文字添加发光效果 */
 }
 
 /* 控制面板 */
@@ -61,6 +62,7 @@
   letter-spacing: 2px;
   text-transform: uppercase;
   position: relative;
+  font-family: 'Blade Runner', 'Eurostile', 'Orbitron', sans-serif;
 }
 
 /* 故障效果 */
@@ -132,9 +134,10 @@
 
 .control-label {
   font-size: 0.8rem;
-  color: #8a8a9a;
+  color: #00c3ff; /* 更改标签颜色为亮蓝色 */
   letter-spacing: 1px;
   text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(0, 195, 255, 0.4); /* 添加发光效果 */
 }
 
 /* 按钮样式 */
@@ -233,6 +236,7 @@
   justify-content: center;
   align-items: center;
   height: 40px;
+  font-family: 'Eurostile', 'Share Tech Mono', monospace;
 }
 
 .channel-btn.active {
@@ -252,15 +256,17 @@
 
 .channel-label {
   font-size: 0.7rem;
-  color: #8a8a9a;
+  color: #00c3ff; /* 更改为亮蓝色 */
   text-align: center;
   flex: 1;
   transition: all 0.3s ease;
+  text-shadow: 0 0 5px rgba(0, 195, 255, 0.4); /* 添加发光效果 */
+  font-family: 'Eurostile', 'Share Tech Mono', monospace;
 }
 
 .channel-label.active {
-  color: #00c3ff;
-  text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
+  color: #00eeff; /* 更亮的蓝色 */
+  text-shadow: 0 0 10px rgba(0, 238, 255, 0.7); /* 更强的发光效果 */
 }
 
 /* 音量和亮度控制 */
@@ -309,20 +315,36 @@
 
 .status-label {
   font-size: 0.8rem;
-  color: #8a8a9a;
+  color: #00c3ff; /* 更改为亮蓝色 */
   margin-bottom: 5px;
   text-transform: uppercase;
   letter-spacing: 1px;
+  text-shadow: 0 0 5px rgba(0, 195, 255, 0.4); /* 添加发光效果 */
+  font-family: 'Eurostile', 'Share Tech Mono', monospace;
 }
 
 .status-value {
-  color: #00c3ff;
+  color: #00eeff; /* 更亮的蓝色 */
   font-size: 0.9rem;
-  text-shadow: 0 0 5px rgba(0, 195, 255, 0.3);
-  font-family: 'Share Tech Mono', monospace;
+  text-shadow: 0 0 8px rgba(0, 238, 255, 0.6); /* 更强的发光效果 */
+  font-family: 'Blade Runner', 'Share Tech Mono', monospace;
   letter-spacing: 1px;
 }
 
+/* 添加字体导入 */
+@font-face {
+  font-family: 'Blade Runner';
+  src: url('https://fonts.cdnfonts.com/css/blade-runner-movie-font') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Eurostile';
+  src: url('https://fonts.cdnfonts.com/css/eurostile') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
 /* 电视屏幕 - 占据剩余所有空间 */
 .tv-screen {
   flex: 1;

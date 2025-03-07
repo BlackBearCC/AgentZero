@@ -8,3 +8,8 @@ export { default as TvControlGroup } from './TvControlGroup.vue'
 export { default as TvSlider } from './TvSlider.vue'
 export { default as TvFileInput } from './TvFileInput.vue'
 export { default as TvCategoryGrid } from './TvCategoryGrid.vue'
+import RetroRobot from './RetroRobot.vue'
+
+export {
+  RetroRobot
+}

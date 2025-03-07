@@ -1,0 +1,59 @@
+// 颜色系统
+:root {
+  // 主色调
+  --color-primary: #00c3ff;
+  --color-primary-light: #00eeff;
+  --color-primary-dark: #0099cc;
+  
+  // 背景色
+  --color-background: #1a1a2a;
+  --color-background-light: #2a2a3a;
+  --color-background-dark: #000000;
+  
+  // 控制面板背景
+  --color-panel: rgba(0, 20, 40, 0.7);
+  --color-panel-light: rgba(0, 40, 80, 0.8);
+  --color-panel-dark: rgba(0, 10, 20, 0.95);
+  
+  // 边框颜色
+  --color-border: rgba(0, 195, 255, 0.3);
+  --color-border-active: rgba(0, 195, 255, 0.5);
+  --color-border-hover: #00c3ff;
+  
+  // 文字颜色
+  --color-text: #00c3ff;
+  --color-text-light: #00eeff;
+  --color-text-dark: #0099cc;
+  --color-text-contrast: #000000;
+  
+  // 阴影颜色
+  --shadow-primary: rgba(0, 195, 255, 0.5);
+  --shadow-secondary: rgba(0, 195, 255, 0.3);
+  
+  // 特效颜色
+  --effect-glow: rgba(0, 195, 255, 0.8);
+  --effect-scan: rgba(0, 195, 255, 0.05);
+  
+  // 交互元素通用样式
+  --element-bg: rgba(0, 20, 40, 0.8);
+  --element-bg-hover: rgba(0, 40, 80, 0.8);
+  --element-bg-active: rgba(0, 40, 80, 0.9);
+  --element-bg-active-hover: rgba(0, 60, 100, 0.9);
+  --element-border-radius: 5px;
+  --element-gradient: linear-gradient(45deg, transparent, rgba(0, 195, 255, 0.1), transparent);
+  
+  // 交互元素阴影
+  --element-shadow-hover: 0 0 15px rgba(0, 195, 255, 0.5), inset 0 0 15px rgba(0, 195, 255, 0.3);
+  --element-shadow-active: 0 0 20px rgba(0, 195, 255, 0.6), inset 0 0 20px rgba(0, 195, 255, 0.4);
+  
+  // 指示器样式
+  --indicator-inactive: #444;
+  --indicator-active: var(--color-primary);
+  --indicator-shadow: 0 0 10px var(--shadow-primary);
+  
+  // 控件尺寸
+  --control-size-sm: 20px;
+  --control-size-md: 24px;
+  --control-size-lg: 30px;
+}
+

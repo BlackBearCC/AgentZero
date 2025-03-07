@@ -61,7 +61,13 @@
           <div class="brightness-value">{{ brightness }}</div>
         </div>
       </div>
-      
+      <div class="action-buttons">
+        <TvButton 
+          primary 
+        >
+          [ 测试按钮 ]
+        </TvButton>
+      </div>
       <!-- 系统状态 -->
       <div class="system-status">
         <div class="status-label">SYSTEM STATUS</div>
@@ -90,6 +96,16 @@
 </template>
 
 <script setup>
+import {
+  TvButton,
+  TvPanel,
+  TvScreen,
+  TvTitle,
+  TvCheckbox,
+  TvControlGroup,
+  TvSlider,
+  TvFileInput
+} from '../design-system/components'
 import { ref, computed } from 'vue'
 import CharacterGenerator from './CharacterGenerator.vue'
 import BatchDialogue from './BatchDialogue.vue'

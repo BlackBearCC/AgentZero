@@ -1,88 +1,91 @@
 <template>
-  <div class="character-generator">
+  <TvScreen class="character-generator" :scanning="isGenerating">
     <!-- 未上传文件时的空状态 -->
     <div v-if="!hasGeneratedData && !isGenerating" class="empty-state">
-      <div class="tv-logo">CHARACTER GENERATOR</div>
+      <TvTitle size="xl">CHARACTER GENERATOR</TvTitle>
       <div class="channel-info">频道 1</div>
       <div class="instruction-text">请上传角色资料文件开始生成</div>
       
       <!-- 控制区域整合到屏幕中 -->
-      <div class="screen-controls">
-        <div class="file-control">
-          <input 
-            type="file" 
-            id="character-file" 
-            @change="handleFileChange" 
-            accept=".txt,.pdf,.docx,.csv,.json"
-            class="file-input"
-          />
-          <label for="character-file" class="tv-button">
-            <span class="button-text">[ 选择角色文件 ]</span>
-          </label>
-          <div class="file-name">{{ fileName || '未选择文件' }}</div>
-        </div>
-
-        <!-- 导入角色按钮 -->
-        <div class="import-control">
-          <input 
-            type="file" 
-            id="import-character" 
-            @change="handleImportFile" 
-            accept=".csv,.json"
-            class="file-input"
-          />
-          <label for="import-character" class="tv-button">
-            <span class="button-text">[ 导入角色 ]</span>
-          </label>
-        </div>
-
-        <!-- 生成选项 -->
-        <div class="option-group">
-          <div class="option-item">
-            <input type="checkbox" id="batch-generate" v-model="batchGenerate" />
-            <label for="batch-generate">批量生成属性</label>
+      <TvPanel>
+        <TvControlGroup label="文件控制">
+          <div class="file-control">
+            <input 
+              type="file" 
+              id="character-file" 
+              @change="handleFileChange" 
+              accept=".txt,.pdf,.docx,.csv,.json"
+              class="file-input"
+            />
+            <label for="character-file">
+              <TvButton>[ 选择角色文件 ]</TvButton>
+            </label>
+            <div class="file-name">{{ fileName || '未选择文件' }}</div>
           </div>
-          <div class="option-item">
-            <input type="checkbox" id="show-generation-process" v-model="showGenerationProcess" />
-            <label for="show-generation-process">显示生成过程</label>
+
+          <div class="import-control">
+            <input 
+              type="file" 
+              id="import-character" 
+              @change="handleImportFile" 
+              accept=".csv,.json"
+              class="file-input"
+            />
+            <label for="import-character">
+              <TvButton>[ 导入角色 ]</TvButton>
+            </label>
           </div>
-        </div>
+        </TvControlGroup>
+
+        <TvControlGroup label="生成选项">
+          <div class="option-group">
+            <TvCheckbox 
+              v-model="batchGenerate"
+              id="batch-generate"
+            >
+              批量生成属性
+            </TvCheckbox>
+            <TvCheckbox 
+              v-model="showGenerationProcess"
+              id="show-generation-process"
+            >
+              显示生成过程
+            </TvCheckbox>
+          </div>
+        </TvControlGroup>
         
         <!-- 类别选择 -->
-        <div class="category-selection" v-if="batchGenerate">
-          <h4>选择要生成的属性类别</h4>
+        <TvControlGroup v-if="batchGenerate" label="选择要生成的属性类别">
           <div class="category-grid">
-            <div 
+            <TvCheckbox 
               v-for="(category, index) in categoryOptions" 
               :key="index"
-              class="category-option"
+              :id="`category-${index}`"
+              v-model="selectedCategories"
+              :value="category.key"
             >
-              <input 
-                type="checkbox" 
-                :id="`category-${index}`" 
-                v-model="selectedCategories"
-                :value="category.key"
-              />
-              <label :for="`category-${index}`">{{ category.title }}</label>
-            </div>
+              {{ category.title }}
+            </TvCheckbox>
           </div>
-        </div>
+        </TvControlGroup>
       
         <!-- 操作按钮 -->
         <div class="action-buttons">
-          <button @click="generateCharacter" class="tv-button primary" :disabled="!canGenerate">
-            <span class="button-text">[ 开始生成 ]</span>
-          </button>
+          <TvButton 
+            primary 
+            @click="generateCharacter" 
+            :disabled="!canGenerate"
+          >
+            [ 开始生成 ]
+          </TvButton>
         </div>
-      </div>
+      </TvPanel>
     </div>
     
     <!-- 生成中状态 -->
     <div v-else-if="isGenerating && showGenerationProcess" class="processing-state">
-      <div class="tv-logo">CHARACTER GENERATOR</div>
-      <div class="generation-screen">
-        <div class="scan-line"></div>
-        <div class="screen-glare"></div>
+      <TvTitle size="xl">CHARACTER GENERATOR</TvTitle>
+      <TvScreen scanning>
         <StreamDisplay 
           :content="streamContent"
           :loading="isGenerating"
@@ -90,10 +93,10 @@
           :typing-effect="true"
           :typing-speed="3"
         />
-      </div>
+      </TvScreen>
     </div>
     
-    <!-- 生成结果 - 使用新组件 -->
+    <!-- 生成结果 -->
     <div v-else class="result-container">
       <CharacterReport 
         :character="characterData"
@@ -106,7 +109,7 @@
         @aiGenerate="handleAiGenerate"
       />
     </div>
-  </div>
+  </TvScreen>
 </template>
 
 <script setup>
@@ -114,6 +117,14 @@ import { ref, computed, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import StreamDisplay from './StreamDisplay.vue'
 import CharacterReport from './CharacterReport.vue'
+import {
+  TvButton,
+  TvPanel,
+  TvScreen,
+  TvTitle,
+  TvCheckbox,
+  TvControlGroup
+} from '../design-system/components'
 
 // 修改 emit 定义，确保包含所有需要的事件
 const emit = defineEmits(['reset', 'refresh', 'update', 'aiOptimizeContent', 'aiOptimizeKeywords', 'aiGenerate'])
@@ -657,4 +668,70 @@ async function handleAiOptimizeKeywords({ category, index, attribute }) {
 }
 </script>
 
-<style src="./styles/character-generator.css"></style>
+
+<style lang="scss" scoped>
+.character-generator {
+  height: 100%;
+  
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-xl);
+  }
+  
+  .channel-info {
+    font-family: var(--font-family-secondary);
+    font-size: var(--font-size-base);
+    color: var(--color-text);
+    margin-bottom: var(--spacing-xl);
+    opacity: 0.8;
+    text-shadow: 0 0 5px var(--shadow-secondary);
+  }
+  
+  .instruction-text {
+    font-size: var(--font-size-lg);
+    color: var(--color-text-light);
+    margin-bottom: var(--spacing-xxl);
+    text-align: center;
+    text-shadow: 0 0 8px var(--shadow-primary);
+  }
+  
+  .file-control {
+    width: 100%;
+    margin-bottom: var(--spacing-lg);
+    
+    .file-input {
+      display: none;
+    }
+    
+    .file-name {
+      margin-top: var(--spacing-sm);
+      font-size: var(--font-size-sm);
+      color: var(--color-text);
+      opacity: 0.8;
+    }
+  }
+  
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-sm);
+  }
+  
+  .action-buttons {
+    margin-top: var(--spacing-xl);
+    display: flex;
+    justify-content: center;
+  }
+  
+  .processing-state {
+    padding: var(--spacing-xl);
+  }
+  
+  .result-container {
+    height: 100%;
+  }
+}
+</style>

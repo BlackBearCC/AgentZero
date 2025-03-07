@@ -1,0 +1,643 @@
+/* 复古科幻电影风格的控制面板 - 受《银翼杀手》和《2001太空漫游》启发 */
+
+/* 重置默认边距和填充 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* 主容器 */
+  .tv-container {
+    display: flex;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, #000510 0%, #001030 100%);
+    color: #00ffff;
+    font-family: 'Orbitron', 'Share Tech Mono', monospace;
+    overflow: hidden;
+  }
+
+/* 添加背景噪点效果 */
+.tv-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 控制面板 */
+.control-panel {
+    width: 300px;
+    min-width: 300px;
+    height: 100%;
+    background: linear-gradient(135deg, #001428 0%, #000a14 100%);
+    border-right: 1px solid rgba(0, 255, 255, 0.2);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    box-shadow: 
+      inset 0 0 30px rgba(0, 255, 255, 0.1),
+      5px 0 15px rgba(0, 0, 0, 0.5);
+    position: relative;
+    z-index: 2;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+/* 面板标题 */
+.panel-title {
+  font-size: 1.8rem;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-align: center;
+  margin-bottom: 20px;
+  color: #00ffff;
+  text-shadow: 
+    0 0 10px rgba(0, 255, 255, 0.8),
+    0 0 20px rgba(0, 255, 255, 0.4);
+  position: relative;
+  animation: titlePulse 4s infinite;
+}
+
+/* 添加故障效果 */
+.panel-title::before {
+  content: attr(data-text);
+  position: absolute;
+  left: 2px;
+  text-shadow: -2px 0 #ff00ff;
+  top: 0;
+  color: #00ffff;
+  background: transparent;
+  overflow: hidden;
+  clip: rect(0, 900px, 0, 0);
+  animation: glitch-1 3s infinite linear alternate-reverse;
+}
+
+.panel-title::after {
+  content: attr(data-text);
+  position: absolute;
+  left: -2px;
+  text-shadow: 2px 0 #00ffff;
+  top: 0;
+  color: #00ffff;
+  background: transparent;
+  overflow: hidden;
+  clip: rect(0, 900px, 0, 0);
+  animation: glitch-2 2s infinite linear alternate-reverse;
+}
+
+/* 控制组 */
+.control-group {
+  background: rgba(0, 20, 40, 0.6);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 5px;
+  padding: 15px;
+  position: relative;
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.1),
+    inset 0 0 10px rgba(0, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+/* 全息投影效果 */
+.control-group::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 255, 255, 0.03) 0px,
+    rgba(0, 255, 255, 0.03) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  animation: hologramScan 10s linear infinite;
+}
+
+/* 控制标签 */
+.control-label {
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  color: #00ffff;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+/* 按钮样式 */
+.control-button {
+  background: rgba(0, 30, 60, 0.6);
+  border: 1px solid rgba(0, 255, 255, 0.5);
+  color: #00ffff;
+  padding: 8px 15px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.control-button::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(0, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: buttonGlow 3s infinite;
+}
+
+.control-button:hover {
+  background: rgba(0, 40, 80, 0.8);
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.5),
+    inset 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+/* 电源按钮特殊样式 */
+.button-face {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.power-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #333;
+  transition: all 0.5s ease;
+}
+
+.power-indicator.active {
+  background: #00ffff;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+  animation: powerPulse 2s infinite;
+}
+
+/* 频道按钮 */
+.channel-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.channel-btn {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  transition: all 0.3s ease;
+}
+
+.channel-btn.active {
+  background: rgba(0, 255, 255, 0.2);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+/* 频道标签 */
+.channel-labels {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.channel-label {
+  flex: 1;
+  font-size: 0.8rem;
+  text-align: center;
+  color: rgba(0, 255, 255, 0.6);
+  transition: all 0.3s ease;
+}
+
+.channel-label.active {
+  color: #00ffff;
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.8);
+}
+
+/* 音量和亮度控制 */
+.volume-control,
+.brightness-control {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.volume-slider,
+.brightness-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  background: rgba(0, 255, 255, 0.2);
+  border-radius: 2px;
+  outline: none;
+}
+
+.volume-slider::-webkit-slider-thumb,
+.brightness-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #00ffff;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+}
+
+.volume-slider:disabled,
+.brightness-slider:disabled {
+  opacity: 0.3;
+}
+
+.volume-value,
+.brightness-value {
+  width: 30px;
+  text-align: center;
+  font-family: 'Share Tech Mono', monospace;
+  color: #00ffff;
+}
+
+/* 系统状态 */
+.system-status {
+  margin-top: auto;
+  padding: 15px;
+  background: rgba(0, 10, 20, 0.8);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 5px;
+}
+
+.status-label {
+  font-size: 0.8rem;
+  color: rgba(0, 255, 255, 0.7);
+  margin-bottom: 5px;
+  letter-spacing: 1px;
+}
+
+.status-value {
+  font-family: 'Share Tech Mono', monospace;
+  color: #00ffff;
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+  animation: statusBlink 4s infinite;
+}
+
+/* 电视屏幕 */
+.tv-screen {
+    flex: 1;
+    background: #000;
+    position: relative;
+    overflow: hidden;
+    transition: filter 0.5s ease;
+    min-width: 0; /* 防止溢出 */
+  }
+
+/* 屏幕边框 - 添加CRT曲面效果 */
+.screen-frame {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  border: 2px solid rgba(0, 255, 255, 0.3);
+  border-radius: 20px;
+  overflow: hidden;
+  background: #000510;
+  box-shadow: 
+    inset 0 0 50px rgba(0, 0, 0, 0.8),
+    0 0 30px rgba(0, 255, 255, 0.2);
+  transition: all 0.5s ease;
+}
+
+/* CRT曲面效果 */
+.screen-frame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 50%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  border-radius: 50% / 10%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* 扫描线效果 */
+.screen-frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 3;
+  animation: scanlines 10s linear infinite;
+}
+
+/* 屏幕内容 */
+.screen-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* 未开机状态 */
+.power-off-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.power-off-dot {
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  animation: fadeInOut 2s infinite;
+}
+
+/* 换台效果 */
+.screen-frame.changing-channel {
+  animation: channelChange 1.5s ease;
+}
+
+.screen-frame.scanning {
+  position: relative;
+}
+
+.screen-frame.scanning::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 255, 255, 0.1),
+    transparent
+  );
+  z-index: 4;
+  animation: scanning 8s linear infinite;
+}
+
+/* 动画定义 */
+@keyframes titlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes glitch-1 {
+    0% {
+      clip: rect(132px, auto, 101px, 30px);
+    }
+    5% {
+      clip: rect(17px, auto, 94px, 30px);
+    }
+    10% {
+      clip: rect(40px, auto, 66px, 30px);
+    }
+    15% {
+      clip: rect(87px, auto, 82px, 30px);
+    }
+    20% {
+      clip: rect(137px, auto, 61px, 30px);
+    }
+    25% {
+      clip: rect(34px, auto, 14px, 30px);
+    }
+    30% {
+      clip: rect(133px, auto, 74px, 30px);
+    }
+    35% {
+      clip: rect(76px, auto, 107px, 30px);
+    }
+    40% {
+      clip: rect(59px, auto, 130px, 30px);
+    }
+    45% {
+      clip: rect(29px, auto, 84px, 30px);
+    }
+    50% {
+      clip: rect(22px, auto, 67px, 30px);
+    }
+    55% {
+      clip: rect(67px, auto, 62px, 30px);
+    }
+    60% {
+      clip: rect(10px, auto, 105px, 30px);
+    }
+    65% {
+      clip: rect(78px, auto, 115px, 30px);
+    }
+    70% {
+      clip: rect(105px, auto, 13px, 30px);
+    }
+    75% {
+      clip: rect(15px, auto, 75px, 30px);
+    }
+    80% {
+      clip: rect(66px, auto, 39px, 30px);
+    }
+    85% {
+      clip: rect(133px, auto, 73px, 30px);
+    }
+    90% {
+      clip: rect(36px, auto, 128px, 30px);
+    }
+    95% {
+      clip: rect(68px, auto, 103px, 30px);
+    }
+    100% {
+      clip: rect(14px, auto, 100px, 30px);
+    }
+  }
+  
+  @keyframes glitch-2 {
+    0% {
+      clip: rect(129px, auto, 36px, 30px);
+    }
+    5% {
+      clip: rect(36px, auto, 4px, 30px);
+    }
+    10% {
+      clip: rect(85px, auto, 66px, 30px);
+    }
+    15% {
+      clip: rect(91px, auto, 77px, 30px);
+    }
+    20% {
+      clip: rect(26px, auto, 87px, 30px);
+    }
+    25% {
+      clip: rect(56px, auto, 98px, 30px);
+    }
+    30% {
+      clip: rect(123px, auto, 32px, 30px);
+    }
+    35% {
+      clip: rect(27px, auto, 153px, 30px);
+    }
+    40% {
+      clip: rect(89px, auto, 110px, 30px);
+    }
+    45% {
+      clip: rect(111px, auto, 95px, 30px);
+    }
+    50% {
+      clip: rect(54px, auto, 105px, 30px);
+    }
+    55% {
+      clip: rect(74px, auto, 112px, 30px);
+    }
+    60% {
+      clip: rect(23px, auto, 69px, 30px);
+    }
+    65% {
+      clip: rect(147px, auto, 45px, 30px);
+    }
+    70% {
+      clip: rect(31px, auto, 103px, 30px);
+    }
+    75% {
+      clip: rect(143px, auto, 125px, 30px);
+    }
+    80% {
+      clip: rect(76px, auto, 139px, 30px);
+    }
+    85% {
+      clip: rect(87px, auto, 33px, 30px);
+    }
+    90% {
+      clip: rect(112px, auto, 108px, 30px);
+    }
+    95% {
+      clip: rect(48px, auto, 153px, 30px);
+    }
+    100% {
+      clip: rect(41px, auto, 84px, 30px);
+    }
+  }
+  
+  @keyframes scanline {
+    0% {
+      transform: translateY(-100%);
+    }
+    100% {
+      transform: translateY(100%);
+    }
+  }
+  
+  @keyframes flicker {
+    0% {
+      opacity: 0.27861;
+    }
+    5% {
+      opacity: 0.34769;
+    }
+    10% {
+      opacity: 0.23604;
+    }
+    15% {
+      opacity: 0.90626;
+    }
+    20% {
+      opacity: 0.18128;
+    }
+    25% {
+      opacity: 0.83891;
+    }
+    30% {
+      opacity: 0.65583;
+    }
+    35% {
+      opacity: 0.67807;
+    }
+    40% {
+      opacity: 0.26559;
+    }
+    45% {
+      opacity: 0.84693;
+    }
+    50% {
+      opacity: 0.96019;
+    }
+    55% {
+      opacity: 0.08594;
+    }
+    60% {
+      opacity: 0.20313;
+    }
+    65% {
+      opacity: 0.71988;
+    }
+    70% {
+      opacity: 0.53455;
+    }
+    75% {
+      opacity: 0.37288;
+    }
+    80% {
+      opacity: 0.71428;
+    }
+    85% {
+      opacity: 0.70419;
+    }
+    90% {
+      opacity: 0.7003;
+    }
+    95% {
+      opacity: 0.36108;
+    }
+    100% {
+      opacity: 0.24387;
+    }
+  }

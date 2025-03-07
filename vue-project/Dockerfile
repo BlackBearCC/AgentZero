@@ -8,6 +8,7 @@ COPY package*.json ./
 
 # Install dependencies including Element Plus
 RUN npm install
+RUN npm install -D sass-embedded
 RUN npm install element-plus @element-plus/icons-vue
 
 # 复制所有源文件，包括字体

@@ -1,7 +1,7 @@
 /* 基础容器样式 */
 .character-generator {
   height: 100%;
-  padding: 20px;
+  /* padding: 20px; */
   overflow-y: auto;
   color: #00c3ff;
   background: linear-gradient(135deg, #1a1a2a 0%, #2a2a3a 100%);
@@ -11,9 +11,9 @@
 }
 
 /* 全息投影基础效果 */
-.hologram-container {
+/* .hologram-container {
   position: relative;
-}
+} */
 
 .hologram-container::before {
   content: '';
@@ -157,16 +157,18 @@
 }
 
 /* 生成屏幕样式 */
-.generation-screen {
-  background: rgba(0, 10, 20, 0.95);
+/* .generation-screen {
+  background: rgba(0, 10, 20, 0.7); 
   border: 1px solid rgba(0, 195, 255, 0.3);
   border-radius: 5px;
-  box-shadow: 
-    0 0 30px rgba(0, 195, 255, 0.2),
-    inset 0 0 30px rgba(0, 195, 255, 0.1);
+  box-shadow: inset 0 0 15px rgba(0, 195, 255, 0.1); 
   position: relative;
   overflow: hidden;
-}
+  margin-top: 20px;
+  padding: 20px;
+  min-height: 300px;
+  font-family: 'Share Tech Mono', monospace;
+} */
 
 /* 添加屏幕噪点效果 */
 .generation-screen::before {
@@ -275,10 +277,10 @@
   align-items: center;
   padding: 40px;
   background: rgba(0, 10, 20, 0.95);
-  border-radius: 10px;
+  /* border-radius: 10px;
   box-shadow: 
     0 0 30px rgba(0, 195, 255, 0.2),
-    inset 0 0 30px rgba(0, 195, 255, 0.1);
+    inset 0 0 30px rgba(0, 195, 255, 0.1); */
 }
 
 /* TV Logo 样式 */
@@ -441,16 +443,16 @@
 }
 
 /* 生成屏幕增强样式 */
-.generation-screen {
+/* .generation-screen {
   margin-top: 20px;
   padding: 20px;
   min-height: 300px;
   font-family: 'Share Tech Mono', monospace;
   position: relative;
-}
+} */
 
 /* 屏幕反光效果 */
-.screen-glare {
+/* .screen-glare {
   position: absolute;
   top: 0;
   left: 0;
@@ -464,7 +466,7 @@
   );
   pointer-events: none;
   z-index: 4;
-}
+} */
 
 /* 结果容器样式 */
 .result-container {

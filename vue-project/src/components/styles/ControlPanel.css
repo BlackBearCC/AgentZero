@@ -1,16 +1,15 @@
 /* 主容器 */
 /* 重置基本样式 */
-
 .tv-container {
   display: flex;
   width: 100%;
   height: 100vh;
-  background-color: #1a1a2a;
+  /* background-color: #000000; */
   position: fixed;
-  color: #00c3ff; /* 更改基础文字颜色为亮蓝色 */
+  color: #00c3ff;
   font-family: 'Blade Runner', 'Orbitron', 'Share Tech Mono', monospace;
   overflow: hidden;
-  text-shadow: 0 0 5px rgba(0, 195, 255, 0.5); /* 为所有文字添加发光效果 */
+  text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
 }
 
 /* 控制面板 */
@@ -28,7 +27,7 @@
 }
 
 /* 全息投影效果 */
-.control-panel::before {
+/* .control-panel::before {
   content: '';
   position: absolute;
   top: 0;
@@ -45,7 +44,7 @@
   pointer-events: none;
   animation: hologramScan 10s linear infinite;
   z-index: -1;
-}
+} */
 
 @keyframes hologramScan {
   0% { transform: translateY(-100%); }
@@ -84,7 +83,7 @@
   animation: glitch-2 3s infinite linear alternate-reverse;
 }
 
-@keyframes glitch-1 {
+/* @keyframes glitch-1 {
   0% { clip-path: inset(20% 0 30% 0); }
   100% { clip-path: inset(10% 0 40% 0); }
 }
@@ -92,7 +91,7 @@
 @keyframes glitch-2 {
   0% { clip-path: inset(40% 0 10% 0); }
   100% { clip-path: inset(30% 0 20% 0); }
-}
+} */
 
 /* 控制组 */
 .control-group {
@@ -346,7 +345,7 @@
   font-style: normal;
 }
 /* 电视屏幕 - 占据剩余所有空间 */
-.tv-screen {
+/* .tv-screen {
   flex: 1;
   height: 100vh;
   background-color: #000000;
@@ -356,30 +355,30 @@
   position: relative;
   overflow: hidden;
   box-shadow: inset 0 0 150px rgba(0, 30, 60, 0.8);
-}
+} */
 
 /* 屏幕框架 */
-.screen-frame {
+/* .screen-frame {
   width: 100%;
   height: 100%;
   background-color: #000000;
   position: relative;
   overflow: hidden;
   box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
-}
+} */
 
 /* 屏幕内容 - 简化结构，移除多余边框 */
 .screen-content {
+  flex: 1;
   width: 100%;
   height: 100%;
   position: relative;
   background-color: #000000;
-  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
   overflow: hidden;
 }
 
 /* CRT屏幕效果 - 直接应用到屏幕内容 */
-.screen-content::after {
+/* .screen-content::after {
   content: '';
   position: absolute;
   top: 0;
@@ -394,10 +393,10 @@
     );
   pointer-events: none;
   z-index: 5;
-}
+} */
 
 /* 屏幕噪点效果 */
-.screen-content::before {
+/* .screen-content::before {
   content: '';
   position: absolute;
   top: 0;
@@ -409,7 +408,7 @@
   pointer-events: none;
   z-index: 6;
   animation: noiseAnimation 0.5s infinite;
-}
+} */
 
 @keyframes noiseAnimation {
   0% { opacity: 0.08; }

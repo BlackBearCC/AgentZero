@@ -69,25 +69,22 @@
       </div>
     </div>
 
-    <!-- 电视屏幕 -->
-    <div class="tv-screen" :style="{ filter: `brightness(${brightness}%)` }">
-      <div class="screen-frame" :class="{ 'scanning': isScanning, 'changing-channel': isChangingChannel }">
-        <div class="screen-content">
-          <!-- 未开机状态 -->
-          <div v-if="!isPoweredOn" class="power-off-screen">
-            <div class="power-off-dot"></div>
-          </div>
-          
-          <!-- 动态加载当前频道内容 -->
-          <component 
-            v-if="isPoweredOn" 
-            :is="currentScreenComponent" 
-            @scanning:start="startScanning" 
-            @scanning:stop="stopScanning"
-            @update:status="updateSystemStatus"
-          />
-        </div>
+    <!-- 屏幕内容 - 简化结构 -->
+    <div class="screen-content" :class="{ 'scanning': isScanning, 'changing-channel': isChangingChannel }" :style="{ filter: `brightness(${brightness}%)` }">
+      <!-- 未开机状态 -->
+      <div v-if="!isPoweredOn" class="power-off-screen">
+        <div class="power-off-dot"></div>
       </div>
+      
+      <!-- 动态加载当前频道内容 -->
+      <component 
+        v-if="isPoweredOn" 
+        :is="currentScreenComponent" 
+        @scanning:start="startScanning" 
+        @scanning:stop="stopScanning"
+        @update:status="updateSystemStatus"
+      />
+
     </div>
   </div>
 </template>
@@ -194,4 +191,4 @@ const updateSystemStatus = (status) => {
  * 
  * 设计理念:
  * 通过怀旧的复古科幻电脑界面，为AI工具增添趣味性和独特的用户体验。
- */ 
+ */

@@ -1,0 +1,605 @@
+/* 基础容器样式 */
+.character-generator {
+  height: 100%;
+  padding: 20px;
+  overflow-y: auto;
+  color: #00c3ff;
+  background: linear-gradient(135deg, #1a1a2a 0%, #2a2a3a 100%);
+  position: relative;
+  font-family: 'Blade Runner', 'Eurostile', 'Share Tech Mono', monospace;
+  text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
+}
+
+/* 全息投影基础效果 */
+.hologram-container {
+  position: relative;
+}
+
+.hologram-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 195, 255, 0.03) 0px,
+    rgba(0, 195, 255, 0.03) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  animation: hologramScan 10s linear infinite;
+  z-index: -1;
+}
+
+/* 故障效果 */
+.glitch {
+  position: relative;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.2);
+}
+  
+.glitch::before {
+  left: 2px;
+  text-shadow: -2px 0 #ff00c3;
+  clip-path: inset(0 0 0 0);
+  animation: glitch-1 2s infinite linear alternate-reverse;
+}
+  
+.glitch::after {
+  left: -2px;
+  text-shadow: 2px 0 #00c3ff;
+  clip-path: inset(0 0 0 0);
+  animation: glitch-2 3s infinite linear alternate-reverse;
+}
+
+/* 复古未来主义标题 */
+.retro-future-title {
+  font-family: 'Blade Runner', 'Eurostile', 'Orbitron', sans-serif;
+  color: #00c3ff;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 
+    0 0 10px rgba(0, 195, 255, 0.8),
+    0 0 20px rgba(0, 195, 255, 0.4),
+    0 0 30px rgba(0, 195, 255, 0.2);
+  position: relative;
+  animation: titlePulse 4s infinite;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* 控制面板样式 */
+.screen-controls {
+  background: rgba(0, 20, 40, 0.7);
+  border: 1px solid rgba(0, 195, 255, 0.3);
+  border-radius: 5px;
+  padding: 15px;
+  box-shadow: 
+    0 0 15px rgba(0, 195, 255, 0.1),
+    inset 0 0 10px rgba(0, 195, 255, 0.05);
+  backdrop-filter: blur(5px);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.screen-controls::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(0, 195, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: controlGlow 8s infinite;
+  z-index: -1;
+}
+
+/* 按钮样式 */
+.tv-button {
+  background: rgba(0, 20, 40, 0.8);
+  border: 1px solid rgba(0, 195, 255, 0.5);
+  border-radius: 5px;
+  padding: 10px;
+  color: #00c3ff;
+  font-family: 'Eurostile', 'Share Tech Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+  
+.tv-button::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(0, 195, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: buttonGlow 3s infinite;
+  z-index: -1;
+}
+  
+.tv-button:hover {
+  background: rgba(0, 40, 80, 0.8);
+  border-color: #00c3ff;
+  box-shadow: 
+    0 0 15px rgba(0, 195, 255, 0.5),
+    inset 0 0 15px rgba(0, 195, 255, 0.3);
+}
+
+/* 生成屏幕样式 */
+.generation-screen {
+  background: rgba(0, 10, 20, 0.95);
+  border: 1px solid rgba(0, 195, 255, 0.3);
+  border-radius: 5px;
+  box-shadow: 
+    0 0 30px rgba(0, 195, 255, 0.2),
+    inset 0 0 30px rgba(0, 195, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 添加屏幕噪点效果 */
+.generation-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 1;
+  animation: noiseAnimation 0.5s infinite;
+}
+
+/* 扫描线效果增强 */
+.scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%, 
+    rgba(0, 195, 255, 0.05) 50%, 
+    transparent 100%
+  );
+  background-size: 100% 4px;
+  animation: scan 8s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* 添加水平扫描线 */
+.horizontal-scan {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(0, 195, 255, 0.15);
+  box-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
+  animation: horizontalScan 3s linear infinite;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* 标签样式 */
+.character-label {
+  font-size: 0.8rem;
+  color: #00c3ff;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px rgba(0, 195, 255, 0.4);
+  font-family: 'Eurostile', 'Share Tech Mono', monospace;
+}
+
+/* 输入框样式 */
+.character-input {
+  background: rgba(0, 20, 40, 0.8);
+  border: 1px solid rgba(0, 195, 255, 0.3);
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #00eeff;
+  font-family: 'Share Tech Mono', monospace;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.character-input:focus {
+  border-color: #00c3ff;
+  box-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
+}
+
+/* 自定义滚动条 */
+.character-generator::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.character-generator::-webkit-scrollbar-track {
+  background: rgba(0, 20, 40, 0.5);
+}
+
+.character-generator::-webkit-scrollbar-thumb {
+  background: rgba(0, 195, 255, 0.3);
+  border-radius: 4px;
+}
+  
+.character-generator::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 195, 255, 0.5);
+}
+
+/* 屏幕闪烁故障效果 */
+.screen-glitch {
+  animation: screenGlitch 10s infinite;
+}
+
+/* 空状态样式 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px;
+  background: rgba(0, 10, 20, 0.95);
+  border-radius: 10px;
+  box-shadow: 
+    0 0 30px rgba(0, 195, 255, 0.2),
+    inset 0 0 30px rgba(0, 195, 255, 0.1);
+}
+
+/* TV Logo 样式 */
+.tv-logo {
+  font-family: 'Blade Runner', 'Eurostile', 'Share Tech Mono', monospace;
+  font-size: 2.5rem;
+  color: #00c3ff;
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  margin-bottom: 20px;
+  text-shadow: 
+    0 0 10px rgba(0, 195, 255, 0.8),
+    0 0 20px rgba(0, 195, 255, 0.4),
+    0 0 30px rgba(0, 195, 255, 0.2);
+  animation: logoGlow 4s infinite;
+}
+
+/* 频道信息样式 */
+.channel-info {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1rem;
+  color: #00c3ff;
+  margin-bottom: 30px;
+  opacity: 0.8;
+  text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
+}
+
+/* 说明文本样式 */
+.instruction-text {
+  font-size: 1.2rem;
+  color: #00eeff;
+  margin-bottom: 40px;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(0, 238, 255, 0.6);
+}
+
+/* 文件控制区域样式 */
+.file-control {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+/* 隐藏原生文件输入框 */
+.file-input {
+  display: none;
+}
+
+/* 文件名显示样式 */
+.file-name {
+  margin-top: 10px;
+  font-family: 'Share Tech Mono', monospace;
+  color: #00c3ff;
+  text-align: center;
+  padding: 5px;
+  background: rgba(0, 20, 40, 0.5);
+  border-radius: 4px;
+  text-shadow: 0 0 5px rgba(0, 195, 255, 0.4);
+}
+
+/* 导入控制区域样式 */
+.import-control {
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+/* 选项组样式 */
+.option-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding: 15px;
+  background: rgba(0, 20, 40, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 195, 255, 0.2);
+}
+
+/* 选项项目样式 */
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 自定义复选框样式 */
+.option-item input[type="checkbox"] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 195, 255, 0.5);
+  border-radius: 4px;
+  background: rgba(0, 20, 40, 0.8);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.option-item input[type="checkbox"]:checked {
+  background: #00c3ff;
+  box-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
+}
+
+.option-item input[type="checkbox"]:checked::before {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #000;
+  font-size: 14px;
+}
+
+/* 类别选择区域样式 */
+.category-selection {
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(0, 20, 40, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 195, 255, 0.3);
+}
+
+.category-selection h4 {
+  color: #00eeff;
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+  text-shadow: 0 0 5px rgba(0, 238, 255, 0.5);
+}
+
+/* 类别网格样式 */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.category-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  background: rgba(0, 20, 40, 0.7);
+  border-radius: 5px;
+  transition: all 0.3s ease;
+}
+
+.category-option:hover {
+  background: rgba(0, 40, 80, 0.7);
+  box-shadow: 0 0 10px rgba(0, 195, 255, 0.3);
+}
+
+/* 处理状态样式 */
+.processing-state {
+  padding: 20px;
+  background: rgba(0, 10, 20, 0.95);
+  border-radius: 10px;
+  box-shadow: 
+    0 0 40px rgba(0, 195, 255, 0.2),
+    inset 0 0 40px rgba(0, 195, 255, 0.1);
+}
+
+/* 生成屏幕增强样式 */
+.generation-screen {
+  margin-top: 20px;
+  padding: 20px;
+  min-height: 300px;
+  font-family: 'Share Tech Mono', monospace;
+  position: relative;
+}
+
+/* 屏幕反光效果 */
+.screen-glare {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(0, 195, 255, 0.05) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* 结果容器样式 */
+.result-container {
+  padding: 20px;
+  background: rgba(0, 10, 20, 0.95);
+  border-radius: 10px;
+  box-shadow: 
+    0 0 40px rgba(0, 195, 255, 0.2),
+    inset 0 0 40px rgba(0, 195, 255, 0.1);
+}
+
+/* 操作按钮组样式 */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 30px;
+}
+
+/* 主要按钮样式 */
+.tv-button.primary {
+  background: rgba(0, 40, 80, 0.9);
+  border-color: #00c3ff;
+  padding: 12px 30px;
+  font-size: 1.1rem;
+}
+
+.tv-button.primary:not(:disabled):hover {
+  background: rgba(0, 60, 100, 0.9);
+  box-shadow: 
+    0 0 20px rgba(0, 195, 255, 0.6),
+    inset 0 0 20px rgba(0, 195, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.tv-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* 新增动画效果 */
+@keyframes logoGlow {
+  0%, 100% { 
+    text-shadow: 
+      0 0 10px rgba(0, 195, 255, 0.8),
+      0 0 20px rgba(0, 195, 255, 0.4),
+      0 0 30px rgba(0, 195, 255, 0.2);
+  }
+  50% { 
+    text-shadow: 
+      0 0 15px rgba(0, 195, 255, 0.9),
+      0 0 25px rgba(0, 195, 255, 0.5),
+      0 0 35px rgba(0, 195, 255, 0.3);
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .category-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  
+  .tv-logo {
+    font-size: 2rem;
+  }
+  
+  .option-group {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .tv-button {
+    width: 100%;
+    max-width: 300px;
+  }
+}
+
+/* 动画定义 */
+@keyframes hologramScan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes glitch-1 {
+  0% { clip-path: inset(20% 0 30% 0); }
+  100% { clip-path: inset(10% 0 40% 0); }
+}
+
+@keyframes glitch-2 {
+  0% { clip-path: inset(40% 0 10% 0); }
+  100% { clip-path: inset(30% 0 20% 0); }
+}
+
+@keyframes buttonGlow {
+  0% { transform: translate(-50%, -50%) rotate(45deg); }
+  100% { transform: translate(150%, 150%) rotate(45deg); }
+}
+
+@keyframes controlGlow {
+  0% { transform: translate(-50%, -50%) rotate(45deg); }
+  100% { transform: translate(150%, 150%) rotate(45deg); }
+}
+
+@keyframes titlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes horizontalScan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+@keyframes noiseAnimation {
+  0% { opacity: 0.08; }
+  50% { opacity: 0.06; }
+  100% { opacity: 0.08; }
+}
+
+@keyframes screenGlitch {
+  0%, 100% { filter: none; }
+  98.5% { filter: none; }
+  99% { filter: hue-rotate(90deg) brightness(1.1) saturate(1.5); }
+  99.5% { filter: none; }
+}

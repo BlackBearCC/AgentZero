@@ -8,66 +8,184 @@
   background-color: #1a1a2a;
   position: fixed;
   color: #e0e0e0;
+  font-family: 'Orbitron', 'Share Tech Mono', monospace;
+  overflow: hidden;
 }
 
 /* 控制面板 */
 .control-panel {
-    width: 300px;
-    min-width: 300px;
-    height: 100vh;
-    background-color: #2a2a3a;
-    padding: 20px;
-    border-right: 2px solid #3a3a4a;
-    overflow-y: auto;
-  }
+  width: 300px;
+  min-width: 300px;
+  height: 100vh;
+  background: linear-gradient(135deg, #1a1a2a 0%, #2a2a3a 100%);
+  padding: 20px;
+  border-right: 2px solid rgba(0, 195, 255, 0.5);
+  box-shadow: 0 0 20px rgba(0, 195, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* 全息投影效果 */
+.control-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 195, 255, 0.03) 0px,
+    rgba(0, 195, 255, 0.03) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  animation: hologramScan 10s linear infinite;
+  z-index: -1;
+}
+
+@keyframes hologramScan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
 
 .panel-title {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #44ff44;
+  color: #00c3ff;
   text-align: center;
   margin-bottom: 20px;
-  text-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+  text-shadow: 0 0 10px rgba(0, 195, 255, 0.7);
   letter-spacing: 2px;
+  text-transform: uppercase;
+  position: relative;
+}
+
+/* 故障效果 */
+.panel-title::before {
+  content: attr(data-text);
+  position: absolute;
+  left: 2px;
+  text-shadow: -2px 0 #ff00c3;
+  clip-path: inset(0 0 0 0);
+  animation: glitch-1 2s infinite linear alternate-reverse;
+}
+
+.panel-title::after {
+  content: attr(data-text);
+  position: absolute;
+  left: -2px;
+  text-shadow: 2px 0 #00c3ff;
+  clip-path: inset(0 0 0 0);
+  animation: glitch-2 3s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-1 {
+  0% { clip-path: inset(20% 0 30% 0); }
+  100% { clip-path: inset(10% 0 40% 0); }
+}
+
+@keyframes glitch-2 {
+  0% { clip-path: inset(40% 0 10% 0); }
+  100% { clip-path: inset(30% 0 20% 0); }
 }
 
 /* 控制组 */
 .control-group {
-  background-color: #222232;
-  border: 1px solid #3a3a4a;
+  background: rgba(0, 20, 40, 0.7);
+  border: 1px solid rgba(0, 195, 255, 0.3);
   border-radius: 5px;
   padding: 15px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-bottom: 15px;
+  box-shadow: 0 0 15px rgba(0, 195, 255, 0.1), inset 0 0 10px rgba(0, 195, 255, 0.05);
+  backdrop-filter: blur(5px);
+  position: relative;
+  overflow: hidden;
+}
+
+.control-group::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(0, 195, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: controlGlow 8s infinite;
+}
+
+@keyframes controlGlow {
+  0% { transform: translate(-50%, -50%) rotate(45deg); }
+  100% { transform: translate(150%, 150%) rotate(45deg); }
 }
 
 .control-label {
   font-size: 0.8rem;
   color: #8a8a9a;
   letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 /* 按钮样式 */
 .control-button {
-  background-color: #1a1a2a;
-  border: 1px solid #3a3a4a;
+  background: rgba(0, 20, 40, 0.8);
+  border: 1px solid rgba(0, 195, 255, 0.5);
   border-radius: 5px;
   padding: 10px;
-  color: #e0e0e0;
+  color: #00c3ff;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.control-button::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(0, 195, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: buttonGlow 3s infinite;
+}
+
+@keyframes buttonGlow {
+  0% { transform: translate(-50%, -50%) rotate(45deg); }
+  100% { transform: translate(150%, 150%) rotate(45deg); }
 }
 
 .control-button:hover {
-  background-color: #2a2a3a;
-  border-color: #44ff44;
+  background: rgba(0, 40, 80, 0.8);
+  border-color: #00c3ff;
+  box-shadow: 0 0 15px rgba(0, 195, 255, 0.5), inset 0 0 15px rgba(0, 195, 255, 0.3);
 }
 
 .button-face {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  z-index: 1;
 }
 
 /* 电源指示灯 */
@@ -77,11 +195,30 @@
   border-radius: 50%;
   background-color: #444;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .power-indicator.active {
-  background-color: #44ff44;
-  box-shadow: 0 0 10px rgba(68, 255, 68, 0.7);
+  background-color: #00c3ff;
+  box-shadow: 0 0 10px rgba(0, 195, 255, 0.7);
+}
+
+.power-indicator.active::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 195, 255, 0.5);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 /* 频道按钮 */
@@ -99,10 +236,11 @@
 }
 
 .channel-btn.active {
-  background-color: #3a3a4a;
-  border-color: #44ff44;
-  color: #44ff44;
-  text-shadow: 0 0 5px rgba(68, 255, 68, 0.5);
+  background: rgba(0, 40, 80, 0.8);
+  border-color: #00c3ff;
+  color: #00c3ff;
+  text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
+  box-shadow: 0 0 15px rgba(0, 195, 255, 0.3), inset 0 0 10px rgba(0, 195, 255, 0.2);
 }
 
 /* 频道标签 */
@@ -121,29 +259,68 @@
 }
 
 .channel-label.active {
-  color: #44ff44;
-  text-shadow: 0 0 5px rgba(68, 255, 68, 0.5);
+  color: #00c3ff;
+  text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
+}
+
+/* 音量和亮度控制 */
+.volume-control, .brightness-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.volume-slider, .brightness-slider {
+  flex: 1;
+  height: 5px;
+  -webkit-appearance: none;
+  background: rgba(0, 20, 40, 0.8);
+  border-radius: 2px;
+  outline: none;
+  border: 1px solid rgba(0, 195, 255, 0.3);
+}
+
+.volume-slider::-webkit-slider-thumb, .brightness-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #00c3ff;
+  cursor: pointer;
+  box-shadow: 0 0 5px rgba(0, 195, 255, 0.7);
+}
+
+.volume-value, .brightness-value {
+  min-width: 30px;
+  text-align: center;
+  color: #00c3ff;
+  font-family: 'Share Tech Mono', monospace;
 }
 
 /* 系统状态 */
 .system-status {
   margin-top: auto;
-  background-color: #222232;
-  border: 1px solid #3a3a4a;
+  background: rgba(0, 20, 40, 0.7);
+  border: 1px solid rgba(0, 195, 255, 0.3);
   border-radius: 5px;
   padding: 15px;
+  box-shadow: 0 0 15px rgba(0, 195, 255, 0.1), inset 0 0 10px rgba(0, 195, 255, 0.05);
 }
 
 .status-label {
   font-size: 0.8rem;
   color: #8a8a9a;
   margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .status-value {
-  color: #44ff44;
+  color: #00c3ff;
   font-size: 0.9rem;
-  text-shadow: 0 0 5px rgba(68, 255, 68, 0.3);
+  text-shadow: 0 0 5px rgba(0, 195, 255, 0.3);
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 1px;
 }
 
 /* 电视屏幕 - 占据剩余所有空间 */
@@ -155,6 +332,7 @@
   justify-content: center;
   align-items: center;
   position: relative;
+  overflow: hidden;
 }
 
 /* 屏幕框架 */
@@ -164,6 +342,7 @@
   background-color: #000000;
   position: relative;
   overflow: hidden;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
 }
 
 /* 屏幕内容 */
@@ -172,6 +351,24 @@
   height: 100%;
   position: relative;
   background-color: #000000;
+}
+
+/* CRT屏幕效果 */
+.screen-frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      ellipse at center,
+      rgba(0, 0, 0, 0) 50%,
+      rgba(0, 0, 0, 0.5) 100%
+    );
+  pointer-events: none;
+  z-index: 5;
 }
 
 /* 扫描线效果 */
@@ -184,7 +381,7 @@
   height: 100%;
   background: linear-gradient(to bottom, 
     transparent 0%, 
-    rgba(68, 255, 68, 0.05) 50%, 
+    rgba(0, 195, 255, 0.05) 50%, 
     transparent 100%);
   background-size: 100% 4px;
   animation: scan 8s linear infinite;
@@ -205,7 +402,11 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: white;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 195, 255, 0.2),
+    rgba(255, 0, 195, 0.2)
+  );
   opacity: 0;
   animation: channel-change 1s ease;
   pointer-events: none;
@@ -214,7 +415,7 @@
 
 @keyframes channel-change {
   0% { opacity: 0; }
-  50% { opacity: 0.2; }
+  50% { opacity: 0.5; }
   100% { opacity: 0; }
 }
 
@@ -226,18 +427,150 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
+}
+
+.power-off-screen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 195, 255, 0.1) 0%,
+    rgba(0, 0, 0, 0) 70%
+  );
+  animation: powerOffGlow 2s forwards;
+}
+
+@keyframes powerOffGlow {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .power-off-dot {
   width: 5px;
   height: 5px;
-  background-color: #fff;
+  background-color: #00c3ff;
   border-radius: 50%;
+  box-shadow: 0 0 15px rgba(0, 195, 255, 0.8);
   animation: fade-out 2s forwards;
+  position: relative;
+}
+
+.power-off-dot::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 195, 255, 0.3);
+  opacity: 0.8;
+  animation: dot-pulse 2s forwards;
 }
 
 @keyframes fade-out {
   0% { transform: scale(1); opacity: 1; }
   20% { transform: scale(0.8); opacity: 0.8; }
   100% { transform: scale(0); opacity: 0; }
-} 
+}
+
+@keyframes dot-pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+/* 音量和亮度滑块样式 */
+.volume-slider, .brightness-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 20, 40, 0.8);
+  border-radius: 2px;
+  outline: none;
+  border: 1px solid rgba(0, 195, 255, 0.3);
+  margin: 10px 0;
+}
+
+.volume-slider::-webkit-slider-thumb, .brightness-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #00c3ff;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 195, 255, 0.7);
+}
+
+/* 全息投影线条效果 */
+.hologram-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 195, 255, 0.03) 0px,
+    rgba(0, 195, 255, 0.03) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  z-index: 100;
+  opacity: 0.5;
+}
+
+/* 故障效果 */
+.glitch-effect {
+  animation: glitch 5s infinite;
+}
+
+@keyframes glitch {
+  0%, 100% { transform: translate(0); }
+  1% { transform: translate(-2px, 2px); }
+  2% { transform: translate(2px, -2px); }
+  3% { transform: translate(0); }
+  10%, 90% { transform: translate(0); }
+  91% { transform: translate(-1px, 1px); }
+  92% { transform: translate(1px, -1px); }
+  93% { transform: translate(0); }
+}
+
+/* 复古未来主义边框效果 */
+.retro-future-border {
+  border: 1px solid rgba(0, 195, 255, 0.5);
+  box-shadow: 
+    0 0 10px rgba(0, 195, 255, 0.3),
+    inset 0 0 5px rgba(0, 195, 255, 0.2);
+  border-radius: 5px;
+  padding: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.retro-future-border::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(0, 195, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: borderGlow 6s infinite;
+}
+
+@keyframes borderGlow {
+  0% { transform: translate(-50%, -50%) rotate(45deg); }
+  100% { transform: translate(150%, 150%) rotate(45deg); }
+}

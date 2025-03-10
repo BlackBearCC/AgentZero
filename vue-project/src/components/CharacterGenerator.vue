@@ -7,7 +7,7 @@
       <div class="instruction-text">请上传角色资料文件开始生成</div>
       <!-- 控制区域整合到屏幕中 -->
       <TvPanel>
-        <TvControlGroup label="文件控制">
+        <!-- <TvControlGroup label="文件控制"> -->
           <div class="file-control">
             <TvFileInput
               id="character-file"
@@ -27,9 +27,9 @@
               [ 导入角色 ]
             </TvFileInput>
           </div>
-        </TvControlGroup>
+        <!-- </TvControlGroup> -->
 
-        <TvControlGroup label="生成选项">
+        <!-- <TvControlGroup label="生成选项"> -->
           <div class="option-group">
             <TvCheckbox 
               v-model="batchGenerate"
@@ -44,17 +44,17 @@
               显示生成过程
             </TvCheckbox>
           </div>
-        </TvControlGroup>
+        <!-- </TvControlGroup> -->
         
         <!-- 类别选择 -->
-        <TvControlGroup v-if="batchGenerate" label="选择要生成的属性类别">
+        <!-- <TvControlGroup v-if="batchGenerate" label="选择要生成的属性类别"> -->
           <TvCheckboxGroup
             v-model="selectedCategories"
             :options="categoryOptionsFormatted"
             selectAllLabel="全选所有类别"
             id="category-selection"
           />
-        </TvControlGroup>
+        <!-- </TvControlGroup> -->
       
         <!-- 操作按钮 -->
         <div class="action-buttons">
@@ -111,7 +111,6 @@ import {
   TvTitle,
   TvCheckbox,
   TvCheckboxGroup,
-  TvControlGroup,
   TvFileInput,
 } from '../design-system/components'
 

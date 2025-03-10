@@ -32,12 +32,6 @@
         <!-- <TvControlGroup label="生成选项"> -->
           <div class="option-group">
             <TvCheckbox 
-              v-model="batchGenerate"
-              id="batch-generate"
-            >
-              批量生成属性
-            </TvCheckbox>
-            <TvCheckbox 
               v-model="showGenerationProcess"
               id="show-generation-process"
             >
@@ -125,7 +119,6 @@ const fileName = ref('')
 const selectedFile = ref(null)
 
 // 生成选项
-const batchGenerate = ref(true)
 const showGenerationProcess = ref(true)
 const selectedCategories = ref([
   '基础信息', '性格特征', '能力特征', '兴趣爱好', '情感特质', 
@@ -162,8 +155,7 @@ const loadingCategories = ref([])
 
 // 计算属性
 const canGenerate = computed(() => {
-  return selectedFile.value && !isGenerating.value && 
-         (batchGenerate.value ? selectedCategories.value.length > 0 : true)
+  return selectedFile.value && !isGenerating.value && selectedCategories.value.length > 0
 })
 
 const hasGeneratedData = computed(() => {
@@ -217,28 +209,18 @@ const generateCharacter = async () => {
   isGenerating.value = true
   streamContent.value = ''  // 重置流内容
   
-  // 如果是批量生成，设置正在加载的类别
-  if (batchGenerate.value) {
-    loadingCategories.value = [...selectedCategories.value]
-  } else {
-    // 如果不是批量生成，清空现有数据
-    Object.keys(characterData).forEach(key => {
-      delete characterData[key]
-    })
-  }
   
   try {
     const fileContent = await selectedFile.value.text()
     
     // 构建请求体
     const requestBody = {
-      reference: fileContent
+      reference: fileContent,
+      categories: selectedCategories.value
+
     }
     
-    // 如果是批量生成，添加类别信息
-    if (batchGenerate.value) {
-      requestBody.categories = selectedCategories.value
-    }
+
     
     const response = await fetch('/api/v1/generate_role_config/stream', {
       method: 'POST',

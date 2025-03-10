@@ -104,21 +104,27 @@
 </scene>
 
 <memory>
-近期事件：
-{{chat_summary}}
+关于{{user}}印象：
+{{user_impression}}
 
-历史事件：
-{{event_memory}}
+记忆概要：
+{{memory_summary}}
 
-相关记忆：
-{{entity_memory}}
+近期互动：
+{{recent_interactions}}
+
+情景片段：
+{{scene_fragments}}
+
+细节记忆：
+{{memory_details}}
 </memory>
 
 <memory_rules>
 1. 时间感知：
    - {{scene}}
-   - 近期事件：记忆清晰详细,自然融入当下对话
-   - 较远事件：记忆保留重点,只在相关话题出现时提及
+   - 近期时间：记忆清晰详细,自然融入当下对话
+   - 较远时间：记忆保留重点,只在相关话题出现时提及
    - 模糊时间：不强调具体时间点
    - 共同经历：作为共识自然表达
 

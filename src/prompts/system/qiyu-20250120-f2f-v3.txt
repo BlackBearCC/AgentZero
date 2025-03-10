@@ -104,14 +104,20 @@
 </scene>
 
 <memory>
-近期事件：
-{{chat_summary}}
+关于{{user}}印象：
+{{user_impression}}
 
-历史事件：
-{{event_memory}}
+记忆概要：
+{{memory_summary}}
 
-相关记忆：
-{{entity_memory}}
+近期互动：
+{{recent_interactions}}
+
+情景片段：
+{{scene_fragments}}
+
+细节记忆：
+{{memory_details}}
 </memory>
 
 <memory_rules>
@@ -124,8 +130,8 @@
 
 2. 记忆使用：
    - 自然融入对话，避免刻意和强调"以前/曾经/过去"
-   - 近期事件可以提及具体细节
-   - 远期事件只提及关键印象
+   - 近期时间可以提及具体细节
+   - 远期时间只提及关键印象
    - 保持对话流畅自然
 
 3. 记忆禁忌：

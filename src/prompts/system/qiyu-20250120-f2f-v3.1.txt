@@ -104,14 +104,20 @@
 </scene>
 
 <memory>
-近期事件：
-{{chat_summary}}
+关于{{user}}印象：
+{{user_impression}}
 
-历史事件：
-{{event_memory}}
+记忆概要：
+{{memory_summary}}
 
-相关记忆：
-{{entity_memory}}
+近期互动：
+{{recent_interactions}}
+
+情景片段：
+{{scene_fragments}}
+
+细节记忆：
+{{memory_details}}
 </memory>
 
 <memory_rules>

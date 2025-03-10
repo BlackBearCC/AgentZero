@@ -37,6 +37,7 @@
           v-for="(option, index) in options" 
           :key="index"
           class="tv-checkbox"
+          :class="{ 'selected': isSelected(option.value) }"
           @mouseenter="activeTooltip = option.value"
           @mouseleave="activeTooltip = null"
         >
@@ -644,9 +645,19 @@
         }
       }
       
+      // 选中状态样式
       &.selected {
-        background: rgba(0, 30, 60, 0.6);
+        background: rgba(0, 40, 80, 0.7);
         box-shadow: 0 0 20px rgba(0, 195, 255, 0.2), inset 0 0 25px rgba(0, 195, 255, 0.1);
+        
+        &::before {
+          opacity: 0.6;
+        }
+        
+        label {
+          color: #00e0ff;
+          text-shadow: 0 0 10px rgba(0, 195, 255, 0.7);
+        }
       }
     }
   }

@@ -48,17 +48,12 @@
         
         <!-- 类别选择 -->
         <TvControlGroup v-if="batchGenerate" label="选择要生成的属性类别">
-          <div class="category-grid">
-            <TvCheckbox 
-              v-for="(category, index) in categoryOptions" 
-              :key="index"
-              :id="`category-${index}`"
-              v-model="selectedCategories"
-              :value="category.key"
-            >
-              {{ category.title }}
-            </TvCheckbox>
-          </div>
+          <TvCheckboxGroup
+            v-model="selectedCategories"
+            :options="categoryOptionsFormatted"
+            selectAllLabel="全选所有类别"
+            id="category-selection"
+          />
         </TvControlGroup>
       
         <!-- 操作按钮 -->
@@ -115,6 +110,7 @@ import {
   TvScreen,
   TvTitle,
   TvCheckbox,
+  TvCheckboxGroup,
   TvControlGroup,
   TvFileInput,
 } from '../design-system/components'
@@ -170,6 +166,14 @@ const canGenerate = computed(() => {
 
 const hasGeneratedData = computed(() => {
   return Object.keys(characterData).length > 0
+})
+
+// 格式化类别选项以适配 TvCheckboxGroup
+const categoryOptionsFormatted = computed(() => {
+  return categoryOptions.map(category => ({
+    label: category.title,
+    value: category.key
+  }))
 })
 
 // 处理文件选择

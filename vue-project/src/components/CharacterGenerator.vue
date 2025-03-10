@@ -9,30 +9,23 @@
       <TvPanel>
         <TvControlGroup label="文件控制">
           <div class="file-control">
-            <input 
-              type="file" 
-              id="character-file" 
-              @change="handleFileChange" 
+            <TvFileInput
+              id="character-file"
               accept=".txt,.pdf,.docx,.csv,.json"
-              class="file-input"
-            />
-            <label for="character-file">
-              <TvButton>[ 选择角色文件 ]</TvButton>
-            </label>
-            <div class="file-name">{{ fileName || '未选择文件' }}</div>
+              @file-change="handleFileChange"
+            >
+              [ 选择角色文件 ]
+            </TvFileInput>
           </div>
 
           <div class="import-control">
-            <input 
-              type="file" 
-              id="import-character" 
-              @change="handleImportFile" 
+            <TvFileInput
+              id="import-character"
               accept=".csv,.json"
-              class="file-input"
-            />
-            <label for="import-character">
-              <TvButton>[ 导入角色 ]</TvButton>
-            </label>
+              @file-change="handleImportFile"
+            >
+              [ 导入角色 ]
+            </TvFileInput>
           </div>
         </TvControlGroup>
 
@@ -123,6 +116,7 @@ import {
   TvTitle,
   TvCheckbox,
   TvControlGroup,
+  TvFileInput,
 } from '../design-system/components'
 
 // 修改 emit 定义，确保包含所有需要的事件

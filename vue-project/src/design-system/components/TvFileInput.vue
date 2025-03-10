@@ -7,13 +7,18 @@
       :accept="accept"
       class="file-input"
     />
-    <label :for="id">
-      <TvButton>
-        <slot>[ 选择文件 ]</slot>
+    <label :for="id" class="file-label">
+      <TvButton class="file-button">
+        <div class="button-content">
+          <div class="file-icon"></div>
+          <slot>[ 选择文件 ]</slot>
+        </div>
       </TvButton>
     </label>
-    <div v-if="showFileName" class="file-name">
-      {{ fileName || '未选择文件' }}
+    <div v-if="showFileName" class="file-name" :class="{ 'has-file': fileName }">
+      <div class="file-status-indicator" :class="{ 'active': fileName }"></div>
+      <div class="file-text">{{ fileName || '未选择文件' }}</div>
+      <div v-if="fileName" class="clear-button" @click="clearFile">×</div>
     </div>
   </div>
 </template>
@@ -47,6 +52,14 @@ const handleFileChange = (event) => {
     emit('file-change', file)
   }
 }
+
+const clearFile = () => {
+  fileName.value = ''
+  // 重置文件输入
+  const fileInput = document.getElementById(props.id)
+  if (fileInput) fileInput.value = ''
+  emit('file-change', null)
+}
 </script>
 
 <style lang="scss" scoped>
@@ -61,11 +74,58 @@ const handleFileChange = (event) => {
     display: none;
   }
   
+  .file-label {
+    width: 100%;
+    cursor: pointer;
+    
+    &:hover .file-button {
+      filter: brightness(1.2);
+    }
+    
+    &:active .file-button {
+      transform: translateY(1px);
+    }
+  }
+  
+  .button-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .file-icon {
+    width: 16px;
+    height: 16px;
+    border: 1px solid rgba(0, 195, 255, 0.7);
+    position: relative;
+    
+    &::before, &::after {
+      content: '';
+      position: absolute;
+      background: rgba(0, 195, 255, 0.7);
+    }
+    
+    &::before {
+      top: 3px;
+      left: 3px;
+      right: 3px;
+      height: 1px;
+    }
+    
+    &::after {
+      top: 7px;
+      left: 3px;
+      right: 3px;
+      height: 1px;
+    }
+  }
+  
   .file-name {
     margin-top: 5px;
     font-family: 'Share Tech Mono', monospace;
     color: #00c3ff;
-    text-align: center;
+    text-align: left;
     padding: 8px 10px;
     background: rgba(0, 20, 40, 0.5);
     border: 1px solid rgba(0, 195, 255, 0.3);
@@ -77,6 +137,8 @@ const handleFileChange = (event) => {
     white-space: nowrap;
     text-overflow: ellipsis;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
     
     &::before {
       content: '';
@@ -100,11 +162,65 @@ const handleFileChange = (event) => {
       background: rgba(0, 30, 60, 0.6);
       box-shadow: 0 0 10px rgba(0, 195, 255, 0.3);
     }
+    
+    &.has-file {
+      background: rgba(0, 40, 70, 0.6);
+      border-color: rgba(0, 195, 255, 0.5);
+    }
+    
+    .file-status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(0, 195, 255, 0.3);
+      margin-right: 10px;
+      transition: all 0.3s ease;
+      
+      &.active {
+        background: #00c3ff;
+        box-shadow: 0 0 8px rgba(0, 195, 255, 0.8);
+        animation: pulse 1.5s infinite;
+      }
+    }
+    
+    .file-text {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .clear-button {
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(0, 195, 255, 0.5);
+      border-radius: 50%;
+      margin-left: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        background: rgba(0, 195, 255, 0.2);
+        transform: scale(1.1);
+      }
+      
+      &:active {
+        transform: scale(0.95);
+      }
+    }
   }
 }
 
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 </style>

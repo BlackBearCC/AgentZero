@@ -1,11 +1,18 @@
 <template>
-  <div class="retro-robot" :class="{ 'talking': isTalking, 'thinking': isThinking }">
+  <div class="retro-robot" 
+       :class="{ 'talking': isTalking, 'thinking': isThinking }"
+       @mousemove="handleMouseMove"
+       ref="robotContainer">
     <div class="robot-head">
       <div class="robot-face">
         <!-- 眼睛 -->
         <div class="robot-eyes">
-          <div class="robot-eye left" :class="{ 'blink': isBlinking }"></div>
-          <div class="robot-eye right" :class="{ 'blink': isBlinking }"></div>
+          <div class="robot-eye left" 
+               :class="{ 'blink': isBlinking }"
+               :style="leftEyeStyle"></div>
+          <div class="robot-eye right" 
+               :class="{ 'blink': isBlinking }"
+               :style="rightEyeStyle"></div>
         </div>
         
         <!-- 信号指示器 -->
@@ -17,6 +24,111 @@
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
+
+const props = defineProps({
+  mood: {
+    type: String,
+    default: 'neutral', // neutral, happy, sad, thinking
+    validator: (value) => ['neutral', 'happy', 'sad', 'thinking'].includes(value)
+  },
+  active: {
+    type: Boolean,
+    default: true
+  },
+  talking: {
+    type: Boolean,
+    default: false
+  }
+});
+
+const isBlinking = ref(false);
+const isTalking = ref(props.talking);
+const isActive = ref(props.active);
+const isHappy = ref(props.mood === 'happy');
+const isSad = ref(props.mood === 'sad');
+const isThinking = ref(props.mood === 'thinking');
+
+// 鼠标跟踪相关变量
+const robotContainer = ref(null);
+const mousePosition = ref({ x: 0, y: 0 });
+const eyeMovementRange = 5; // 眼睛移动的最大范围（像素）
+
+// 计算左眼样式
+const leftEyeStyle = computed(() => {
+  if (isBlinking.value) return {};
+  
+  return {
+    transform: `translate(${mousePosition.value.x * eyeMovementRange}px, ${mousePosition.value.y * eyeMovementRange}px)`
+  };
+});
+
+// 计算右眼样式
+const rightEyeStyle = computed(() => {
+  if (isBlinking.value) return {};
+  
+  return {
+    transform: `translate(${mousePosition.value.x * eyeMovementRange}px, ${mousePosition.value.y * eyeMovementRange}px)`
+  };
+});
+
+// 处理鼠标移动
+const handleMouseMove = (event) => {
+  if (!robotContainer.value) return;
+  
+  const rect = robotContainer.value.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  
+  // 计算鼠标相对于容器中心的位置（范围从-1到1）
+  const relativeX = (event.clientX - centerX) / (window.innerWidth / 2);
+  const relativeY = (event.clientY - centerY) / (window.innerHeight / 2);
+  
+  // 限制值在-1到1之间
+  mousePosition.value = {
+    x: Math.max(-1, Math.min(1, relativeX)),
+    y: Math.max(-1, Math.min(1, relativeY))
+  };
+};
+
+// 监听属性变化
+watch(() => props.mood, (newMood) => {
+  isHappy.value = newMood === 'happy';
+  isSad.value = newMood === 'sad';
+  isThinking.value = newMood === 'thinking';
+});
+
+watch(() => props.active, (newActive) => {
+  isActive.value = newActive;
+});
+
+watch(() => props.talking, (newTalking) => {
+  isTalking.value = newTalking;
+});
+
+// 眨眼动画
+let blinkInterval;
+const startBlinking = () => {
+  blinkInterval = setInterval(() => {
+    isBlinking.value = true;
+    setTimeout(() => {
+      isBlinking.value = false;
+    }, 200);
+  }, 3000 + Math.random() * 2000); // 随机间隔眨眼
+};
+
+// 组件挂载时启动动画
+onMounted(() => {
+  startBlinking();
+});
+
+// 组件卸载时清除定时器
+onUnmounted(() => {
+  if (blinkInterval) clearInterval(blinkInterval);
+});
+</script>
   
 <style lang="scss" scoped>
 .retro-robot {
@@ -64,7 +176,6 @@
       z-index: -1;
     }
   }
-  }
   
   .robot-face {
     display: flex;
@@ -78,26 +189,17 @@
   .robot-eyes {
     display: flex;
     gap: 120px;
-    animation: slight-shift 8s ease-in-out infinite;
     
     .robot-eye {
       width: 40px;
       height: 10px;
       background: #00c3ff;
       box-shadow: 0 0 8px #00c3ff;
-      transition: all 0.2s ease;
+      transition: transform 0.2s ease, height 0.2s ease;
       
       &.blink {
         height: 2px;
-        transform: translateY(4px);
-      }
-      
-      &.left {
-        animation: eye-move-left 6s ease-in-out infinite;
-      }
-      
-      &.right {
-        animation: eye-move-right 6s ease-in-out infinite;
+        transform: translateY(4px) !important;
       }
     }
   }
@@ -125,7 +227,7 @@
       }
     }
   }
-
+}
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
@@ -156,23 +258,5 @@
       0 0 60px rgba(0, 195, 255, 0.02),
       inset 0 0 25px rgba(0, 195, 255, 0.03);
   }
-}
-
-@keyframes slight-shift {
-  0%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-2px); }
-  70% { transform: translateY(2px); }
-}
-
-@keyframes eye-move-left {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-2px); }
-  75% { transform: translateX(1px); }
-}
-
-@keyframes eye-move-right {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(2px); }
-  75% { transform: translateX(-1px); }
 }
 </style>

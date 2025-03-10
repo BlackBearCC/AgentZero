@@ -179,26 +179,67 @@ const clearFile = () => {
     }
     
     .upload-arrow {
-      width: 20px;
-      height: 20px;
-      border-left: 2px solid rgba(0, 195, 255, 0.7);
-      border-top: 2px solid rgba(0, 195, 255, 0.7);
-      transform: rotate(45deg) translateY(5px);
+      position: relative;
+      width: 24px;
+      height: 24px;
+      
+      &::before {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 2px;
+        background: #00c3ff;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 5px rgba(0, 195, 255, 0.8);
+      }
       
       &::after {
         content: '';
         position: absolute;
         width: 2px;
-        height: 20px;
-        background: rgba(0, 195, 255, 0.7);
+        height: 16px;
+        background: #00c3ff;
         top: 50%;
         left: 50%;
-        transform: translate(-50%, -30%);
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 5px rgba(0, 195, 255, 0.8);
       }
     }
   }
-
-  // ... 其他样式保持不变 ...
+  
+  .file-type-icon {
+    width: 24px;
+    height: 30px;
+    position: relative;
+    margin-right: 10px;
+    background: rgba(0, 20, 40, 0.7);
+    border: 1px solid rgba(0, 195, 255, 0.5);
+    box-shadow: 0 0 8px rgba(0, 195, 255, 0.3);
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      right: 6px;
+      height: 2px;
+      background: rgba(0, 195, 255, 0.7);
+      box-shadow: 0 0 4px rgba(0, 195, 255, 0.5);
+    }
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 12px;
+      left: 6px;
+      right: 10px;
+      height: 2px;
+      background: rgba(0, 195, 255, 0.7);
+      box-shadow: 0 0 4px rgba(0, 195, 255, 0.5);
+    }
+  }
   
   &.drag-over {
     .file-drop-area {

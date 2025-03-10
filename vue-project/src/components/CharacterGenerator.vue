@@ -48,11 +48,14 @@
         
         <!-- 类别选择 -->
         <!-- <TvControlGroup v-if="batchGenerate" label="选择要生成的属性类别"> -->
+          <!-- 类别选择 -->
           <TvCheckboxGroup
             v-model="selectedCategories"
             :options="categoryOptionsFormatted"
             selectAllLabel="全选所有类别"
             id="category-selection"
+            class="grid-layout"
+            :descriptions="categoryDescriptions"
           />
         <!-- </TvControlGroup> -->
       
@@ -174,6 +177,26 @@ const categoryOptionsFormatted = computed(() => {
     value: category.key
   }))
 })
+
+// 为每个类别添加描述信息
+const categoryDescriptions = {
+  '基础信息': '角色的基本资料，如姓名、年龄、性别等基础属性',
+  '性格特征': '角色的性格特点和心理特征',
+  '能力特征': '角色的技能、专长和特殊能力',
+  '兴趣爱好': '角色喜欢从事的活动和爱好',
+  '情感特质': '角色的情感表达方式和情绪特点',
+  '喜好厌恶': '角色喜欢和讨厌的事物',
+  '成长经历': '角色的成长过程和重要经历',
+  '价值观念': '角色的信仰、价值观和人生态度',
+  '社交关系': '角色与他人的关系和社交模式',
+  '禁忌话题': '角色不愿提及或敏感的话题',
+  '行为模式': '角色在不同情境下的行为习惯',
+  '隐藏设定': '角色不为人知的秘密或隐藏特质',
+  '目标动机': '角色的目标和行动动机',
+  '弱点缺陷': '角色的弱点、缺陷和不足',
+  '特殊习惯': '角色独特的习惯和小癖好',
+  '语言风格': '角色的说话方式和语言特点'
+}
 
 // 处理文件选择
 const handleFileChange = (event) => {

@@ -1,5 +1,11 @@
 <template>
-  <div class="tv-file-input">
+  <div 
+    class="tv-file-input" 
+    :class="{ 'drag-over': isDragging, 'has-file': fileName }"
+    @dragover.prevent="handleDragOver"
+    @dragleave.prevent="handleDragLeave"
+    @drop.prevent="handleDrop"
+  >
     <input 
       type="file" 
       :id="id" 
@@ -7,25 +13,26 @@
       :accept="accept"
       class="file-input"
     />
-    <label :for="id" class="file-label">
-      <TvButton class="file-button">
-        <div class="button-content">
-          <div class="file-icon"></div>
-          <slot>[ 选择文件 ]</slot>
-        </div>
-      </TvButton>
+    <label :for="id" class="file-drop-area">
+      <div class="upload-icon" v-if="!fileName">
+        <div class="upload-arrow"></div>
+      </div>
+      <div class="file-info" v-if="fileName">
+        <div class="file-type-icon"></div>
+        <div class="file-name-display">{{ fileName }}</div>
+        <div class="clear-button" @click.stop="clearFile">×</div>
+      </div>
+      <div class="upload-text" v-else>
+        <div class="primary-text">{{ primaryText }}</div>
+        <div class="secondary-text">{{ secondaryText }}</div>
+      </div>
+      <div class="scan-line"></div>
     </label>
-    <div v-if="showFileName" class="file-name" :class="{ 'has-file': fileName }">
-      <div class="file-status-indicator" :class="{ 'active': fileName }"></div>
-      <div class="file-text">{{ fileName || '未选择文件' }}</div>
-      <div v-if="fileName" class="clear-button" @click="clearFile">×</div>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import TvButton from './TvButton.vue'
 
 const props = defineProps({
   id: {
@@ -36,13 +43,18 @@ const props = defineProps({
     type: String,
     default: '*'
   },
-  showFileName: {
-    type: Boolean,
-    default: true
+  primaryText: {
+    type: String,
+    default: '拖拽文件到此处'
+  },
+  secondaryText: {
+    type: String,
+    default: '或点击选择文件'
   }
 })
 
 const fileName = ref('')
+const isDragging = ref(false)
 const emit = defineEmits(['file-change'])
 
 const handleFileChange = (event) => {
@@ -50,6 +62,32 @@ const handleFileChange = (event) => {
   if (file) {
     fileName.value = file.name
     emit('file-change', file)
+  }
+}
+
+const handleDragOver = () => {
+  isDragging.value = true
+}
+
+const handleDragLeave = () => {
+  isDragging.value = false
+}
+
+const handleDrop = (event) => {
+  isDragging.value = false
+  const file = event.dataTransfer.files[0]
+  if (file) {
+    fileName.value = file.name
+    emit('file-change', file)
+    
+    // 更新文件输入元素，保持一致性
+    const fileInput = document.getElementById(props.id)
+    if (fileInput) {
+      // 创建一个新的 DataTransfer 对象
+      const dataTransfer = new DataTransfer()
+      dataTransfer.items.add(file)
+      fileInput.files = dataTransfer.files
+    }
   }
 }
 
@@ -64,163 +102,207 @@ const clearFile = () => {
 
 <style lang="scss" scoped>
 .tv-file-input {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
   width: 100%;
+  position: relative;
   
   .file-input {
     display: none;
   }
   
-  .file-label {
-    width: 100%;
-    cursor: pointer;
-    
-    &:hover .file-button {
-      filter: brightness(1.2);
-    }
-    
-    &:active .file-button {
-      transform: translateY(1px);
-    }
-  }
-  
-  .button-content {
+  .file-drop-area {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-  }
-  
-  .file-icon {
-    width: 16px;
-    height: 16px;
-    border: 1px solid rgba(0, 195, 255, 0.7);
-    position: relative;
-    
-    &::before, &::after {
-      content: '';
-      position: absolute;
-      background: rgba(0, 195, 255, 0.7);
-    }
-    
-    &::before {
-      top: 3px;
-      left: 3px;
-      right: 3px;
-      height: 1px;
-    }
-    
-    &::after {
-      top: 7px;
-      left: 3px;
-      right: 3px;
-      height: 1px;
-    }
-  }
-  
-  .file-name {
-    margin-top: 5px;
-    font-family: 'Share Tech Mono', monospace;
-    color: #00c3ff;
-    text-align: left;
-    padding: 8px 10px;
-    background: rgba(0, 20, 40, 0.5);
-    border: 1px solid rgba(0, 195, 255, 0.3);
+    min-height: 120px;
+    padding: 20px;
+    background: rgba(0, 20, 40, 0.6);
+    border: none;
     border-radius: 4px;
-    text-shadow: 0 0 5px rgba(0, 195, 255, 0.4);
-    width: 100%;
+    cursor: pointer;
+    transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
+    box-shadow: 0 0 15px rgba(0, 195, 255, 0.1), inset 0 0 20px rgba(0, 195, 255, 0.05);
     
     &::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(0, 195, 255, 0.1) 50%,
-        transparent 100%
-      );
-      transform: translateX(-100%);
-      animation: shimmer 2s infinite;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at center, rgba(0, 195, 255, 0.1) 0%, transparent 70%);
+      animation: pulse-glow 3s infinite alternate;
+      pointer-events: none;
+    }
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border: 1px solid rgba(0, 195, 255, 0.2);
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 195, 255, 0.1);
+      animation: pulse-border 2s infinite alternate;
+      pointer-events: none;
+    }
+  }
+  
+  .upload-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(0, 20, 40, 0.7);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    position: relative;
+    box-shadow: 0 0 15px rgba(0, 195, 255, 0.2);
+    animation: pulse-icon 3s infinite alternate;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      right: -5px;
+      bottom: -5px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(0, 195, 255, 0.2) 0%, transparent 70%);
+      animation: pulse-halo 2s infinite;
       z-index: -1;
     }
     
-    &:hover {
+    .upload-arrow {
+      width: 20px;
+      height: 20px;
+      border-left: 2px solid rgba(0, 195, 255, 0.7);
+      border-top: 2px solid rgba(0, 195, 255, 0.7);
+      transform: rotate(45deg) translateY(5px);
+      
+      &::after {
+        content: '';
+        position: absolute;
+        width: 2px;
+        height: 20px;
+        background: rgba(0, 195, 255, 0.7);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -30%);
+      }
+    }
+  }
+
+  // ... 其他样式保持不变 ...
+  
+  &.drag-over {
+    .file-drop-area {
+      background: rgba(0, 30, 60, 0.7);
+      box-shadow: 0 0 25px rgba(0, 195, 255, 0.3), inset 0 0 30px rgba(0, 195, 255, 0.15);
+      
+      &::before {
+        animation: pulse-glow-fast 1s infinite alternate;
+      }
+      
+      &::after {
+        border-color: rgba(0, 195, 255, 0.4);
+        animation: pulse-border-fast 1s infinite alternate;
+      }
+    }
+    
+    .upload-icon {
+      animation: pulse-icon-fast 1s infinite alternate;
+      
+      &::before {
+        animation: pulse-halo-fast 1s infinite;
+      }
+    }
+    
+    .scan-line {
+      opacity: 1;
+      animation: scan-fast 1.5s ease-in-out infinite;
+    }
+  }
+  
+  &.has-file {
+    .file-drop-area {
       background: rgba(0, 30, 60, 0.6);
-      box-shadow: 0 0 10px rgba(0, 195, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 195, 255, 0.2), inset 0 0 25px rgba(0, 195, 255, 0.1);
     }
-    
-    &.has-file {
-      background: rgba(0, 40, 70, 0.6);
-      border-color: rgba(0, 195, 255, 0.5);
-    }
-    
-    .file-status-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: rgba(0, 195, 255, 0.3);
-      margin-right: 10px;
-      transition: all 0.3s ease;
-      
-      &.active {
-        background: #00c3ff;
-        box-shadow: 0 0 8px rgba(0, 195, 255, 0.8);
-        animation: pulse 1.5s infinite;
-      }
-    }
-    
-    .file-text {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    .clear-button {
-      width: 18px;
-      height: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid rgba(0, 195, 255, 0.5);
-      border-radius: 50%;
-      margin-left: 10px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s ease;
-      
-      &:hover {
-        background: rgba(0, 195, 255, 0.2);
-        transform: scale(1.1);
-      }
-      
-      &:active {
-        transform: scale(0.95);
-      }
+  }
+  
+  &:hover {
+    .file-drop-area {
+      background: rgba(0, 25, 50, 0.7);
+      box-shadow: 0 0 20px rgba(0, 195, 255, 0.2), inset 0 0 25px rgba(0, 195, 255, 0.1);
     }
   }
 }
 
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+@keyframes pulse-glow {
+  0% { opacity: 0.3; }
+  100% { opacity: 0.7; }
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+@keyframes pulse-glow-fast {
+  0% { opacity: 0.5; }
+  100% { opacity: 0.9; }
+}
+
+@keyframes pulse-border {
+  0% { opacity: 0.3; box-shadow: 0 0 5px rgba(0, 195, 255, 0.1); }
+  100% { opacity: 0.7; box-shadow: 0 0 15px rgba(0, 195, 255, 0.2); }
+}
+
+@keyframes pulse-border-fast {
+  0% { opacity: 0.5; box-shadow: 0 0 10px rgba(0, 195, 255, 0.2); }
+  100% { opacity: 1; box-shadow: 0 0 20px rgba(0, 195, 255, 0.3); }
+}
+
+@keyframes pulse-icon {
+  0% { transform: scale(0.95); box-shadow: 0 0 10px rgba(0, 195, 255, 0.1); }
+  100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 195, 255, 0.3); }
+}
+
+@keyframes pulse-icon-fast {
+  0% { transform: scale(0.95); box-shadow: 0 0 15px rgba(0, 195, 255, 0.2); }
+  100% { transform: scale(1.05); box-shadow: 0 0 25px rgba(0, 195, 255, 0.4); }
+}
+
+@keyframes pulse-halo {
+  0%, 100% { opacity: 0.3; transform: scale(0.9); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+@keyframes pulse-halo-fast {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes scan {
+  0%, 100% { 
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  50% { 
+    transform: translateY(1000%);
+    opacity: 0.8;
+  }
+}
+
+@keyframes scan-fast {
+  0%, 100% { 
+    transform: translateY(-100%);
+    opacity: 0.5;
+  }
+  50% { 
+    transform: translateY(1000%);
+    opacity: 1;
+  }
 }
 </style>

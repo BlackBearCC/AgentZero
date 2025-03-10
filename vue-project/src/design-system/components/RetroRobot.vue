@@ -20,9 +20,11 @@
   
 <style lang="scss" scoped>
 .retro-robot {
-  width: 180px;
-  height: 180px;
-  margin: 0 auto;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   position: relative;
   
   &.thinking {
@@ -34,14 +36,11 @@
   }
   
   .robot-head {
-    width: 140px;
-    height: 100px;
-    background: transparenta;
+    width: 100%;
+    height: 100%;
+    background: transparent;
     position: relative;
-    margin: 0 auto;
-    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
     animation: glow 4s infinite alternate;
@@ -53,14 +52,23 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(135deg, rgba(0, 195, 255, 0.1) 0%, transparent 100%);
+      background: linear-gradient(90deg, 
+        rgba(0, 195, 255, 0) 0%, 
+        rgba(0, 195, 255, 0.03) 30%,
+        rgba(0, 195, 255, 0.05) 50%, 
+        rgba(0, 195, 255, 0.03) 70%,
+        rgba(0, 195, 255, 0) 100%
+      );
+      filter: blur(15px);
       pointer-events: none;
+      z-index: -1;
     }
+  }
   }
   
   .robot-face {
     display: flex;
-    flex-direction: column;
+    justify-content: center;
     align-items: center;
     width: 100%;
     height: 100%;
@@ -69,20 +77,19 @@
   
   .robot-eyes {
     display: flex;
-    gap: 30px;
-    margin-top: 40px;
+    gap: 120px;
     animation: slight-shift 8s ease-in-out infinite;
     
     .robot-eye {
-      width: 24px;
-      height: 8px;
+      width: 40px;
+      height: 10px;
       background: #00c3ff;
       box-shadow: 0 0 8px #00c3ff;
       transition: all 0.2s ease;
       
       &.blink {
         height: 2px;
-        transform: translateY(3px);
+        transform: translateY(4px);
       }
       
       &.left {
@@ -100,7 +107,7 @@
     top: 10px;
     right: 10px;
     display: flex;
-    gap: 4px;
+    gap: 6px;
     
     .signal-dot {
       width: 4px;
@@ -118,7 +125,7 @@
       }
     }
   }
-}
+
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
@@ -137,8 +144,18 @@
 }
 
 @keyframes glow {
-  0%, 100% { box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8); }
-  50% { box-shadow: inset 0 0 20px rgba(0, 195, 255, 0.2); }
+  0%, 100% { 
+    box-shadow: 
+      0 0 30px rgba(0, 195, 255, 0.02),
+      0 0 50px rgba(0, 195, 255, 0.01),
+      inset 0 0 20px rgba(0, 195, 255, 0.02);
+  }
+  50% { 
+    box-shadow: 
+      0 0 40px rgba(0, 195, 255, 0.03),
+      0 0 60px rgba(0, 195, 255, 0.02),
+      inset 0 0 25px rgba(0, 195, 255, 0.03);
+  }
 }
 
 @keyframes slight-shift {
